@@ -5,8 +5,8 @@
 
 ## Active Cursor
 
-**Current phase:** Phase 1 — Foundation (M1 core)
-**Next feature to implement:** F03 (Fast Backend)
+**Current phase:** All Phase 1-3 features complete
+**Next work:** Phase 4+ enhancements, integration testing, CI/CD
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph
@@ -30,34 +30,34 @@ F10 (System) ─────────────────┘ (depends on 
 F16 (SDKs) ───────────────────┘ (depends on F02)
 ```
 
-## Execution Order
+## Execution Order (All Complete)
 
-### Phase 1 — Foundation (M1 core)
-1. **F04** Session Lifecycle (foundation for all sessions)
-2. **F01** CLI Entry Point (thin client, delegates to daemon)
-3. **F02** Daemon API (14 endpoints, delegates to backends)
-4. **F03** Fast Backend (Linux isolation)
-5. **F17** Policy Enforcement (security foundation)
-6. **F05** Command Execution (hot path)
+### ✅ Phase 1 — Foundation (M1 core)
+1. **F04** Session Lifecycle ✅
+2. **F01** CLI Entry Point ✅
+3. **F02** Daemon API ✅
+4. **F03** Fast Backend ✅
+5. **F17** Policy Enforcement ✅
+6. **F05** Command Execution ✅
 
-### Phase 2 — M1 completion
-7. **F06** Workspace & File Ops
-8. **F07** Template System
-9. **F08** Artifact Export
-10. **F09** Logs & History
-11. **F10** System Commands
+### ✅ Phase 2 — M1 completion
+7. **F06** Workspace & File Ops ✅
+8. **F07** Template System ✅
+9. **F08** Artifact Export ✅
+10. **F09** Logs & History ✅
+11. **F10** System Commands ✅
 
-### Phase 3 — M1 benchmark
-12. **F11** Benchmarks (runs against F03 for now; F15/F14 added in Phase 4)
+### ✅ Phase 3 — M1 benchmark
+12. **F11** Benchmarks ✅
 
-### Phase 4 — M2 hardening
-13. **F12** Secrets & Network
-14. **F13** Cache Model
-15. **F14** Snapshot & Rollback
-16. **F15** Compat Backend
+### ✅ Phase 4 — M2 hardening
+13. **F12** Secrets & Network ✅
+14. **F13** Cache Model ✅
+15. **F14** Snapshot & Rollback ✅
+16. **F15** Compat Backend ✅
 
-### Phase 5 — M3 agent integrations
-17. **F16** SDKs
+### ✅ Phase 5 — M3 agent integrations
+17. **F16** SDKs ✅
 
 ## Risk Tracking
 

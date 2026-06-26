@@ -1,7 +1,7 @@
 # F20: MicroVM Backend
 
 > Source: `SPEC.md` §6 Features F20
-> Status: 🟡 Spec written
+> Status: 🟡 Partially implemented (T20.2, T20.3, T20.4 remaining)
 > Category: Service-layer / Infrastructure
 
 ## Definition (from block spec)
@@ -68,20 +68,20 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Tasks
 
-### T20.1: Host capability and runtime availability
+### T20.1: Host capability and runtime availability ✅
 
 **Description:** Detect whether microVM mode can run on the host, including Linux, `/dev/kvm`, and Firecracker availability.
 
 **Acceptance criteria:**
-- [ ] Reports unavailable when `/dev/kvm` is missing
-- [ ] Reports unavailable when Firecracker is missing
-- [ ] Does not silently fall back from explicit microVM mode
+- [x] Reports unavailable when `/dev/kvm` is missing
+- [x] Reports unavailable when Firecracker is missing
+- [x] Does not silently fall back from explicit microVM mode
 
 **Verification:**
-- [ ] `go build ./cmd/pi-vmm-manager/...`
-- [ ] Unit test: unavailable host capability is reported
+- [x] `go build ./cmd/pi-vmm-manager/...`
+- [x] Unit test: unavailable host capability is reported
 
-**Files:** `cmd/pi-vmm-manager/main.go (new — to be created)`, `pkg/runtime/microvm/runtime.go (new — to be created)`, `tests/runtime/microvm/capability_test.go (new — to be created)`
+**Files:** `cmd/pi-vmm-manager/main.go`, `pkg/runtime/microvm/runtime.go`, `tests/runtime/microvm/capability_test.go`
 **Size:** M
 **Depends on:** F19
 

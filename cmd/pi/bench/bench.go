@@ -1,9 +1,6 @@
 package bench
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/pi-sandbox/pi/cmd/pi/cli"
 	"github.com/spf13/cobra"
 )
@@ -19,12 +16,5 @@ var Command = benchCmd
 
 func init() {
 	cli.AddCommand(benchCmd)
-	benchCmd.AddCommand(&cobra.Command{
-		Use:   "run [flags]",
-		Short: "Run benchmarks",
-		Run: func(*cobra.Command, []string) {
-			fmt.Fprintln(os.Stderr, "stub: bench run")
-			os.Exit(1)
-		},
-	})
+	benchCmd.AddCommand(RunCmd())
 }

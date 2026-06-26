@@ -38,7 +38,7 @@ Dashboard of all features for this project.
 | [F18](F18-secure-backend.md) | Secure Backend | 🟡 Written | ✅ Implemented | M4 | F15, F17, F19 |
 | [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | 🟡 Written | ✅ Implemented | M4 | F03, F15, F18 |
 | [F20](F20-microvm-backend.md) | MicroVM Backend | 🟡 Written | 🔴 Not started | M5 | F19, F21 |
-| [F21](F21-microvm-guest-control-plane.md) | MicroVM Guest Control Plane | 🟡 Written | 🔴 Not started | M5 | F20 |
+| [F21](F21-microvm-guest-control-plane.md) | MicroVM Guest Control Plane | 🟡 Written | 🟡 1/4 tasks | M5 | F20 |
 | [F22](F22-remote-daemon-contexts.md) | Remote Daemon Contexts | 🟡 Written | 🔴 Not started | M6 | F02, F23 |
 | [F23](F23-remote-daemon-transport-auth.md) | Remote Daemon Transport & Auth | 🟡 Written | 🔴 Not started | M6 | F02, F16, F22 |
 

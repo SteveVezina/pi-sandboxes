@@ -1,7 +1,7 @@
 # F21: MicroVM Guest Control Plane
 
 > Source: `SPEC.md` §6 Features F21
-> Status: 🟡 Spec written
+> Status: 🟡 Partially implemented (T21.1, T21.3, T21.4 remaining)
 > Category: Service-layer / Infrastructure
 
 ## Definition (from block spec)
@@ -83,7 +83,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Size:** M
 **Depends on:** F20
 
-### T21.2: Vsock frame codec
+### T21.2: Vsock frame codec ✅
 
 **Description:** Implement newline-delimited JSON frame encoding/decoding for host and guest.
 
@@ -93,12 +93,12 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [ ] Invalid frames return actionable errors
 
 **Verification:**
-- [ ] Unit tests for valid frame round-trip
-- [ ] Unit tests for invalid frame errors
+- [x] Unit tests for valid frame round-trip
+- [x] Unit tests for invalid frame errors
 
-**Files:** `pkg/runtime/microvm/protocol.go (new — to be created)`, `tests/runtime/microvm/protocol_test.go (new — to be created)`
+**Files:** `pkg/runtime/microvm/protocol.go`, `tests/runtime/microvm/protocol_test.go`
 **Size:** M
-**Depends on:** T21.1
+**Depends on:** None
 
 ### T21.3: Exec streaming protocol
 

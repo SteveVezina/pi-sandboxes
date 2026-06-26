@@ -40,9 +40,9 @@ The artifact export avoids copying the whole workspace unless requested. It only
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-9.1: `pi box artifacts list <id>` lists available artifacts
-- [ ] AC-9.2: `pi box artifacts pull <id> <dest>` pulls artifacts to host
-- [ ] AC-9.3: `pi box artifacts pack <id> --output <file>` creates archive
+- [x] AC-9.1: `pi box artifacts list <id>` lists available artifacts
+- [x] AC-9.2: `pi box artifacts pull <id> <dest>` pulls artifacts to host
+- [x] AC-9.3: `pi box artifacts pack <id> --output <file>` creates archive
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -89,14 +89,14 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement artifact listing. Scans known artifact locations and returns file listing.
 
 **Acceptance criteria:**
-- [ ] Lists files in `/artifacts`, `/workspace/dist`, `/workspace/build`, `/workspace/coverage`, `/workspace/test-results`, `/workspace/target/release`
-- [ ] Returns file paths, sizes, and modification times
-- [ ] Empty directories excluded from listing
-- [ ] Symbolic links reported but not followed
+- [x] Lists files in `/artifacts`, `/workspace/dist`, `/workspace/build`, `/workspace/coverage`, `/workspace/test-results`, `/workspace/target/release`
+- [x] Returns file paths, sizes, and modification times
+- [x] Empty directories excluded from listing
+- [x] Symbolic links reported but not followed
 
 **Verification:**
-- [ ] `go build ./pkg/artifacts/...`
-- [ ] Unit test: artifact list returns correct files
+- [x] `go build ./pkg/artifacts/...`
+- [x] Unit test: artifact list returns correct files
 
 **Files:** `pkg/artifacts/list.go`
 **Size:** S
@@ -107,14 +107,14 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement artifact pull. Copies files from artifact locations to host destination.
 
 **Acceptance criteria:**
-- [ ] `pi box artifacts pull demo ./artifacts` pulls all artifacts to host
-- [ ] Directory structure preserved on host
-- [ ] Progress reported for large transfers
-- [ ] Only known artifact locations are copied
+- [x] `pi box artifacts pull demo ./artifacts` pulls all artifacts to host
+- [x] Directory structure preserved on host
+- [x] Progress reported for large transfers
+- [x] Only known artifact locations are copied
 
 **Verification:**
-- [ ] `go build ./pkg/artifacts/...`
-- [ ] Integration test: pull artifacts from sandbox
+- [x] `go build ./pkg/artifacts/...`
+- [x] Integration test: pull artifacts from sandbox
 
 **Files:** `pkg/artifacts/pull.go`
 **Size:** S
@@ -125,14 +125,14 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement artifact packing. Creates tar.zst archive of artifact directories.
 
 **Acceptance criteria:**
-- [ ] `pi box artifacts pack demo --output artifacts.tar.zst` creates compressed archive
-- [ ] Archive contains all files from artifact locations
-- [ ] Archive is valid tar.zst format
-- [ ] Archive size validated (prevent DoS)
+- [x] `pi box artifacts pack demo --output artifacts.tar.zst` creates compressed archive
+- [x] Archive contains all files from artifact locations
+- [x] Archive is valid tar.zst format
+- [x] Archive size validated (prevent DoS)
 
 **Verification:**
-- [ ] `go build ./pkg/artifacts/...`
-- [ ] Integration test: pack and unpack archive
+- [x] `go build ./pkg/artifacts/...`
+- [x] Integration test: pack and unpack archive
 
 **Files:** `pkg/artifacts/pack.go`
 **Size:** S
@@ -140,11 +140,11 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./pkg/artifacts/...` succeeds
-- [ ] Artifact list returns correct files
-- [ ] Artifact pull copies files correctly
-- [ ] Artifact pack creates valid tar.zst archive
-- [ ] Benchmark: artifact export 20MB < 500ms local (SPEC.md §19)
+- [x] `go build ./pkg/artifacts/...` succeeds
+- [x] Artifact list returns correct files
+- [x] Artifact pull copies files correctly
+- [x] Artifact pack creates valid tar.zst archive
+- [x] Benchmark: artifact export 20MB < 500ms local (SPEC.md §19)
 
 ## Spec Gaps
 

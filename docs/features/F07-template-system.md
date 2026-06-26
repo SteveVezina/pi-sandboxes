@@ -74,10 +74,10 @@ pi template prune
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-5.1: `base`, `node`, `python`, `go`, `rust`, `node-python`, `polyglot` templates defined
-- [ ] AC-5.2: `pi template list` shows available templates
-- [ ] AC-5.3: `pi template inspect <name>` shows template details
-- [ ] AC-5.4: Templates configure correct toolchains and cache mounts
+- [x] AC-5.1: `base`, `node`, `python`, `go`, `rust`, `node-python`, `polyglot` templates defined
+- [x] AC-5.2: `pi template list` shows available templates
+- [x] AC-5.3: `pi template inspect <name>` shows template details
+- [x] AC-5.4: Templates configure correct toolchains and cache mounts
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -126,16 +126,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement template metadata store. YAML files under `~/.pi/templates/<name>/template.yaml`. CRUD for template definitions.
 
 **Acceptance criteria:**
-- [ ] Templates stored as YAML under `~/.pi/templates/<name>/template.yaml`
-- [ ] Template schema: name, runtime, base, tools, mounts, network
-- [ ] `List()` returns all template names
-- [ ] `Get(name)` returns template details
-- [ ] `Create(name, yaml)` writes template file
-- [ ] `Delete(name)` removes template directory
+- [x] Templates stored as YAML under `~/.pi/templates/<name>/template.yaml`
+- [x] Template schema: name, runtime, base, tools, mounts, network
+- [x] `List()` returns all template names
+- [x] `Get(name)` returns template details
+- [x] `Create(name, yaml)` writes template file
+- [x] `Delete(name)` removes template directory
 
 **Verification:**
-- [ ] `go build ./pkg/template/...`
-- [ ] Unit tests for template YAML parsing
+- [x] `go build ./pkg/template/...`
+- [x] Unit tests for template YAML parsing
 
 **Files:** `pkg/template/store.go`, `pkg/template/template.go`
 **Size:** S
@@ -146,19 +146,19 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Ship base, node, python, go, rust, node-python, polyglot templates as default templates.
 
 **Acceptance criteria:**
-- [ ] All 7 templates defined with correct toolchains
-- [ ] base template has: bash, git, curl, ripgrep, jq, etc.
-- [ ] node template has: node:22, npm, pnpm, corepack
-- [ ] python template has: python:3.13, uv, pip, venv
-- [ ] go template has: go stable, GOMODCACHE, GOCACHE
-- [ ] rust template has: rustc, cargo
-- [ ] node-python has: node:22, pnpm, python:3.13, uv
-- [ ] polyglot has all tools from all templates
+- [x] All 7 templates defined with correct toolchains
+- [x] base template has: bash, git, curl, ripgrep, jq, etc.
+- [x] node template has: node:22, npm, pnpm, corepack
+- [x] python template has: python:3.13, uv, pip, venv
+- [x] go template has: go stable, GOMODCACHE, GOCACHE
+- [x] rust template has: rustc, cargo
+- [x] node-python has: node:22, pnpm, python:3.13, uv
+- [x] polyglot has all tools from all templates
 
 **Verification:**
-- [ ] `go build ./pkg/template/...`
-- [ ] `pi template list` shows all 7 templates
-- [ ] `pi template inspect node-python` shows correct details
+- [x] `go build ./pkg/template/...`
+- [x] `pi template list` shows all 7 templates
+- [x] `pi template inspect node-python` shows correct details
 
 **Files:** `~/.pi/templates/base/template.yaml`, `~/.pi/templates/node/template.yaml`, `~/.pi/templates/python/template.yaml`, `~/.pi/templates/go/template.yaml`, `~/.pi/templates/rust/template.yaml`, `~/.pi/templates/node-python/template.yaml`, `~/.pi/templates/polyglot/template.yaml`
 **Size:** S
@@ -169,15 +169,15 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement `template list/inspect/build/update/prune` CLI commands.
 
 **Acceptance criteria:**
-- [ ] `pi template list` shows available templates
-- [ ] `pi template inspect <name>` shows template details
-- [ ] `pi template build <name>` builds template image (stub for compat backend)
-- [ ] `pi template prune` removes unused templates
-- [ ] `--json` flag produces valid JSON output
+- [x] `pi template list` shows available templates
+- [x] `pi template inspect <name>` shows template details
+- [x] `pi template build <name>` builds template image (stub for compat backend)
+- [x] `pi template prune` removes unused templates
+- [x] `--json` flag produces valid JSON output
 
 **Verification:**
-- [ ] `go build ./cmd/pi/...`
-- [ ] Integration test: template commands work
+- [x] `go build ./cmd/pi/...`
+- [x] Integration test: template commands work
 
 **Files:** `cmd/pi/template/list.go`, `cmd/pi/template/inspect.go`, `cmd/pi/template/build.go`, `cmd/pi/template/update.go`, `cmd/pi/template/prune.go`
 **Size:** S
@@ -185,11 +185,11 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./pkg/template/...` succeeds
-- [ ] All 7 templates defined and loadable
-- [ ] `pi template list` shows all templates
-- [ ] `pi template inspect <name>` shows correct details
-- [ ] Template YAML parsing handles valid and invalid input
+- [x] `go build ./pkg/template/...` succeeds
+- [x] All 7 templates defined and loadable
+- [x] `pi template list` shows all templates
+- [x] `pi template inspect <name>` shows correct details
+- [x] Template YAML parsing handles valid and invalid input
 
 ## Spec Gaps
 

@@ -52,6 +52,8 @@ func NewRouter(store *session.Store) *mux.Router {
 	router.HandleFunc("/v1/sandboxes/{id}/snapshot/list", api.SnapshotList(store)).Methods("GET")
 	router.HandleFunc("/v1/sandboxes/{id}/snapshot/rollback", api.SnapshotRollback(store)).Methods("POST")
 	router.HandleFunc("/v1/sandboxes/{id}/snapshot/delete", api.SnapshotDelete(store)).Methods("POST")
+	// SPEC.md §9 canonical rollback route (alias for backwards-compatibility with spec).
+	router.HandleFunc("/v1/sandboxes/{id}/rollback", api.SnapshotRollback(store)).Methods("POST")
 
 	// Logs
 	router.HandleFunc("/v1/sandboxes/{id}/logs", api.LogsSandbox(store)).Methods("GET")

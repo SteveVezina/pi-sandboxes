@@ -48,9 +48,9 @@ SDK packages:
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-15.1: TypeScript SDK: `client.sandboxes.create()`, `.clone()`, `.exec()`, `.diff()`
-- [ ] AC-15.2: Python SDK: `client.sandboxes.create()`, `.clone()`, `.exec()`, `.diff()`
-- [ ] AC-15.3: Both support streaming output
+- [x] AC-15.1: TypeScript SDK: `client.sandboxes.create()`, `.clone()`, `.exec()`, `.diff()`
+- [x] AC-15.2: Python SDK: `client.sandboxes.create()`, `.clone()`, `.exec()`, `.diff()`
+- [x] AC-15.3: Both support streaming output
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -95,18 +95,18 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement TypeScript SDK with all sandbox operations and streaming output.
 
 **Acceptance criteria:**
-- [ ] `client.sandboxes.create()` creates sandbox
-- [ ] `box.clone()` clones repository
-- [ ] `box.exec()` executes command with streaming output
-- [ ] `box.diff()` gets workspace diff
-- [ ] All API operations implemented
-- [ ] Streaming output via callbacks or async iterators
-- [ ] Error handling with actionable messages
+- [x] `client.sandboxes.create()` creates sandbox
+- [x] `box.clone()` clones repository
+- [x] `box.exec()` executes command with streaming output
+- [x] `box.diff()` gets workspace diff
+- [x] All API operations implemented
+- [x] Streaming output via callbacks or async iterators
+- [x] Error handling with actionable messages
 
 **Verification:**
-- [ ] `npm install` succeeds in `sdk/typescript/`
-- [ ] TypeScript compilation succeeds
-- [ ] Unit tests pass
+- [x] `npm install` succeeds in `sdk/typescript/`
+- [x] TypeScript compilation succeeds
+- [x] Unit tests pass
 
 **Files:** `sdk/typescript/src/`, `sdk/typescript/package.json`, `sdk/typescript/tsconfig.json`
 **Size:** M
@@ -117,18 +117,18 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement Python SDK with all sandbox operations and streaming output.
 
 **Acceptance criteria:**
-- [ ] `client.sandboxes.create()` creates sandbox
-- [ ] `box.clone()` clones repository
-- [ ] `box.exec()` executes command with streaming output
-- [ ] `box.diff()` gets workspace diff
-- [ ] All API operations implemented
-- [ ] Streaming output via generators or callbacks
-- [ ] Error handling with actionable messages
+- [x] `client.sandboxes.create()` creates sandbox
+- [x] `box.clone()` clones repository
+- [x] `box.exec()` executes command with streaming output
+- [x] `box.diff()` gets workspace diff
+- [x] All API operations implemented
+- [x] Streaming output via generators or callbacks
+- [x] Error handling with actionable messages
 
 **Verification:**
-- [ ] `pip install -e sdk/python/` succeeds
-- [ ] Python type checking passes
-- [ ] Unit tests pass
+- [x] `pip install -e sdk/python/` succeeds
+- [x] Python type checking passes
+- [x] Unit tests pass
 
 **Files:** `sdk/python/src/`, `sdk/python/pyproject.toml`, `sdk/python/README.md`
 **Size:** M
@@ -136,11 +136,11 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] TypeScript SDK compiles and tests pass
-- [ ] Python SDK installs and tests pass
-- [ ] Both SDKs support streaming output
-- [ ] Both SDKs implement all API operations
-- [ ] Error messages are actionable per SPEC.md §28
+- [x] TypeScript SDK compiles and tests pass
+- [x] Python SDK installs and tests pass
+- [x] Both SDKs support streaming output
+- [x] Both SDKs implement all API operations
+- [x] Error messages are actionable per SPEC.md §28
 
 ## Spec Gaps
 

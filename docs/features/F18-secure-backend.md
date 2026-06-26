@@ -20,11 +20,11 @@ The secure backend must provide actionable compatibility errors. If gVisor is un
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-21.1: `pi box create --mode secure <template>` creates a sandbox using gVisor/runsc when available
-- [ ] AC-21.2: Secure sandboxes execute commands through the same daemon API as fast/compat sandboxes
-- [ ] AC-21.3: Secure mode does not mount the host home directory or Docker socket by default
-- [ ] AC-21.4: Secure mode exposes compatibility errors with actionable guidance
-- [ ] AC-21.5: Benchmarks compare fast vs compat vs secure modes
+- [x] AC-21.1: `pi box create --mode secure <template>` creates a sandbox using gVisor/runsc when available
+- [x] AC-21.2: Secure sandboxes execute commands through the same daemon API as fast/compat sandboxes
+- [x] AC-21.3: Secure mode does not mount the host home directory or Docker socket by default
+- [x] AC-21.4: Secure mode exposes compatibility errors with actionable guidance
+- [x] AC-21.5: Benchmarks compare fast vs compat vs secure modes
 
 ## Interface Impact
 
@@ -62,13 +62,13 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 ### T18.1: gVisor backend lifecycle
 
 **Acceptance criteria:**
-- [ ] Create/destroy/exec work through gVisor/runsc
-- [ ] Secure backend returns actionable errors when unavailable
-- [ ] Secure backend enforces default policy
+- [x] Create/destroy/exec work through gVisor/runsc
+- [x] Secure backend returns actionable errors when unavailable
+- [x] Secure backend enforces default policy
 
 **Verification:**
-- [ ] `go build ./pkg/runtime/gvisor/...`
-- [ ] Integration test: secure sandbox create/exec/destroy
+- [x] `go build ./pkg/runtime/gvisor/...`
+- [x] Integration test: secure sandbox create/exec/destroy
 
 **Files:** `pkg/runtime/gvisor/runtime.go`
 **Size:** L
@@ -77,11 +77,11 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 ### T18.2: Secure-mode benchmark comparison
 
 **Acceptance criteria:**
-- [ ] Benchmark suite can run secure mode
-- [ ] Output compares fast, compat, and secure
+- [x] Benchmark suite can run secure mode
+- [x] Output compares fast, compat, and secure
 
 **Verification:**
-- [ ] `pi bench run --mode secure --json`
+- [x] `pi bench run --mode secure --json`
 
 **Files:** `pkg/bench/benchmarks.go`, `cmd/pi/bench/commands.go`
 **Size:** M
@@ -89,10 +89,10 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Verification Plan
 
-- [ ] Secure backend builds
-- [ ] Secure create/exec/destroy works when runsc is available
-- [ ] Security defaults remain enforced
-- [ ] Benchmarks include secure mode
+- [x] Secure backend builds
+- [x] Secure create/exec/destroy works when runsc is available
+- [x] Security defaults remain enforced
+- [x] Benchmarks include secure mode
 
 ## Spec Gaps
 

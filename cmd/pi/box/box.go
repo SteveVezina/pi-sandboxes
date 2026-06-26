@@ -34,6 +34,9 @@ func init() {
 	cli.AddCommand(boxCmd)
 	boxCmd.AddCommand(createCmd, listCmd, inspectCmd, destroyCmd, cloneCmd, execCmd, shellCmd, filesCmd, diffCmd, patchCmd, artifactsCmd, snapshotCmd, logsCmd)
 
+	// Persistent JSON flag available on all box subcommands (AC-1.5).
+	boxCmd.PersistentFlags().Bool("json", false, "Output as JSON")
+
 	// Files subcommands
 	filesCmd.AddCommand(filesListCmd, filesReadCmd, filesWriteCmd)
 
@@ -45,6 +48,7 @@ func init() {
 
 	// Set up flags
 	artifactsPackCmd.Flags().StringP("output", "o", "/tmp/artifacts.tar.gz", "Output path")
+	destroyCmd.Flags().Bool("all", false, "Destroy all sandboxes (AC-8.4)")
 }
 
 // getSocketPath returns the daemon socket path.
@@ -230,6 +234,7 @@ var listCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "error: failed to list sandboxes: %v\n", err)
 			os.Exit(1)
 		}
+		// listCmd outputs JSON by default (--json is a no-op; output is always machine-readable).
 		data, _ := json.MarshalIndent(sandboxes, "", "  ")
 		fmt.Println(string(data))
 	},
@@ -253,11 +258,12 @@ var inspectCmd = &cobra.Command{
 
 // destroyCmd destroys a sandbox session.
 var destroyCmd = &cobra.Command{
-	Use:   "destroy <name>",
+	Use:   "destroy [<name>]",
 	Short: "Destroy a sandbox session",
-	Args:  cobra.MinimumNArgs(1),
+	Args:  cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if args[0] == "--all" {
+		all, _ := cmd.Flags().GetBool("all")
+		if all {
 			sandboxes, err := callAPIList("GET", "/v1/sandboxes")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error: listing sandboxes failed: %v\n", err)
@@ -286,6 +292,10 @@ var destroyCmd = &cobra.Command{
 			}
 			fmt.Printf("Destroyed %d sandbox(es)\n", count)
 			return
+		}
+		if len(args) == 0 {
+			fmt.Fprintf(os.Stderr, "error: provide a sandbox name or use --all\n")
+			os.Exit(1)
 		}
 		_, err := callAPI("DELETE", "/v1/sandboxes/"+args[0], nil)
 		if err != nil {

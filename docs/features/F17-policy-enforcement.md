@@ -70,14 +70,14 @@ Policy is configurable per session via create request flags, but defaults are al
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-17.1: Host home directory not mounted by default
-- [ ] AC-17.2: Docker socket not mounted by default
-- [ ] AC-17.3: Cloud metadata credentials not accessible
-- [ ] AC-17.4: SSH private keys not mounted by default
-- [ ] AC-17.5: Git credentials brokered (not dumped into environment)
-- [ ] AC-17.6: Exec output limited to 8MiB by default
-- [ ] AC-17.7: Exec timeout 120s by default
-- [ ] AC-17.8: Max processes 256 by default
+- [x] AC-17.1: Host home directory not mounted by default
+- [x] AC-17.2: Docker socket not mounted by default
+- [x] AC-17.3: Cloud metadata credentials not accessible
+- [x] AC-17.4: SSH private keys not mounted by default
+- [x] AC-17.5: Git credentials brokered (not dumped into environment)
+- [x] AC-17.6: Exec output limited to 8MiB by default
+- [x] AC-17.7: Exec timeout 120s by default
+- [x] AC-17.8: Max processes 256 by default
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -127,18 +127,18 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement policy engine. Default policy loading, per-session overrides, policy validation.
 
 **Acceptance criteria:**
-- [ ] Default policy loaded from `~/.pi/config.yaml`
-- [ ] Filesystem defaults: hostHomeMount=false, workspace=rw, artifacts=rw, caches=scoped, root=readonly
-- [ ] Process defaults: maxProcesses=256, defaultTimeout=120s, maxOutput=8MiB
-- [ ] Network defaults: mode=restricted, deny list, allow list
-- [ ] Secrets defaults: env=deny-by-default, sshAgent=opt-in, gitCredentials=brokered
-- [ ] Per-session overrides merge with defaults (override cannot relax defaults)
-- [ ] Policy validated on sandbox creation
+- [x] Default policy loaded from `~/.pi/config.yaml`
+- [x] Filesystem defaults: hostHomeMount=false, workspace=rw, artifacts=rw, caches=scoped, root=readonly
+- [x] Process defaults: maxProcesses=256, defaultTimeout=120s, maxOutput=8MiB
+- [x] Network defaults: mode=restricted, deny list, allow list
+- [x] Secrets defaults: env=deny-by-default, sshAgent=opt-in, gitCredentials=brokered
+- [x] Per-session overrides merge with defaults (override cannot relax defaults)
+- [x] Policy validated on sandbox creation
 
 **Verification:**
-- [ ] `go build ./pkg/policy/...`
-- [ ] Unit test: default policy loaded correctly
-- [ ] Unit test: per-session overrides merge correctly
+- [x] `go build ./pkg/policy/...`
+- [x] Unit test: default policy loaded correctly
+- [x] Unit test: per-session overrides merge correctly
 
 **Files:** `pkg/policy/engine.go`, `pkg/policy/default.go`, `pkg/policy/override.go`
 **Size:** M
@@ -149,22 +149,22 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement backend-specific policy enforcement. Fast backend applies namespaces/cgroups/seccomp. Compat backend applies container hardening.
 
 **Acceptance criteria:**
-- [ ] Fast backend enforces: namespaces, cgroups, seccomp, Landlock
-- [ ] Compat backend enforces: no privileged, no host network, caps dropped, seccomp
-- [ ] Docker socket never mounted
-- [ ] Host home never mounted
-- [ ] Cloud metadata never accessible
-- [ ] Process limits enforced (maxProcesses=256)
-- [ ] Output limits enforced (maxOutput=8MiB)
-- [ ] Timeout enforced (defaultTimeout=120s)
+- [x] Fast backend enforces: namespaces, cgroups, seccomp, Landlock
+- [x] Compat backend enforces: no privileged, no host network, caps dropped, seccomp
+- [x] Docker socket never mounted
+- [x] Host home never mounted
+- [x] Cloud metadata never accessible
+- [x] Process limits enforced (maxProcesses=256)
+- [x] Output limits enforced (maxOutput=8MiB)
+- [x] Timeout enforced (defaultTimeout=120s)
 
 **Verification:**
-- [ ] `go build ./pkg/policy/...`
-- [ ] Integration test: fast backend enforces policy
-- [ ] Integration test: compat backend enforces policy
-- [ ] Security test: sandbox cannot access host home
-- [ ] Security test: sandbox cannot access Docker socket
-- [ ] Security test: sandbox cannot access cloud metadata
+- [x] `go build ./pkg/policy/...`
+- [x] Integration test: fast backend enforces policy
+- [x] Integration test: compat backend enforces policy
+- [x] Security test: sandbox cannot access host home
+- [x] Security test: sandbox cannot access Docker socket
+- [x] Security test: sandbox cannot access cloud metadata
 
 **Files:** `pkg/policy/fast.go`, `pkg/policy/compat.go`
 **Size:** M
@@ -172,16 +172,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./pkg/policy/...` succeeds
-- [ ] Default policy loaded correctly
-- [ ] Fast backend enforces all security constraints
-- [ ] Compat backend enforces all security constraints
-- [ ] Docker socket never mounted
-- [ ] Host home never mounted
-- [ ] Cloud metadata never accessible
-- [ ] Process limits enforced
-- [ ] Output limits enforced
-- [ ] Timeout enforced
+- [x] `go build ./pkg/policy/...` succeeds
+- [x] Default policy loaded correctly
+- [x] Fast backend enforces all security constraints
+- [x] Compat backend enforces all security constraints
+- [x] Docker socket never mounted
+- [x] Host home never mounted
+- [x] Cloud metadata never accessible
+- [x] Process limits enforced
+- [x] Output limits enforced
+- [x] Timeout enforced
 
 ## Spec Gaps
 

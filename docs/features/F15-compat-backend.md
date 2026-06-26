@@ -43,13 +43,13 @@ The compat backend is cross-platform (Linux, macOS via Colima/Docker, Windows vi
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-4.1: Sandbox runs as OCI container via runc/containerd/Podman
-- [ ] AC-4.2: No privileged containers by default
-- [ ] AC-4.3: No host network by default
-- [ ] AC-4.4: No Docker socket mount by default
-- [ ] AC-4.5: Seccomp profile enabled
-- [ ] AC-4.6: Capabilities dropped by default
-- [ ] AC-4.7: Warm exec p50 < 100ms (SPEC.md §19)
+- [x] AC-4.1: Sandbox runs as OCI container via runc/containerd/Podman
+- [x] AC-4.2: No privileged containers by default
+- [x] AC-4.3: No host network by default
+- [x] AC-4.4: No Docker socket mount by default
+- [x] AC-4.5: Seccomp profile enabled
+- [x] AC-4.6: Capabilities dropped by default
+- [x] AC-4.7: Warm exec p50 < 100ms (SPEC.md §19)
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -102,16 +102,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement OCI runtime detection. Try containerd, Podman, runc, Docker in order.
 
 **Acceptance criteria:**
-- [ ] Detects containerd (preferred)
-- [ ] Detects Podman
-- [ ] Detects runc
-- [ ] Detects Docker
-- [ ] Uses first available runtime
-- [ ] Reports error if no OCI runtime found
+- [x] Detects containerd (preferred)
+- [x] Detects Podman
+- [x] Detects runc
+- [x] Detects Docker
+- [x] Uses first available runtime
+- [x] Reports error if no OCI runtime found
 
 **Verification:**
-- [ ] `go build ./pkg/runtime/compat/...`
-- [ ] Unit test: runtime detection with mock binaries
+- [x] `go build ./pkg/runtime/compat/...`
+- [x] Unit test: runtime detection with mock binaries
 
 **Files:** `pkg/runtime/compat/runtime.go`
 **Size:** S
@@ -122,19 +122,19 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement container creation with hardened defaults. OCI container spec generation, container start.
 
 **Acceptance criteria:**
-- [ ] Container created from template OCI image
-- [ ] No privileged mode
-- [ ] No host network (bridge network)
-- [ ] No Docker socket mount
-- [ ] No hostPath unless explicitly configured
-- [ ] Capabilities dropped by default
-- [ ] Seccomp profile enabled
-- [ ] Workspace, artifacts, caches mounted
+- [x] Container created from template OCI image
+- [x] No privileged mode
+- [x] No host network (bridge network)
+- [x] No Docker socket mount
+- [x] No hostPath unless explicitly configured
+- [x] Capabilities dropped by default
+- [x] Seccomp profile enabled
+- [x] Workspace, artifacts, caches mounted
 
 **Verification:**
-- [ ] `go build ./pkg/runtime/compat/...`
-- [ ] Integration test: container created with hardened defaults
-- [ ] Integration test: container cannot access host filesystem
+- [x] `go build ./pkg/runtime/compat/...`
+- [x] Integration test: container created with hardened defaults
+- [x] Integration test: container cannot access host filesystem
 
 **Files:** `pkg/runtime/compat/create.go`
 **Size:** M
@@ -145,16 +145,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement container exec, stdout/stderr streaming, exit code collection, container cleanup.
 
 **Acceptance criteria:**
-- [ ] Command executes in container
-- [ ] stdout/stderr streamed to caller
-- [ ] Exit code captured accurately
-- [ ] Container cleaned up on destroy
-- [ ] Warm exec p50 < 100ms (SPEC.md §19)
+- [x] Command executes in container
+- [x] stdout/stderr streamed to caller
+- [x] Exit code captured accurately
+- [x] Container cleaned up on destroy
+- [x] Warm exec p50 < 100ms (SPEC.md §19)
 
 **Verification:**
-- [ ] `go build ./pkg/runtime/compat/...`
-- [ ] Integration test: exec works in container
-- [ ] Benchmark: warm exec p50 < 100ms
+- [x] `go build ./pkg/runtime/compat/...`
+- [x] Integration test: exec works in container
+- [x] Benchmark: warm exec p50 < 100ms
 
 **Files:** `pkg/runtime/compat/exec.go`, `pkg/runtime/compat/lifecycle.go`
 **Size:** M
@@ -162,13 +162,13 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./pkg/runtime/compat/...` succeeds
-- [ ] OCI runtime detection works
-- [ ] Container created with hardened defaults
-- [ ] Exec works in container
-- [ ] Container cleaned up on destroy
-- [ ] Benchmark: warm exec p50 < 100ms (compat mode)
-- [ ] Benchmark: idle memory < 64 MiB (compat mode, SPEC.md §19)
+- [x] `go build ./pkg/runtime/compat/...` succeeds
+- [x] OCI runtime detection works
+- [x] Container created with hardened defaults
+- [x] Exec works in container
+- [x] Container cleaned up on destroy
+- [x] Benchmark: warm exec p50 < 100ms (compat mode)
+- [x] Benchmark: idle memory < 64 MiB (compat mode, SPEC.md §19)
 
 ## Spec Gaps
 

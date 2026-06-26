@@ -39,12 +39,12 @@ The fast backend is Linux-only. macOS and Windows require a Linux helper VM or r
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-3.1: Sandbox runs in isolated namespace/cgroup environment
-- [ ] AC-3.2: Host filesystem is not mounted by default
-- [ ] AC-3.3: Process limits enforced (maxProcesses: 256)
-- [ ] AC-3.4: Command timeout enforced (default: 120s)
-- [ ] AC-3.5: Output truncation at maxOutput (default: 8MiB)
-- [ ] AC-3.6: Exec overhead p50 < 10ms (SPEC.md §19)
+- [x] AC-3.1: Sandbox runs in isolated namespace/cgroup environment
+- [x] AC-3.2: Host filesystem is not mounted by default
+- [x] AC-3.3: Process limits enforced (maxProcesses: 256)
+- [x] AC-3.4: Command timeout enforced (default: 120s)
+- [x] AC-3.5: Output truncation at maxOutput (default: 8MiB)
+- [x] AC-3.6: Exec overhead p50 < 10ms (SPEC.md §19)
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -105,14 +105,14 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement Linux namespace setup (user, mount, PID) for sandbox processes. Use `syscall.Unshare` or Go's `os/exec` with namespace flags.
 
 **Acceptance criteria:**
-- [ ] User namespace maps sandbox root to unprivileged host user (uid 1000)
-- [ ] Mount namespace isolates filesystem view
-- [ ] PID namespace isolates process tree
-- [ ] Namespace setup completes in < 5ms
+- [x] User namespace maps sandbox root to unprivileged host user (uid 1000)
+- [x] Mount namespace isolates filesystem view
+- [x] PID namespace isolates process tree
+- [x] Namespace setup completes in < 5ms
 
 **Verification:**
-- [ ] `go build ./pkg/runtime/fast/...`
-- [ ] Integration test: sandboxed process sees isolated PID 1
+- [x] `go build ./pkg/runtime/fast/...`
+- [x] Integration test: sandboxed process sees isolated PID 1
 
 **Files:** `pkg/runtime/fast/namespace.go`
 **Size:** M
@@ -123,17 +123,17 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement cgroup v2 hierarchy with CPU, memory, disk I/O, and PID limits. Create cgroup per sandbox session.
 
 **Acceptance criteria:**
-- [ ] cgroup v2 hierarchy created under `~/.pi/cgroups/<sandbox-id>/`
-- [ ] CPU limit enforced (cgroup CPU weight)
-- [ ] Memory limit enforced (cgroup memory.max, OOM kill on breach)
-- [ ] Disk I/O limit enforced (cgroup io.max)
-- [ ] PID limit enforced (cgroup pids.max = 256)
-- [ ] cgroup cleaned up on sandbox destroy
+- [x] cgroup v2 hierarchy created under `~/.pi/cgroups/<sandbox-id>/`
+- [x] CPU limit enforced (cgroup CPU weight)
+- [x] Memory limit enforced (cgroup memory.max, OOM kill on breach)
+- [x] Disk I/O limit enforced (cgroup io.max)
+- [x] PID limit enforced (cgroup pids.max = 256)
+- [x] cgroup cleaned up on sandbox destroy
 
 **Verification:**
-- [ ] `go build ./pkg/runtime/fast/...`
-- [ ] Integration test: process exceeding memory limit is OOM killed
-- [ ] Integration test: process exceeding PID limit is blocked
+- [x] `go build ./pkg/runtime/fast/...`
+- [x] Integration test: process exceeding memory limit is OOM killed
+- [x] Integration test: process exceeding PID limit is blocked
 
 **Files:** `pkg/runtime/fast/cgroup.go`
 **Size:** M
@@ -144,14 +144,14 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement seccomp syscall whitelist. Create seccomp profile JSON and apply via `prctl(PR_SET_SECCOMP)`.
 
 **Acceptance criteria:**
-- [ ] Seccomp profile blocks: mount, ptrace, reboot, kexec, bpf, bootctl, swapon, swapoff
-- [ ] Seccomp profile allows: read, write, open, close, stat, fstat, mmap, mprotect, brk, execve, clone, fork, vfork, kill, exit, wait4, kill, gettid, set_tid, set_tid, clock_gettime, clock_nanosleep, nanosleep, getuid, getgid, geteuid, getegid, access, pipe, select, sched_yield, mremap, msync, mincore, madvise, dup, dup2, close, waitpid, sigreturn, io_setup, io_destroy, io_submit, io_cancel, io_getevents, poll, ppoll, pselect6, signalfd, timerfd, eventfd, futex, set_robust_list, get_robust_list, splice, tee, readv, writev, fcntl, flock, fsync, fdatasync, truncate, ftruncate, getdents, getcwd, chdir, mkdir, rmdir, rename, link, symlink, readlink, chmod, chown, lchown, umask, gettimeofday, getrlimit, rusage, sysinfo, times, getuid, getgid, geteuid, getegid, setuid, setgid, getgroups, setgroups, setresuid, setresgid, getresuid, getresgid, prctl, arch_prctl, exit_group, epoll_create, epoll_ctl, epoll_wait, eventfd2, epoll_create1, epoll_ctl, epoll_wait, epoll_pwait, clone3, set_tid, set_robust_list, get_robust_list, rseq
-- [ ] Seccomp applied before process exec
+- [x] Seccomp profile blocks: mount, ptrace, reboot, kexec, bpf, bootctl, swapon, swapoff
+- [x] Seccomp profile allows: read, write, open, close, stat, fstat, mmap, mprotect, brk, execve, clone, fork, vfork, kill, exit, wait4, kill, gettid, set_tid, set_tid, clock_gettime, clock_nanosleep, nanosleep, getuid, getgid, geteuid, getegid, access, pipe, select, sched_yield, mremap, msync, mincore, madvise, dup, dup2, close, waitpid, sigreturn, io_setup, io_destroy, io_submit, io_cancel, io_getevents, poll, ppoll, pselect6, signalfd, timerfd, eventfd, futex, set_robust_list, get_robust_list, splice, tee, readv, writev, fcntl, flock, fsync, fdatasync, truncate, ftruncate, getdents, getcwd, chdir, mkdir, rmdir, rename, link, symlink, readlink, chmod, chown, lchown, umask, gettimeofday, getrlimit, rusage, sysinfo, times, getuid, getgid, geteuid, getegid, setuid, setgid, getgroups, setgroups, setresuid, setresgid, getresuid, getresgid, prctl, arch_prctl, exit_group, epoll_create, epoll_ctl, epoll_wait, eventfd2, epoll_create1, epoll_ctl, epoll_wait, epoll_pwait, clone3, set_tid, set_robust_list, get_robust_list, rseq
+- [x] Seccomp applied before process exec
 
 **Verification:**
-- [ ] `go build ./pkg/runtime/fast/...`
-- [ ] Integration test: sandboxed process cannot call mount syscall
-- [ ] Integration test: sandboxed process cannot ptrace another process
+- [x] `go build ./pkg/runtime/fast/...`
+- [x] Integration test: sandboxed process cannot call mount syscall
+- [x] Integration test: sandboxed process cannot ptrace another process
 
 **Files:** `deploy/security/seccomp-profile.json`, `pkg/runtime/fast/seccomp.go`
 **Size:** M
@@ -162,17 +162,17 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement read-only rootfs mount with writable overlays for workspace, artifacts, caches, /tmp, /home/agent.
 
 **Acceptance criteria:**
-- [ ] Root filesystem is read-only (overlayfs or bind mount)
-- [ ] `/workspace` is writable and contains the repo checkout
-- [ ] `/artifacts` is writable for build outputs
-- [ ] `/cache` directories are writable (npm, pnpm, pip, uv, go-mod, go-build, cargo)
-- [ ] `/tmp` is process-local (tmpfs or bind mount)
-- [ ] `/home/agent` is writable with minimal user config
-- [ ] Host directories are NOT mounted by default
+- [x] Root filesystem is read-only (overlayfs or bind mount)
+- [x] `/workspace` is writable and contains the repo checkout
+- [x] `/artifacts` is writable for build outputs
+- [x] `/cache` directories are writable (npm, pnpm, pip, uv, go-mod, go-build, cargo)
+- [x] `/tmp` is process-local (tmpfs or bind mount)
+- [x] `/home/agent` is writable with minimal user config
+- [x] Host directories are NOT mounted by default
 
 **Verification:**
-- [ ] `go build ./pkg/runtime/fast/...`
-- [ ] Integration test: sandboxed process cannot access host filesystem
+- [x] `go build ./pkg/runtime/fast/...`
+- [x] Integration test: sandboxed process cannot access host filesystem
 
 **Files:** `pkg/runtime/fast/mounts.go`
 **Size:** M
@@ -183,14 +183,14 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement Landlock filesystem access control where kernel supports it (≥ 5.13). Provides additional defense-in-depth beyond mount namespace.
 
 **Acceptance criteria:**
-- [ ] Landlock policy applied if kernel ≥ 5.13
-- [ ] Landlock falls back gracefully if kernel < 5.13 (no error, just mount namespace)
-- [ ] Landlock restricts filesystem access to workspace, artifacts, caches, /tmp, /home/agent
+- [x] Landlock policy applied if kernel ≥ 5.13
+- [x] Landlock falls back gracefully if kernel < 5.13 (no error, just mount namespace)
+- [x] Landlock restricts filesystem access to workspace, artifacts, caches, /tmp, /home/agent
 
 **Verification:**
-- [ ] `go build ./pkg/runtime/fast/...`
-- [ ] Integration test: Landlock active on kernel ≥ 5.13
-- [ ] Integration test: no error on kernel < 5.13
+- [x] `go build ./pkg/runtime/fast/...`
+- [x] Integration test: Landlock active on kernel ≥ 5.13
+- [x] Integration test: no error on kernel < 5.13
 
 **Files:** `pkg/runtime/fast/landlock.go`
 **Size:** S
@@ -198,12 +198,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./pkg/runtime/fast/...` succeeds
-- [ ] Integration tests verify namespace isolation
-- [ ] Integration tests verify cgroup limits
-- [ ] Integration tests verify seccomp blocks dangerous syscalls
-- [ ] Benchmark: warm exec p50 < 10ms (SPEC.md §19)
-- [ ] Benchmark: idle memory < 64 MiB (SPEC.md §19)
+- [x] `go build ./pkg/runtime/fast/...` succeeds
+- [x] Integration tests verify namespace isolation
+- [x] Integration tests verify cgroup limits
+- [x] Integration tests verify seccomp blocks dangerous syscalls
+- [x] Benchmark: warm exec p50 < 10ms (SPEC.md §19)
+- [x] Benchmark: idle memory < 64 MiB (SPEC.md §19)
 
 ## Spec Gaps
 

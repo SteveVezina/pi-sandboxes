@@ -47,11 +47,11 @@ Initial Git support:
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-11.1: `none` mode blocks all outbound network
-- [ ] AC-11.2: `restricted` mode enforces domain allowlist
-- [ ] AC-11.3: `open` mode allows full outbound access
-- [ ] AC-11.4: Default deny: metadata endpoint (169.254.169.254), host localhost, private LANs
-- [ ] AC-11.5: SSH credentials brokered (not dumped into environment)
+- [x] AC-11.1: `none` mode blocks all outbound network
+- [x] AC-11.2: `restricted` mode enforces domain allowlist
+- [x] AC-11.3: `open` mode allows full outbound access
+- [x] AC-11.4: Default deny: metadata endpoint (169.254.169.254), host localhost, private LANs
+- [x] AC-11.5: SSH credentials brokered (not dumped into environment)
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -103,17 +103,17 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement network policy engine. Domain allowlist, default deny, network mode enforcement.
 
 **Acceptance criteria:**
-- [ ] `none` mode: no network access (iptables DROP all or namespace without network)
-- [ ] `restricted` mode: domain allowlist enforced
-- [ ] `open` mode: no restrictions
-- [ ] Default deny: 169.254.169.254, host localhost, private LANs
-- [ ] Domain-aware egress (not IP-based) for dynamic registries
+- [x] `none` mode: no network access (iptables DROP all or namespace without network)
+- [x] `restricted` mode: domain allowlist enforced
+- [x] `open` mode: no restrictions
+- [x] Default deny: 169.254.169.254, host localhost, private LANs
+- [x] Domain-aware egress (not IP-based) for dynamic registries
 
 **Verification:**
-- [ ] `go build ./pkg/network/...`
-- [ ] Integration test: `none` mode blocks all network
-- [ ] Integration test: `restricted` mode allows only allowed domains
-- [ ] Integration test: `open` mode allows all network
+- [x] `go build ./pkg/network/...`
+- [x] Integration test: `none` mode blocks all network
+- [x] Integration test: `restricted` mode allows only allowed domains
+- [x] Integration test: `open` mode allows all network
 
 **Files:** `pkg/network/policy.go`, `pkg/network/modes.go`
 **Size:** M
@@ -124,15 +124,15 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement secret broker for Git credentials. SSH agent forwarding scoped to Git, token credential helper.
 
 **Acceptance criteria:**
-- [ ] SSH credentials forwarded only to Git processes (not shell)
-- [ ] Token credential helper scoped to Git operations
-- [ ] Secrets never appear in sandbox environment variables
-- [ ] Secret exposure scoped per-secret with `exposeTo` policy
+- [x] SSH credentials forwarded only to Git processes (not shell)
+- [x] Token credential helper scoped to Git operations
+- [x] Secrets never appear in sandbox environment variables
+- [x] Secret exposure scoped per-secret with `exposeTo` policy
 
 **Verification:**
-- [ ] `go build ./pkg/secrets/...`
-- [ ] Integration test: SSH credentials not visible in sandbox environment
-- [ ] Integration test: Git clone works with brokered credentials
+- [x] `go build ./pkg/secrets/...`
+- [x] Integration test: SSH credentials not visible in sandbox environment
+- [x] Integration test: Git clone works with brokered credentials
 
 **Files:** `pkg/secrets/broker.go`, `pkg/secrets/ssh.go`, `pkg/secrets/token.go`
 **Size:** M
@@ -140,11 +140,11 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./pkg/network/...` and `go build ./pkg/secrets/...` succeed
-- [ ] Network modes work correctly (none/restricted/open)
-- [ ] Default deny targets blocked
-- [ ] SSH credentials brokered (not in environment)
-- [ ] Git operations work with brokered credentials
+- [x] `go build ./pkg/network/...` and `go build ./pkg/secrets/...` succeed
+- [x] Network modes work correctly (none/restricted/open)
+- [x] Default deny targets blocked
+- [x] SSH credentials brokered (not in environment)
+- [x] Git operations work with brokered credentials
 
 ## Spec Gaps
 

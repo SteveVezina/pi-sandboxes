@@ -32,18 +32,18 @@ The CLI must not implement business logic — all operations go through the daem
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-1.1: `pi box create --name demo --template node-python --mode fast` creates a sandbox via daemon API
-- [ ] AC-1.2: `pi box list` lists all sandboxes by querying the daemon
-- [ ] AC-1.3: `pi box inspect demo` displays sandbox details from daemon
-- [ ] AC-1.4: `pi box destroy demo` sends destroy request to daemon
-- [ ] AC-1.5: `--json` flag produces valid JSON output for all box commands
-- [ ] AC-1.6: `pi system status` shows daemon connection status and sandbox summary
-- [ ] AC-1.7: `pi system doctor` validates configuration and reports issues
-- [ ] AC-1.8: `pi system prune` removes old sandbox state
-- [ ] AC-1.9: `pi system disk-usage` shows storage breakdown by category
-- [ ] AC-1.10: `pi bench run` invokes benchmark suite
-- [ ] AC-1.11: `pi template list/inspect/build/update/prune` commands work
-- [ ] AC-1.12: Error messages are actionable (not just "failed")
+- [x] AC-1.1: `pi box create --name demo --template node-python --mode fast` creates a sandbox via daemon API
+- [x] AC-1.2: `pi box list` lists all sandboxes by querying the daemon
+- [x] AC-1.3: `pi box inspect demo` displays sandbox details from daemon
+- [x] AC-1.4: `pi box destroy demo` sends destroy request to daemon
+- [x] AC-1.5: `--json` flag produces valid JSON output for all box commands
+- [x] AC-1.6: `pi system status` shows daemon connection status and sandbox summary
+- [x] AC-1.7: `pi system doctor` validates configuration and reports issues
+- [x] AC-1.8: `pi system prune` removes old sandbox state
+- [x] AC-1.9: `pi system disk-usage` shows storage breakdown by category
+- [x] AC-1.10: `pi bench run` invokes benchmark suite
+- [x] AC-1.11: `pi template list/inspect/build/update/prune` commands work
+- [x] AC-1.12: Error messages are actionable (not just "failed")
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -101,15 +101,15 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 **Description:** Create the `cmd/pi/` Go module with cobra-based CLI structure. Root command with `box`, `system`, `bench`, `template` subcommand groups. No functionality yet — just the command tree.
 
 **Acceptance criteria:**
-- [ ] `pi --help` shows root command with subcommand groups
-- [ ] `pi box --help` shows all box subcommands
-- [ ] `pi system --help` shows all system subcommands
-- [ ] `pi bench --help` shows bench subcommands
-- [ ] `pi template --help` shows template subcommands
+- [x] `pi --help` shows root command with subcommand groups
+- [x] `pi box --help` shows all box subcommands
+- [x] `pi system --help` shows all system subcommands
+- [x] `pi bench --help` shows bench subcommands
+- [x] `pi template --help` shows template subcommands
 
 **Verification:**
-- [ ] `go build ./cmd/pi/...`
-- [ ] `./bin/pi --help`
+- [x] `go build ./cmd/pi/...`
+- [x] `./bin/pi --help`
 
 **Files:** `cmd/pi/main.go`, `cmd/pi/root.go`, `cmd/pi/box/`, `cmd/pi/system/`, `cmd/pi/bench/`, `cmd/pi/template/`
 **Size:** S
@@ -120,14 +120,14 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 **Description:** Implement `box create/list/inspect/destroy/clone/exec/shell/files/diff/patch/artifacts/snapshot/logs` subcommand stubs that connect to `pi-sandboxd` via Unix socket and print "stub: not yet implemented".
 
 **Acceptance criteria:**
-- [ ] All box subcommands connect to daemon socket
-- [ ] Connection failure shows actionable error (SPEC.md §28)
-- [ ] `--json` flag produces `{"error": "stub", "command": "..."}` for stub commands
+- [x] All box subcommands connect to daemon socket
+- [x] Connection failure shows actionable error (SPEC.md §28)
+- [x] `--json` flag produces `{"error": "stub", "command": "..."}` for stub commands
 
 **Verification:**
-- [ ] `go build ./cmd/pi/...`
-- [ ] `./bin/pi box create --help` works
-- [ ] `./bin/pi box create mybox` shows connection error (no daemon running)
+- [x] `go build ./cmd/pi/...`
+- [x] `./bin/pi box create --help` works
+- [x] `./bin/pi box create mybox` shows connection error (no daemon running)
 
 **Files:** `cmd/pi/box/create.go`, `cmd/pi/box/list.go`, `cmd/pi/box/inspect.go`, `cmd/pi/box/destroy.go`, `cmd/pi/box/clone.go`, `cmd/pi/box/exec.go`, `cmd/pi/box/shell.go`, `cmd/pi/box/files.go`, `cmd/pi/box/diff.go`, `cmd/pi/box/artifacts.go`, `cmd/pi/box/snapshot.go`, `cmd/pi/box/logs.go`
 **Size:** M
@@ -138,14 +138,14 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 **Description:** Implement `system status/doctor/prune/disk-usage` subcommands. These query the daemon for local state information.
 
 **Acceptance criteria:**
-- [ ] `pi system status` shows daemon connection status
-- [ ] `pi system doctor` validates config file and reports issues
-- [ ] `pi system prune` asks for confirmation before removing state
-- [ ] `pi system disk-usage` shows breakdown by category
+- [x] `pi system status` shows daemon connection status
+- [x] `pi system doctor` validates config file and reports issues
+- [x] `pi system prune` asks for confirmation before removing state
+- [x] `pi system disk-usage` shows breakdown by category
 
 **Verification:**
-- [ ] `go build ./cmd/pi/...`
-- [ ] `./bin/pi system status` works with and without daemon
+- [x] `go build ./cmd/pi/...`
+- [x] `./bin/pi system status` works with and without daemon
 
 **Files:** `cmd/pi/system/status.go`, `cmd/pi/system/doctor.go`, `cmd/pi/system/prune.go`, `cmd/pi/system/disk-usage.go`
 **Size:** S
@@ -156,13 +156,13 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 **Description:** Implement `~/.pi/config.yaml` parsing with defaults for runtime mode, network mode, exec timeout, max output, cache settings.
 
 **Acceptance criteria:**
-- [ ] Default config created on first `pi system doctor` run
-- [ ] Config values override CLI flags with lower precedence
-- [ ] Invalid config produces actionable error
+- [x] Default config created on first `pi system doctor` run
+- [x] Config values override CLI flags with lower precedence
+- [x] Invalid config produces actionable error
 
 **Verification:**
-- [ ] `go build ./cmd/pi/...`
-- [ ] Unit tests for config parsing
+- [x] `go build ./cmd/pi/...`
+- [x] Unit tests for config parsing
 
 **Files:** `pkg/cli/config/config.go`, `~/.pi/config.yaml` (created by doctor)
 **Size:** S
@@ -170,11 +170,11 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./cmd/pi/...` succeeds
-- [ ] `./bin/pi --help` shows all subcommand groups
-- [ ] All box commands connect to daemon (or show connection error)
-- [ ] `--json` flag produces valid JSON
-- [ ] Error messages are actionable per SPEC.md §28
+- [x] `go build ./cmd/pi/...` succeeds
+- [x] `./bin/pi --help` shows all subcommand groups
+- [x] All box commands connect to daemon (or show connection error)
+- [x] `--json` flag produces valid JSON
+- [x] Error messages are actionable per SPEC.md §28
 
 ## Spec Gaps
 

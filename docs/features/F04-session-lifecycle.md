@@ -53,12 +53,12 @@ The session manager runs a background goroutine that:
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-8.1: Sandbox created once and kept warm
-- [ ] AC-8.2: Multiple exec calls reuse the same session
-- [ ] AC-8.3: TTL expiration triggers cleanup
-- [ ] AC-8.4: `pi box destroy --all` cleans all sandboxes
-- [ ] AC-8.5: Session state persisted in `~/.pi/sandboxes/<id>/meta.json`
-- [ ] AC-8.6: Orphaned sessions cleaned up on daemon restart
+- [x] AC-8.1: Sandbox created once and kept warm
+- [x] AC-8.2: Multiple exec calls reuse the same session
+- [x] AC-8.3: TTL expiration triggers cleanup
+- [x] AC-8.4: `pi box destroy --all` cleans all sandboxes
+- [x] AC-8.5: Session state persisted in `~/.pi/sandboxes/<id>/meta.json`
+- [x] AC-8.6: Orphaned sessions cleaned up on daemon restart
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -108,16 +108,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement session metadata store under `~/.pi/sandboxes/<id>/meta.json`. CRUD operations for session state.
 
 **Acceptance criteria:**
-- [ ] `Create(name, template, mode)` creates `~/.pi/sandboxes/<id>/meta.json`
-- [ ] `Get(id)` reads and parses metadata
-- [ ] `Update(id, state)` updates state and timestamp
-- [ ] `List()` returns all session IDs with status
-- [ ] `Delete(id)` removes metadata directory
-- [ ] Metadata directory permissions: `0755` (owner read/write/execute, group/others read/execute)
+- [x] `Create(name, template, mode)` creates `~/.pi/sandboxes/<id>/meta.json`
+- [x] `Get(id)` reads and parses metadata
+- [x] `Update(id, state)` updates state and timestamp
+- [x] `List()` returns all session IDs with status
+- [x] `Delete(id)` removes metadata directory
+- [x] Metadata directory permissions: `0755` (owner read/write/execute, group/others read/execute)
 
 **Verification:**
-- [ ] `go build ./pkg/session/...`
-- [ ] Unit tests for CRUD operations
+- [x] `go build ./pkg/session/...`
+- [x] Unit tests for CRUD operations
 
 **Files:** `pkg/session/store.go`, `pkg/session/meta.go`
 **Size:** S
@@ -129,14 +129,14 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement session state machine with lifecycle transitions. State validation prevents invalid transitions.
 
 **Acceptance criteria:**
-- [ ] Valid transitions: CREATING→WARM, WARM→EXECUTING, EXECUTING→WARM, WARM→DESTROYING, EXECUTING→DESTROYING
-- [ ] Invalid transitions are rejected with error
-- [ ] State changes are persisted to meta.json
-- [ ] State is thread-safe (concurrent access from multiple goroutines)
+- [x] Valid transitions: CREATING→WARM, WARM→EXECUTING, EXECUTING→WARM, WARM→DESTROYING, EXECUTING→DESTROYING
+- [x] Invalid transitions are rejected with error
+- [x] State changes are persisted to meta.json
+- [x] State is thread-safe (concurrent access from multiple goroutines)
 
 **Verification:**
-- [ ] `go build ./pkg/session/...`
-- [ ] Unit tests for state transitions
+- [x] `go build ./pkg/session/...`
+- [x] Unit tests for state transitions
 
 **Files:** `pkg/session/state.go`
 **Size:** S
@@ -148,15 +148,15 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement background TTL checker. Runs every 60 seconds, destroys sessions past their TTL.
 
 **Acceptance criteria:**
-- [ ] Background goroutine checks TTL every 60 seconds
-- [ ] Sessions past TTL are marked DESTROYING
-- [ ] TTL calculated from LastUsedAt + TTL seconds
-- [ ] TTL configurable per session (default: 7200s)
-- [ ] TTL disabled when set to 0 (infinite)
+- [x] Background goroutine checks TTL every 60 seconds
+- [x] Sessions past TTL are marked DESTROYING
+- [x] TTL calculated from LastUsedAt + TTL seconds
+- [x] TTL configurable per session (default: 7200s)
+- [x] TTL disabled when set to 0 (infinite)
 
 **Verification:**
-- [ ] `go build ./pkg/session/...`
-- [ ] Integration test: session destroyed after TTL expires
+- [x] `go build ./pkg/session/...`
+- [x] Integration test: session destroyed after TTL expires
 
 **Files:** `pkg/session/ttl.go`
 **Size:** S
@@ -168,14 +168,14 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** On daemon start, scan for sessions in non-terminal states (CREATING, EXECUTING) that have no running backend process. Mark them as DESTROYED.
 
 **Acceptance criteria:**
-- [ ] On startup, scan all sessions in ~/.pi/sandboxes/
-- [ ] Sessions with no running process are marked DESTROYED
-- [ ] Orphan cleanup is logged
-- [ ] Orphan cleanup does not delete workspace/artifacts (metadata only)
+- [x] On startup, scan all sessions in ~/.pi/sandboxes/
+- [x] Sessions with no running process are marked DESTROYED
+- [x] Orphan cleanup is logged
+- [x] Orphan cleanup does not delete workspace/artifacts (metadata only)
 
 **Verification:**
-- [ ] `go build ./pkg/session/...`
-- [ ] Integration test: orphan session cleaned up on restart
+- [x] `go build ./pkg/session/...`
+- [x] Integration test: orphan session cleaned up on restart
 
 **Files:** `pkg/session/orphans.go`
 **Size:** S
@@ -184,12 +184,13 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./pkg/session/...` succeeds
-- [ ] Unit tests for metadata CRUD
-- [ ] Unit tests for state machine transitions
-- [ ] Integration test: TTL expiration triggers destroy
-- [ ] Integration test: orphan cleanup on restart
-- [ ] `pi box destroy --all` cleans all sandboxes
+- [x] `go build ./pkg/session/...` succeeds
+- [x] Unit tests for metadata CRUD
+- [x] Unit tests for state machine transitions
+- [x] Integration test: TTL expiration triggers destroy
+- [x] Integration test: orphan cleanup on restart
+- [x] `pi box destroy --all` cleans all sandboxes
+- [x] AC-8.4: `pi box destroy --all` via cobra `--all` flag (`tests/box/box_ac_test.go::TestBoxDestroyAll_CleansAllSandboxes`)
 
 ## Spec Gaps
 

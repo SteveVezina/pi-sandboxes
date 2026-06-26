@@ -46,10 +46,10 @@ For now, the MVP uses filesystem-level snapshots.
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-13.1: `pi box snapshot <id> <name>` creates a named snapshot
-- [ ] AC-13.2: `pi box rollback <id> <name>` restores to snapshot
-- [ ] AC-13.3: Snapshot creation uses overlay upperdir or reflink
-- [ ] AC-13.4: Snapshot metadata stored under `~/.pi/sandboxes/<id>/snapshots/`
+- [x] AC-13.1: `pi box snapshot <id> <name>` creates a named snapshot
+- [x] AC-13.2: `pi box rollback <id> <name>` restores to snapshot
+- [x] AC-13.3: Snapshot creation uses overlay upperdir or reflink
+- [x] AC-13.4: Snapshot metadata stored under `~/.pi/sandboxes/<id>/snapshots/`
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -99,17 +99,17 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement snapshot creation using overlay upperdir copy or reflink.
 
 **Acceptance criteria:**
-- [ ] `pi box snapshot demo before-refactor` creates named snapshot
-- [ ] Snapshot uses overlay upperdir copy (fast mode)
-- [ ] Snapshot uses reflink if filesystem supports it (btrfs, xfs)
-- [ ] Snapshot falls back to tar/zstd if reflink unavailable
-- [ ] Snapshot metadata stored under `~/.pi/sandboxes/<id>/snapshots/<name>/meta.json`
-- [ ] Snapshot size validated before creation (prevent disk exhaustion)
+- [x] `pi box snapshot demo before-refactor` creates named snapshot
+- [x] Snapshot uses overlay upperdir copy (fast mode)
+- [x] Snapshot uses reflink if filesystem supports it (btrfs, xfs)
+- [x] Snapshot falls back to tar/zstd if reflink unavailable
+- [x] Snapshot metadata stored under `~/.pi/sandboxes/<id>/snapshots/<name>/meta.json`
+- [x] Snapshot size validated before creation (prevent disk exhaustion)
 
 **Verification:**
-- [ ] `go build ./pkg/snapshot/...`
-- [ ] Integration test: snapshot created successfully
-- [ ] Integration test: snapshot uses reflink on supported filesystem
+- [x] `go build ./pkg/snapshot/...`
+- [x] Integration test: snapshot created successfully
+- [x] Integration test: snapshot uses reflink on supported filesystem
 
 **Files:** `pkg/snapshot/create.go`, `pkg/snapshot/metadata.go`
 **Size:** M
@@ -120,16 +120,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement snapshot listing and rollback.
 
 **Acceptance criteria:**
-- [ ] `pi box snapshots demo` lists all snapshots with timestamps
-- [ ] `pi box rollback demo before-refactor` restores workspace to snapshot
-- [ ] Rollback overwrites workspace with snapshot contents
-- [ ] Rollback asks for confirmation (destructive operation)
-- [ ] `pi box snapshot delete demo before-refactor` removes snapshot
+- [x] `pi box snapshots demo` lists all snapshots with timestamps
+- [x] `pi box rollback demo before-refactor` restores workspace to snapshot
+- [x] Rollback overwrites workspace with snapshot contents
+- [x] Rollback asks for confirmation (destructive operation)
+- [x] `pi box snapshot delete demo before-refactor` removes snapshot
 
 **Verification:**
-- [ ] `go build ./pkg/snapshot/...`
-- [ ] Integration test: rollback restores correct state
-- [ ] Integration test: delete removes snapshot
+- [x] `go build ./pkg/snapshot/...`
+- [x] Integration test: rollback restores correct state
+- [x] Integration test: delete removes snapshot
 
 **Files:** `pkg/snapshot/list.go`, `pkg/snapshot/rollback.go`, `pkg/snapshot/delete.go`
 **Size:** M
@@ -137,13 +137,13 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./pkg/snapshot/...` succeeds
-- [ ] Snapshot creation works with overlay/reflink/tar fallback
-- [ ] Snapshot listing shows all snapshots
-- [ ] Rollback restores correct state
-- [ ] Delete removes snapshot
-- [ ] Benchmark: snapshot_create < 500ms (SPEC.md §19)
-- [ ] Benchmark: snapshot_rollback < 500ms (SPEC.md §19)
+- [x] `go build ./pkg/snapshot/...` succeeds
+- [x] Snapshot creation works with overlay/reflink/tar fallback
+- [x] Snapshot listing shows all snapshots
+- [x] Rollback restores correct state
+- [x] Delete removes snapshot
+- [x] Benchmark: snapshot_create < 500ms (SPEC.md §19)
+- [x] Benchmark: snapshot_rollback < 500ms (SPEC.md §19)
 
 ## Spec Gaps
 

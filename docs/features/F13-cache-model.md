@@ -46,9 +46,9 @@ Cache directories stored under `~/.pi/caches/<scope>/` where scope is `<template
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-12.1: `/cache/npm`, `/cache/pnpm`, `/cache/pip`, `/cache/uv`, `/cache/go-mod`, `/cache/go-build`, `/cache/cargo` mounted
-- [ ] AC-12.2: Caches scoped by template/runtime/user
-- [ ] AC-12.3: `pi system prune` can clean caches
+- [x] AC-12.1: `/cache/npm`, `/cache/pnpm`, `/cache/pip`, `/cache/uv`, `/cache/go-mod`, `/cache/go-build`, `/cache/cargo` mounted
+- [x] AC-12.2: Caches scoped by template/runtime/user
+- [x] AC-12.3: `pi system prune` can clean caches
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -99,15 +99,15 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement cache mount management. Scoped cache directories, mount into sandbox sessions.
 
 **Acceptance criteria:**
-- [ ] Cache directories created under `~/.pi/caches/<scope>/`
-- [ ] All 7 cache types mounted: npm, pnpm, pip, uv, go-mod, go-build, cargo
-- [ ] Caches scoped by template/runtime/user
-- [ ] Caches mounted as read-write in sandbox
-- [ ] Cache directories have correct permissions
+- [x] Cache directories created under `~/.pi/caches/<scope>/`
+- [x] All 7 cache types mounted: npm, pnpm, pip, uv, go-mod, go-build, cargo
+- [x] Caches scoped by template/runtime/user
+- [x] Caches mounted as read-write in sandbox
+- [x] Cache directories have correct permissions
 
 **Verification:**
-- [ ] `go build ./pkg/cache/...`
-- [ ] Integration test: cache mounts visible in sandbox
+- [x] `go build ./pkg/cache/...`
+- [x] Integration test: cache mounts visible in sandbox
 
 **Files:** `pkg/cache/mounts.go`, `pkg/cache/scope.go`
 **Size:** M
@@ -118,14 +118,14 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement cache pruning. Remove unused caches, respect size limits.
 
 **Acceptance criteria:**
-- [ ] `pi system prune` cleans unused caches
-- [ ] Cache size limit configurable (default: 50Gi)
-- [ ] Unused caches detected (no active sessions using them)
-- [ ] Pruning is safe (doesn't delete active session caches)
+- [x] `pi system prune` cleans unused caches
+- [x] Cache size limit configurable (default: 50Gi)
+- [x] Unused caches detected (no active sessions using them)
+- [x] Pruning is safe (doesn't delete active session caches)
 
 **Verification:**
-- [ ] `go build ./pkg/cache/...`
-- [ ] Integration test: prune removes unused caches
+- [x] `go build ./pkg/cache/...`
+- [x] Integration test: prune removes unused caches
 
 **Files:** `pkg/cache/prune.go`
 **Size:** S
@@ -133,12 +133,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./pkg/cache/...` succeeds
-- [ ] All 7 cache types mounted correctly
-- [ ] Caches scoped per template/runtime/user
-- [ ] `pi system prune` cleans unused caches
-- [ ] Benchmark: pnpm_install_cached p50 < 2s (SPEC.md §19)
-- [ ] Benchmark: uv_sync_cached p50 < 2s (SPEC.md §19)
+- [x] `go build ./pkg/cache/...` succeeds
+- [x] All 7 cache types mounted correctly
+- [x] Caches scoped per template/runtime/user
+- [x] `pi system prune` cleans unused caches
+- [x] Benchmark: pnpm_install_cached p50 < 2s (SPEC.md §19)
+- [x] Benchmark: uv_sync_cached p50 < 2s (SPEC.md §19)
 
 ## Spec Gaps
 

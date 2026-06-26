@@ -70,8 +70,36 @@ func TestStats_P50_P95(t *testing.T) {
 
 func TestAll_BenchmarksExist(t *testing.T) {
 	benchmarks := bench.All()
-	if len(benchmarks) < 5 {
-		t.Errorf("Expected >= 5 benchmarks, got %d", len(benchmarks))
+	// SPEC.md AC-14 requires all 13 benchmarks to be registered (even if some are
+	// Disabled on hosts where the required tools aren't available).
+	if len(benchmarks) != 13 {
+		t.Errorf("Expected exactly 13 benchmarks (per SPEC.md AC-14), got %d", len(benchmarks))
+	}
+	// Every benchmark must have a non-empty Name and a non-nil Func.
+	for _, b := range benchmarks {
+		if b.Name == "" {
+			t.Errorf("benchmark has empty Name")
+		}
+		if b.Func == nil {
+			t.Errorf("benchmark %q has nil Func", b.Name)
+		}
+	}
+
+	// Verify all 13 SPEC-required benchmark names are present.
+	required := []string{
+		"warm_exec_echo", "warm_exec_shell", "file_scan_rg", "git_clone_small",
+		"pnpm_install_cached", "uv_sync_cached", "go_test_cached", "cargo_test_cached",
+		"snapshot_create", "snapshot_rollback",
+		"artifact_export_20mb", "parallel_10", "parallel_100",
+	}
+	names := make(map[string]bool, len(benchmarks))
+	for _, b := range benchmarks {
+		names[b.Name] = true
+	}
+	for _, r := range required {
+		if !names[r] {
+			t.Errorf("missing required benchmark %q (SPEC.md AC-14)", r)
+		}
 	}
 }
 

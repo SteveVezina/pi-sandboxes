@@ -47,14 +47,14 @@ The daemon is stateless in terms of business logic — it delegates to backend i
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-2.1: `pi-sandboxd` listens on `~/.pi/sandboxd.sock`
-- [ ] AC-2.2: `POST /v1/sandboxes` creates a sandbox
-- [ ] AC-2.3: `GET /v1/sandboxes` lists sandboxes
-- [ ] AC-2.4: `GET /v1/sandboxes/{id}` returns sandbox state
-- [ ] AC-2.5: `DELETE /v1/sandboxes/{id}` destroys a sandbox
-- [ ] AC-2.6: All 14 endpoints respond with JSON
-- [ ] AC-2.7: Errors are actionable (SPEC.md §28 format)
-- [ ] AC-2.8: Optional localhost HTTP on `127.0.0.1:7777` for dev
+- [x] AC-2.1: `pi-sandboxd` listens on `~/.pi/sandboxd.sock`
+- [x] AC-2.2: `POST /v1/sandboxes` creates a sandbox
+- [x] AC-2.3: `GET /v1/sandboxes` lists sandboxes
+- [x] AC-2.4: `GET /v1/sandboxes/{id}` returns sandbox state
+- [x] AC-2.5: `DELETE /v1/sandboxes/{id}` destroys a sandbox
+- [x] AC-2.6: All 14 endpoints respond with JSON
+- [x] AC-2.7: Errors are actionable (SPEC.md §28 format)
+- [x] AC-2.8: Optional localhost HTTP on `127.0.0.1:7777` for dev
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -113,14 +113,14 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 **Description:** Create `cmd/pi-sandboxd/` with daemon lifecycle management. Unix socket listener, optional localhost HTTP, health check endpoint (`GET /health`).
 
 **Acceptance criteria:**
-- [ ] Daemon starts and listens on `~/.pi/sandboxd.sock`
-- [ ] `GET /health` returns `{"status": "ok"}`
-- [ ] Daemon creates `~/.pi/` directory if missing
-- [ ] Optional `--http-port` flag enables `127.0.0.1:7777`
+- [x] Daemon starts and listens on `~/.pi/sandboxd.sock`
+- [x] `GET /health` returns `{"status": "ok"}`
+- [x] Daemon creates `~/.pi/` directory if missing
+- [x] Optional `--http-port` flag enables `127.0.0.1:7777`
 
 **Verification:**
-- [ ] `go build ./cmd/pi-sandboxd/...`
-- [ ] `curl --unix ~/.pi/sandboxd.sock http://localhost/health`
+- [x] `go build ./cmd/pi-sandboxd/...`
+- [x] `curl --unix ~/.pi/sandboxd.sock http://localhost/health`
 
 **Files:** `cmd/pi-sandboxd/main.go`, `cmd/pi-sandboxd/daemon.go`, `pkg/daemon/listener.go`
 **Size:** S
@@ -131,15 +131,15 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 **Description:** Implement `/v1/sandboxes` CRUD endpoints (POST, GET list, GET by ID, DELETE). Each returns JSON responses per the Interface Contract (SPEC.md §9).
 
 **Acceptance criteria:**
-- [ ] `POST /v1/sandboxes` creates sandbox metadata and returns sandbox ID
-- [ ] `GET /v1/sandboxes` returns list of sandbox IDs with status
-- [ ] `GET /v1/sandboxes/{id}` returns full sandbox state
-- [ ] `DELETE /v1/sandboxes/{id}` marks sandbox for cleanup and returns 200
-- [ ] All endpoints return structured JSON responses
+- [x] `POST /v1/sandboxes` creates sandbox metadata and returns sandbox ID
+- [x] `GET /v1/sandboxes` returns list of sandbox IDs with status
+- [x] `GET /v1/sandboxes/{id}` returns full sandbox state
+- [x] `DELETE /v1/sandboxes/{id}` marks sandbox for cleanup and returns 200
+- [x] All endpoints return structured JSON responses
 
 **Verification:**
-- [ ] `go build ./cmd/pi-sandboxd/...`
-- [ ] Integration tests against mock daemon
+- [x] `go build ./cmd/pi-sandboxd/...`
+- [x] Integration tests against mock daemon
 
 **Files:** `pkg/api/sandbox_create.go`, `pkg/api/sandbox_list.go`, `pkg/api/sandbox_get.go`, `pkg/api/sandbox_delete.go`
 **Size:** M
@@ -150,15 +150,15 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 **Description:** Implement clone, files read/write, diff, patch endpoints.
 
 **Acceptance criteria:**
-- [ ] `POST /v1/sandboxes/{id}/clone` accepts repo URL and returns task ID
-- [ ] `POST /v1/sandboxes/{id}/files/write` writes file to workspace
-- [ ] `GET /v1/sandboxes/{id}/files/read` returns file content
-- [ ] `GET /v1/sandboxes/{id}/diff` returns workspace diff
-- [ ] `GET /v1/sandboxes/{id}/patch` returns workspace patch
+- [x] `POST /v1/sandboxes/{id}/clone` accepts repo URL and returns task ID
+- [x] `POST /v1/sandboxes/{id}/files/write` writes file to workspace
+- [x] `GET /v1/sandboxes/{id}/files/read` returns file content
+- [x] `GET /v1/sandboxes/{id}/diff` returns workspace diff
+- [x] `GET /v1/sandboxes/{id}/patch` returns workspace patch
 
 **Verification:**
-- [ ] `go build ./cmd/pi-sandboxd/...`
-- [ ] Integration tests
+- [x] `go build ./cmd/pi-sandboxd/...`
+- [x] Integration tests
 
 **Files:** `pkg/api/sandbox_clone.go`, `pkg/api/files_read.go`, `pkg/api/files_write.go`, `pkg/api/sandbox_diff.go`, `pkg/api/sandbox_patch.go`
 **Size:** M
@@ -169,15 +169,15 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 **Description:** Implement exec (streaming), artifacts export, snapshot, rollback, and logs endpoints.
 
 **Acceptance criteria:**
-- [ ] `POST /v1/sandboxes/{id}/exec` accepts command, streams stdout/stderr, returns exit code/duration/truncated/timedOut
-- [ ] `POST /v1/sandboxes/{id}/artifacts/export` exports artifacts
-- [ ] `POST /v1/sandboxes/{id}/snapshot` creates snapshot
-- [ ] `POST /v1/sandboxes/{id}/rollback` restores snapshot
-- [ ] `GET /v1/sandboxes/{id}/logs` returns command history
+- [x] `POST /v1/sandboxes/{id}/exec` accepts command, streams stdout/stderr, returns exit code/duration/truncated/timedOut
+- [x] `POST /v1/sandboxes/{id}/artifacts/export` exports artifacts
+- [x] `POST /v1/sandboxes/{id}/snapshot` creates snapshot
+- [x] `POST /v1/sandboxes/{id}/rollback` restores snapshot
+- [x] `GET /v1/sandboxes/{id}/logs` returns command history
 
 **Verification:**
-- [ ] `go build ./cmd/pi-sandboxd/...`
-- [ ] Integration tests
+- [x] `go build ./cmd/pi-sandboxd/...`
+- [x] Integration tests
 
 **Files:** `pkg/api/sandbox_exec.go`, `pkg/api/artifacts_export.go`, `pkg/api/sandbox_snapshot.go`, `pkg/api/sandbox_rollback.go`, `pkg/api/sandbox_logs.go`
 **Size:** M
@@ -185,11 +185,11 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./cmd/pi-sandboxd/...` succeeds
-- [ ] All 14 endpoints respond with JSON
-- [ ] Health check returns `{"status": "ok"}`
-- [ ] CRUD operations work with metadata store
-- [ ] Errors are actionable per SPEC.md §28
+- [x] `go build ./cmd/pi-sandboxd/...` succeeds
+- [x] All 14 endpoints respond with JSON
+- [x] Health check returns `{"status": "ok"}`
+- [x] CRUD operations work with metadata store
+- [x] Errors are actionable per SPEC.md §28
 
 ## Spec Gaps
 

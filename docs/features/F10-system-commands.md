@@ -44,10 +44,10 @@ pi system disk-usage
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-16.1: `pi system status` shows daemon and sandbox status
-- [ ] AC-16.2: `pi system doctor` validates configuration
-- [ ] AC-16.3: `pi system prune` cleans old state
-- [ ] AC-16.4: `pi system disk-usage` shows storage breakdown
+- [x] AC-16.1: `pi system status` shows daemon and sandbox status
+- [x] AC-16.2: `pi system doctor` validates configuration
+- [x] AC-16.3: `pi system prune` cleans old state
+- [x] AC-16.4: `pi system disk-usage` shows storage breakdown
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -94,14 +94,14 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement `pi system status` showing daemon connection and sandbox summary.
 
 **Acceptance criteria:**
-- [ ] Shows daemon connection status (connected/disconnected)
-- [ ] Shows number of active sandboxes (WARM + EXECUTING states)
-- [ ] Shows total sandbox count
-- [ ] Shows `~/.pi/` directory existence
+- [x] Shows daemon connection status (connected/disconnected)
+- [x] Shows number of active sandboxes (WARM + EXECUTING states)
+- [x] Shows total sandbox count
+- [x] Shows `~/.pi/` directory existence
 
 **Verification:**
-- [ ] `go build ./cmd/pi/...`
-- [ ] Integration test: status with and without daemon
+- [x] `go build ./cmd/pi/...`
+- [x] Integration test: status with and without daemon
 
 **Files:** `pkg/system/status.go`, `cmd/pi/system/status.go`
 **Size:** S
@@ -112,16 +112,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement `pi system doctor` validating configuration and reporting issues.
 
 **Acceptance criteria:**
-- [ ] Checks `~/.pi/config.yaml` exists and is valid YAML
-- [ ] Checks required directories exist (`sandboxes/`, `templates/`)
-- [ ] Checks disk space (warns if < 1GiB free)
-- [ ] Checks filesystem permissions on `~/.pi/`
-- [ ] Reports issues with actionable recommendations
-- [ ] Creates default config if missing (non-destructive)
+- [x] Checks `~/.pi/config.yaml` exists and is valid YAML
+- [x] Checks required directories exist (`sandboxes/`, `templates/`)
+- [x] Checks disk space (warns if < 1GiB free)
+- [x] Checks filesystem permissions on `~/.pi/`
+- [x] Reports issues with actionable recommendations
+- [x] Creates default config if missing (non-destructive)
 
 **Verification:**
-- [ ] `go build ./cmd/pi/...`
-- [ ] Integration test: doctor with valid and invalid config
+- [x] `go build ./cmd/pi/...`
+- [x] Integration test: doctor with valid and invalid config
 
 **Files:** `pkg/system/doctor.go`, `cmd/pi/system/doctor.go`
 **Size:** S
@@ -132,15 +132,15 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement `pi system prune` removing old sandbox state.
 
 **Acceptance criteria:**
-- [ ] Removes destroyed sandbox metadata
-- [ ] Removes orphaned sandbox data (no corresponding metadata)
-- [ ] Removes old log files (> 30 days)
-- [ ] Asks for confirmation before destructive operations
-- [ ] `--yes` flag skips confirmation
+- [x] Removes destroyed sandbox metadata
+- [x] Removes orphaned sandbox data (no corresponding metadata)
+- [x] Removes old log files (> 30 days)
+- [x] Asks for confirmation before destructive operations
+- [x] `--yes` flag skips confirmation
 
 **Verification:**
-- [ ] `go build ./cmd/pi/...`
-- [ ] Integration test: prune removes old state
+- [x] `go build ./cmd/pi/...`
+- [x] Integration test: prune removes old state
 
 **Files:** `pkg/system/prune.go`, `cmd/pi/system/prune.go`
 **Size:** S
@@ -151,17 +151,17 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement `pi system disk-usage` showing storage breakdown.
 
 **Acceptance criteria:**
-- [ ] Shows size of `sandboxes/` directory
-- [ ] Shows size of `templates/` directory
-- [ ] Shows size of `caches/` directory
-- [ ] Shows size of `images/` directory
-- [ ] Shows size of `logs/` directory
-- [ ] Shows total size
-- [ ] Output is human-readable (MiB/GiB)
+- [x] Shows size of `sandboxes/` directory
+- [x] Shows size of `templates/` directory
+- [x] Shows size of `caches/` directory
+- [x] Shows size of `images/` directory
+- [x] Shows size of `logs/` directory
+- [x] Shows total size
+- [x] Output is human-readable (MiB/GiB)
 
 **Verification:**
-- [ ] `go build ./cmd/pi/...`
-- [ ] Integration test: disk-usage shows correct sizes
+- [x] `go build ./cmd/pi/...`
+- [x] Integration test: disk-usage shows correct sizes
 
 **Files:** `pkg/system/disk-usage.go`, `cmd/pi/system/disk-usage.go`
 **Size:** S
@@ -169,11 +169,11 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./cmd/pi/...` succeeds
-- [ ] All 4 system commands work
-- [ ] `pi system doctor` detects and reports issues
-- [ ] `pi system prune` removes old state safely
-- [ ] `pi system disk-usage` shows correct breakdown
+- [x] `go build ./cmd/pi/...` succeeds
+- [x] All 4 system commands work
+- [x] `pi system doctor` detects and reports issues
+- [x] `pi system prune` removes old state safely
+- [x] `pi system disk-usage` shows correct breakdown
 
 ## Spec Gaps
 

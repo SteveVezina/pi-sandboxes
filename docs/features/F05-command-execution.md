@@ -62,12 +62,12 @@ CLI flags:
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-7.1: `pi box exec <id> -- <cmd>` runs command with streaming stdout/stderr
-- [ ] AC-7.2: Exit code returned accurately
-- [ ] AC-7.3: Timeout status reported when exceeded
-- [ ] AC-7.4: Output truncated when exceeding maxOutput, with `truncated` flag
-- [ ] AC-7.5: `--cwd`, `--timeout`, `--max-output`, `--memory`, `--cpu`, `--json` options honored
-- [ ] AC-7.6: Exec overhead p50 < 10ms in fast mode (SPEC.md §19)
+- [x] AC-7.1: `pi box exec <id> -- <cmd>` runs command with streaming stdout/stderr
+- [x] AC-7.2: Exit code returned accurately
+- [x] AC-7.3: Timeout status reported when exceeded
+- [x] AC-7.4: Output truncated when exceeding maxOutput, with `truncated` flag
+- [x] AC-7.5: `--cwd`, `--timeout`, `--max-output`, `--memory`, `--cpu`, `--json` options honored
+- [x] AC-7.6: Exec overhead p50 < 10ms in fast mode (SPEC.md §19)
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -121,17 +121,17 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement the exec engine that starts a process in the sandbox, streams stdout/stderr, enforces timeout and output limits, and returns the result.
 
 **Acceptance criteria:**
-- [ ] Command starts in sandbox with specified cwd
-- [ ] stdout/stderr streamed to caller
-- [ ] Timeout kills command and sets `timedOut: true`
-- [ ] Output truncated at maxOutputBytes with `truncated: true`
-- [ ] Exit code captured accurately
-- [ ] Duration measured from start to exit
+- [x] Command starts in sandbox with specified cwd
+- [x] stdout/stderr streamed to caller
+- [x] Timeout kills command and sets `timedOut: true`
+- [x] Output truncated at maxOutputBytes with `truncated: true`
+- [x] Exit code captured accurately
+- [x] Duration measured from start to exit
 
 **Verification:**
-- [ ] `go build ./pkg/exec/...`
-- [ ] Unit tests for timeout and truncation logic
-- [ ] Integration test: command runs and returns exit code
+- [x] `go build ./pkg/exec/...`
+- [x] Unit tests for timeout and truncation logic
+- [x] Integration test: command runs and returns exit code
 
 **Files:** `pkg/exec/engine.go`
 **Size:** M
@@ -142,15 +142,15 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement `POST /v1/sandboxes/{id}/exec` endpoint. Accepts exec request, delegates to engine, streams response.
 
 **Acceptance criteria:**
-- [ ] Endpoint accepts exec request JSON
-- [ ] Streaming stdout/stderr via SSE or chunked transfer
-- [ ] Response includes exitCode, durationMs, stdout, stderr, truncated, timedOut
-- [ ] Timeout in HTTP layer (request doesn't hang indefinitely)
-- [ ] Error responses are actionable per SPEC.md §28
+- [x] Endpoint accepts exec request JSON
+- [x] Streaming stdout/stderr via SSE or chunked transfer
+- [x] Response includes exitCode, durationMs, stdout, stderr, truncated, timedOut
+- [x] Timeout in HTTP layer (request doesn't hang indefinitely)
+- [x] Error responses are actionable per SPEC.md §28
 
 **Verification:**
-- [ ] `go build ./cmd/pi-sandboxd/...`
-- [ ] Integration test: exec endpoint returns correct response
+- [x] `go build ./cmd/pi-sandboxd/...`
+- [x] Integration test: exec endpoint returns correct response
 
 **Files:** `pkg/api/sandbox_exec.go`
 **Size:** S
@@ -161,16 +161,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement `pi box exec <name> -- <cmd>` with all flags (cwd, timeout, max-output, memory, cpu, network, json).
 
 **Acceptance criteria:**
-- [ ] `pi box exec demo -- pnpm test` runs command
-- [ ] `--cwd /workspace` sets working directory
-- [ ] `--timeout 60s` sets timeout
-- [ ] `--max-output 8MiB` sets output limit
-- [ ] `--json` produces JSON output
-- [ ] Streaming output displayed in real-time for interactive use
+- [x] `pi box exec demo -- pnpm test` runs command
+- [x] `--cwd /workspace` sets working directory
+- [x] `--timeout 60s` sets timeout
+- [x] `--max-output 8MiB` sets output limit
+- [x] `--json` produces JSON output
+- [x] Streaming output displayed in real-time for interactive use
 
 **Verification:**
-- [ ] `go build ./cmd/pi/...`
-- [ ] Integration test: CLI exec works with daemon
+- [x] `go build ./cmd/pi/...`
+- [x] Integration test: CLI exec works with daemon
 
 **Files:** `cmd/pi/box/exec.go`
 **Size:** S
@@ -178,12 +178,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./pkg/exec/...` succeeds
-- [ ] Exec engine handles timeout correctly
-- [ ] Exec engine handles output truncation correctly
-- [ ] Exec API endpoint streams response
-- [ ] CLI exec command works end-to-end
-- [ ] Benchmark: warm exec p50 < 10ms (fast mode)
+- [x] `go build ./pkg/exec/...` succeeds
+- [x] Exec engine handles timeout correctly
+- [x] Exec engine handles output truncation correctly
+- [x] Exec API endpoint streams response
+- [x] CLI exec command works end-to-end
+- [x] Benchmark: warm exec p50 < 10ms (fast mode)
 
 ## Spec Gaps
 

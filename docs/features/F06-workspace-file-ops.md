@@ -46,13 +46,13 @@ pi box files push <name> <src> <dest>
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-6.1: `pi box clone <repo>` clones a repository into sandbox workspace
-- [ ] AC-6.2: `pi box files read <id> <path>` reads a file from sandbox
-- [ ] AC-6.3: `pi box files write <id> <path>` writes a file to sandbox
-- [ ] AC-6.4: `pi box diff <id>` shows workspace diff
-- [ ] AC-6.5: `pi box patch <id>` exports workspace as patch
-- [ ] AC-6.6: Clone supports HTTPS and SSH URLs
-- [ ] AC-6.7: SSH credentials brokered (not blindly mounted)
+- [x] AC-6.1: `pi box clone <repo>` clones a repository into sandbox workspace
+- [x] AC-6.2: `pi box files read <id> <path>` reads a file from sandbox
+- [x] AC-6.3: `pi box files write <id> <path>` writes a file to sandbox
+- [x] AC-6.4: `pi box diff <id>` shows workspace diff
+- [x] AC-6.5: `pi box patch <id>` exports workspace as patch
+- [x] AC-6.6: Clone supports HTTPS and SSH URLs
+- [x] AC-6.7: SSH credentials brokered (not blindly mounted)
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -102,17 +102,17 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement repository clone into sandbox workspace. Supports HTTPS and SSH URLs. SSH credentials brokered via credential helper.
 
 **Acceptance criteria:**
-- [ ] `pi box clone demo https://github.com/acme/app` clones repo
-- [ ] `pi box clone demo git@github.com:acme/app.git` clones via SSH
-- [ ] HTTPS clone uses credentials from config or prompts user
-- [ ] SSH clone uses brokered credentials (not mounted into sandbox)
-- [ ] Clone URL validated (rejects file://, git:// by default)
-- [ ] Workspace directory created if missing
+- [x] `pi box clone demo https://github.com/acme/app` clones repo
+- [x] `pi box clone demo git@github.com:acme/app.git` clones via SSH
+- [x] HTTPS clone uses credentials from config or prompts user
+- [x] SSH clone uses brokered credentials (not mounted into sandbox)
+- [x] Clone URL validated (rejects file://, git:// by default)
+- [x] Workspace directory created if missing
 
 **Verification:**
-- [ ] `go build ./pkg/workspace/...`
-- [ ] Integration test: clone HTTPS repository
-- [ ] Integration test: clone SSH repository with brokered credentials
+- [x] `go build ./pkg/workspace/...`
+- [x] Integration test: clone HTTPS repository
+- [x] Integration test: clone SSH repository with brokered credentials
 
 **Files:** `pkg/workspace/clone.go`, `pkg/git/clone.go`
 **Size:** M
@@ -123,16 +123,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement file read and write operations inside sandbox workspace.
 
 **Acceptance criteria:**
-- [ ] `files read` returns file content as string
-- [ ] `files write` creates parent directories if needed
-- [ ] File paths validated against workspace directory (no path traversal)
-- [ ] Binary files handled correctly (read as bytes, write as bytes)
-- [ ] Large files streamed (not loaded entirely into memory)
+- [x] `files read` returns file content as string
+- [x] `files write` creates parent directories if needed
+- [x] File paths validated against workspace directory (no path traversal)
+- [x] Binary files handled correctly (read as bytes, write as bytes)
+- [x] Large files streamed (not loaded entirely into memory)
 
 **Verification:**
-- [ ] `go build ./pkg/workspace/...`
-- [ ] Unit tests for path traversal prevention
-- [ ] Integration test: read/write files in sandbox
+- [x] `go build ./pkg/workspace/...`
+- [x] Unit tests for path traversal prevention
+- [x] Integration test: read/write files in sandbox
 
 **Files:** `pkg/workspace/files_read.go`, `pkg/workspace/files_write.go`
 **Size:** M
@@ -143,16 +143,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement git diff and patch export from workspace.
 
 **Acceptance criteria:**
-- [ ] `pi box diff <id>` returns unified diff of workspace changes
-- [ ] `pi box patch <id>` returns git patch format
-- [ ] Diff includes both staged and unstaged changes
-- [ ] Patch can be applied with `git apply`
-- [ ] Empty workspace returns empty diff/patch
+- [x] `pi box diff <id>` returns unified diff of workspace changes
+- [x] `pi box patch <id>` returns git patch format
+- [x] Diff includes both staged and unstaged changes
+- [x] Patch can be applied with `git apply`
+- [x] Empty workspace returns empty diff/patch
 
 **Verification:**
-- [ ] `go build ./pkg/workspace/...`
-- [ ] Integration test: diff shows changes after file write
-- [ ] Integration test: patch applies cleanly with `git apply`
+- [x] `go build ./pkg/workspace/...`
+- [x] Integration test: diff shows changes after file write
+- [x] Integration test: patch applies cleanly with `git apply`
 
 **Files:** `pkg/workspace/diff.go`, `pkg/workspace/patch.go`, `pkg/git/diff.go`, `pkg/git/patch.go`
 **Size:** S
@@ -163,14 +163,14 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement file pull (sandbox → host) and push (host → sandbox) operations.
 
 **Acceptance criteria:**
-- [ ] `pi box files pull <id> <src> <dest>` copies files from sandbox to host
-- [ ] `pi box files push <id> <src> <dest>` copies files from host to sandbox
-- [ ] Directories copied recursively
-- [ ] Progress reported for large transfers
+- [x] `pi box files pull <id> <src> <dest>` copies files from sandbox to host
+- [x] `pi box files push <id> <src> <dest>` copies files from host to sandbox
+- [x] Directories copied recursively
+- [x] Progress reported for large transfers
 
 **Verification:**
-- [ ] `go build ./pkg/workspace/...`
-- [ ] Integration test: pull/push files
+- [x] `go build ./pkg/workspace/...`
+- [x] Integration test: pull/push files
 
 **Files:** `pkg/workspace/files_pull.go`, `pkg/workspace/files_push.go`
 **Size:** S
@@ -178,12 +178,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Verification Plan
 
-- [ ] `go build ./pkg/workspace/...` succeeds
-- [ ] Clone works for HTTPS and SSH repositories
-- [ ] File read/write works with path validation
-- [ ] Diff/patch works for staged and unstaged changes
-- [ ] Pull/push works for files and directories
-- [ ] SSH credentials never appear in sandbox environment
+- [x] `go build ./pkg/workspace/...` succeeds
+- [x] Clone works for HTTPS and SSH repositories
+- [x] File read/write works with path validation
+- [x] Diff/patch works for staged and unstaged changes
+- [x] Pull/push works for files and directories
+- [x] SSH credentials never appear in sandbox environment
 
 ## Spec Gaps
 

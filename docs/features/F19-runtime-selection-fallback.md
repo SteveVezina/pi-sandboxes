@@ -20,11 +20,11 @@ Fallback cannot weaken policy silently. If fallback is allowed, the user-visible
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-22.1: `pi system doctor` reports available runtime backends
-- [ ] AC-22.2: Backend selection honors explicit `--mode` requests
-- [ ] AC-22.3: Auto-selection prefers an available compatible backend based on trust/config
-- [ ] AC-22.4: Secure-mode startup failure can fall back to compat mode when policy permits
-- [ ] AC-22.5: Fallback decisions are visible in logs/history
+- [x] AC-22.1: `pi system doctor` reports available runtime backends
+- [x] AC-22.2: Backend selection honors explicit `--mode` requests
+- [x] AC-22.3: Auto-selection prefers an available compatible backend based on trust/config
+- [x] AC-22.4: Secure-mode startup failure can fall back to compat mode when policy permits
+- [x] AC-22.5: Fallback decisions are visible in logs/history
 
 ## Interface Impact
 
@@ -61,12 +61,12 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 ### T19.1: Runtime registry and detection
 
 **Acceptance criteria:**
-- [ ] Detect fast, compat, secure, and future microVM backend availability
-- [ ] `pi system doctor` reports backend status
+- [x] Detect fast, compat, secure, and future microVM backend availability
+- [x] `pi system doctor` reports backend status
 
 **Verification:**
-- [ ] Unit tests for runtime detection
-- [ ] `pi system doctor` includes runtime backend table
+- [x] Unit tests for runtime detection
+- [x] `pi system doctor` includes runtime backend table
 
 **Files:** `pkg/runtime/registry.go (new — to be created)`, `pkg/system/doctor.go`
 **Size:** M
@@ -75,13 +75,13 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 ### T19.2: Selection and fallback policy
 
 **Acceptance criteria:**
-- [ ] Explicit mode selection is honored
-- [ ] Auto-selection follows config/trust policy
-- [ ] Secure-to-compat fallback is policy-gated and logged
+- [x] Explicit mode selection is honored
+- [x] Auto-selection follows config/trust policy
+- [x] Secure-to-compat fallback is policy-gated and logged
 
 **Verification:**
-- [ ] Unit tests for explicit/auto/fallback selection
-- [ ] Integration test: secure unavailable fallback behavior
+- [x] Unit tests for explicit/auto/fallback selection
+- [x] Integration test: secure unavailable fallback behavior
 
 **Files:** `pkg/runtime/selector.go (new — to be created)`, `pkg/logs/entry.go`
 **Size:** M
@@ -89,10 +89,10 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Verification Plan
 
-- [ ] Runtime availability detection works
-- [ ] Doctor reports backends
-- [ ] Fallback decisions are observable
-- [ ] Policy prevents unsafe fallback
+- [x] Runtime availability detection works
+- [x] Doctor reports backends
+- [x] Fallback decisions are observable
+- [x] Policy prevents unsafe fallback
 
 ## Spec Gaps
 

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/pi-sandbox/pi/pkg/runtime/detect"
 )
 
 // Issue represents a single issue found by the doctor.
@@ -104,6 +106,26 @@ func RunDoctor() *DoctorResult {
 				})
 			}
 		}
+	}
+
+	// Check available runtime backends
+	available := detect.AvailableRuntimes("")
+	if len(available) > 0 {
+		result.Issues = append(result.Issues, Issue{
+			Severity: "info",
+			Message:  fmt.Sprintf("Available runtime backends: %s", available),
+		})
+		bestMode := detect.BestMode("")
+		result.Issues = append(result.Issues, Issue{
+			Severity: "info",
+			Message:  fmt.Sprintf("Best available mode: %s", bestMode),
+		})
+	} else {
+		result.Issues = append(result.Issues, Issue{
+			Severity:       "error",
+			Message:        "No runtime backend available",
+			Recommendation: "Install gVisor (runsc), or use compat mode (Docker/Podman), or fast mode (Linux namespaces)",
+		})
 	}
 
 	result.Passed = true

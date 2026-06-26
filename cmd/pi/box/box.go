@@ -10,8 +10,9 @@ import (
 	"os/exec"
 	"strings"
 
-
 	"github.com/pi-sandbox/pi/cmd/pi/cli"
+	pictx "github.com/pi-sandbox/pi/pkg/context"
+	"github.com/pi-sandbox/pi/pkg/remote"
 	"github.com/spf13/cobra"
 )
 
@@ -50,8 +51,30 @@ func getSocketPath() string {
 	return fmt.Sprintf("%s/.pi/sandboxd.sock", home)
 }
 
-// callAPI makes an HTTP call to the daemon via curl.
+// resolveContext returns the context to use, honoring --context override (F22).
+func resolveContext() (pictx.Context, error) {
+	store, err := pictx.NewStore(pictx.DefaultPath())
+	if err != nil {
+		return pictx.Context{}, err
+	}
+	return store.Resolve(cli.ContextOverride)
+}
+
+// callAPI makes an HTTP call to the daemon, routing via the active context.
+// For the local unix context (the default) it preserves the curl-based path;
+// for remote contexts it uses pkg/remote with proper auth.
 func callAPI(method, endpoint string, body io.Reader) (map[string]interface{}, error) {
+	ctx, err := resolveContext()
+	if err != nil {
+		return nil, fmt.Errorf("context: %w", err)
+	}
+	if ctx.Transport == pictx.TransportUnix && cli.ContextOverride == "" {
+		return callAPIUnix(method, endpoint, body)
+	}
+	return callAPIRemote(ctx, method, endpoint, body)
+}
+
+func callAPIUnix(method, endpoint string, body io.Reader) (map[string]interface{}, error) {
 	args := []string{"-s", "-X", method, "-H", "Content-Type: application/json",
 		"--unix-socket", getSocketPath(), endpoint}
 	if body != nil {
@@ -66,26 +89,93 @@ func callAPI(method, endpoint string, body io.Reader) (map[string]interface{}, e
 		return nil, err
 	}
 	var result map[string]interface{}
+	if len(output) == 0 {
+		return result, nil
+	}
 	if err := json.Unmarshal(output, &result); err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
+func callAPIRemote(ctx pictx.Context, method, endpoint string, body io.Reader) (map[string]interface{}, error) {
+	client, err := remote.NewClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("remote client: %w", err)
+	}
+	resp, err := client.Do(method, endpoint, body)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read remote response: %w", err)
+	}
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		return nil, fmt.Errorf("remote auth failed (HTTP %d): %s", resp.StatusCode, strings.TrimSpace(string(data)))
+	}
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("remote API error (HTTP %d): %s", resp.StatusCode, strings.TrimSpace(string(data)))
+	}
+	var result map[string]interface{}
+	if len(data) == 0 {
+		return result, nil
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("decode remote response: %w", err)
+	}
+	return result, nil
+}
+
 // callAPIList makes an HTTP call and returns a JSON array.
 func callAPIList(method, endpoint string) ([]interface{}, error) {
-	args := []string{"-s", "-X", method, "-H", "Content-Type: application/json",
-		"--unix-socket", getSocketPath(), endpoint}
-	cmd := exec.Command("curl", args...)
-	output, err := cmd.Output()
+	ctx, err := resolveContext()
+	if err != nil {
+		return nil, fmt.Errorf("context: %w", err)
+	}
+	var data []byte
+	if ctx.Transport == pictx.TransportUnix && cli.ContextOverride == "" {
+		data, err = curlList(method, endpoint)
+	} else {
+		data, err = remoteList(ctx, method, endpoint)
+	}
 	if err != nil {
 		return nil, err
 	}
 	var result []interface{}
-	if err := json.Unmarshal(output, &result); err != nil {
-		return nil, err
+	if len(data) == 0 {
+		return result, nil
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("decode list response: %w", err)
 	}
 	return result, nil
+}
+
+func curlList(method, endpoint string) ([]byte, error) {
+	args := []string{"-s", "-X", method, "-H", "Content-Type: application/json",
+		"--unix-socket", getSocketPath(), endpoint}
+	return exec.Command("curl", args...).Output()
+}
+
+func remoteList(ctx pictx.Context, method, endpoint string) ([]byte, error) {
+	client, err := remote.NewClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("remote client: %w", err)
+	}
+	resp, err := client.Do(method, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		return nil, fmt.Errorf("remote auth failed (HTTP %d)", resp.StatusCode)
+	}
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("remote API error (HTTP %d)", resp.StatusCode)
+	}
+	return io.ReadAll(resp.Body)
 }
 
 // createCmd creates a new sandbox session.

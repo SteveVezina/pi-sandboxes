@@ -1,7 +1,7 @@
 # F01: CLI Entry Point
 
 > Source: `SPEC.md` §6 Features F1
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)

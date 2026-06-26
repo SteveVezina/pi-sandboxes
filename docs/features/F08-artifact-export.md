@@ -1,7 +1,7 @@
 # F08: Artifact Export
 
 > Source: `SPEC.md` §6 Features F9
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)

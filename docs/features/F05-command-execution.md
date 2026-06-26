@@ -1,7 +1,7 @@
 # F05: Command Execution
 
 > Source: `SPEC.md` §6 Features F7
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)

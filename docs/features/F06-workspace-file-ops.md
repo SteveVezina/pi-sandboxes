@@ -1,7 +1,7 @@
 # F06: Workspace & File Operations
 
 > Source: `SPEC.md` §6 Features F6
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)

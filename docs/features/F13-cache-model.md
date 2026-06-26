@@ -1,7 +1,7 @@
 # F13: Cache Model
 
 > Source: `SPEC.md` §6 Features F12
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)

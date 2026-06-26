@@ -1,7 +1,7 @@
 # F02: Daemon API
 
 > Source: `SPEC.md` §6 Features F2
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)

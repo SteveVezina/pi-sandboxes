@@ -1,7 +1,7 @@
 # F07: Template System
 
 > Source: `SPEC.md` §6 Features F5
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)

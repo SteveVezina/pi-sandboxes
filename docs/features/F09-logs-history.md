@@ -1,7 +1,7 @@
 # F09: Logs & Command History
 
 > Source: `SPEC.md` §6 Features F10
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)

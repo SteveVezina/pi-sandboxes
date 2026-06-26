@@ -70,26 +70,28 @@ func GitCloneSmall() time.Duration {
 }
 
 // PnpmInstall measures Node dependency cache path.
+// Returns 0 if pnpm is not installed on this host (benchmark marked Disabled).
 func PnpmInstall() time.Duration {
+	if _, err := exec.LookPath("pnpm"); err != nil {
+		return 0
+	}
 	start := time.Now()
-	// Create a temp dir with a minimal package.json
 	dir := filepath.Join(os.TempDir(), "pi-bench-pnpm-"+time.Now().Format("20060102150405"))
 	os.MkdirAll(dir, 0755)
 	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"name":"bench","version":"1.0.0"}`), 0644)
-	// Try pnpm install, fall back to sleep if not available
-	if _, err := exec.LookPath("pnpm"); err == nil {
-		cmd := exec.Command("pnpm", "install", "--prefer-offline")
-		cmd.Dir = dir
-		cmd.Run()
-	} else {
-		time.Sleep(50 * time.Millisecond) // Placeholder
-	}
+	cmd := exec.Command("pnpm", "install", "--prefer-offline")
+	cmd.Dir = dir
+	cmd.Run()
 	os.RemoveAll(dir)
 	return time.Since(start)
 }
 
 // UVSync measures Python dependency cache path.
+// Returns 0 if uv is not installed on this host (benchmark marked Disabled).
 func UVSync() time.Duration {
+	if _, err := exec.LookPath("uv"); err != nil {
+		return 0
+	}
 	start := time.Now()
 	dir := filepath.Join(os.TempDir(), "pi-bench-uv-"+time.Now().Format("20060102150405"))
 	os.MkdirAll(dir, 0755)
@@ -98,19 +100,19 @@ name = "bench"
 version = "1.0.0"
 dependencies = []
 `), 0644)
-	if _, err := exec.LookPath("uv"); err == nil {
-		cmd := exec.Command("uv", "sync")
-		cmd.Dir = dir
-		cmd.Run()
-	} else {
-		time.Sleep(50 * time.Millisecond)
-	}
+	cmd := exec.Command("uv", "sync")
+	cmd.Dir = dir
+	cmd.Run()
 	os.RemoveAll(dir)
 	return time.Since(start)
 }
 
 // GoTest measures Go toolchain and cache.
+// Returns 0 if go is not installed on this host (benchmark marked Disabled).
 func GoTest() time.Duration {
+	if _, err := exec.LookPath("go"); err != nil {
+		return 0
+	}
 	start := time.Now()
 	dir := filepath.Join(os.TempDir(), "pi-bench-gotest-"+time.Now().Format("20060102150405"))
 	os.MkdirAll(dir, 0755)
@@ -121,22 +123,23 @@ go 1.21
 import "testing"
 func TestBench(t *testing.T) {}
 `), 0644)
-	if _, err := exec.LookPath("go"); err == nil {
-		cmd := exec.Command("go", "test", "./...")
-		cmd.Dir = dir
-		cmd.Run()
-	} else {
-		time.Sleep(50 * time.Millisecond)
-	}
+	cmd := exec.Command("go", "test", "./...")
+	cmd.Dir = dir
+	cmd.Run()
 	os.RemoveAll(dir)
 	return time.Since(start)
 }
 
 // CargoTest measures Rust toolchain and cache.
+// Returns 0 if cargo is not installed on this host (benchmark marked Disabled).
 func CargoTest() time.Duration {
+	if _, err := exec.LookPath("cargo"); err != nil {
+		return 0
+	}
 	start := time.Now()
 	dir := filepath.Join(os.TempDir(), "pi-bench-cargo-"+time.Now().Format("20060102150405"))
 	os.MkdirAll(dir, 0755)
+	os.MkdirAll(filepath.Join(dir, "src"), 0755)
 	os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte(`[package]
 name = "bench"
 version = "1.0.0"
@@ -145,14 +148,9 @@ version = "1.0.0"
 #[cfg(test)]
 mod tests { #[test] fn test_bench() {} }
 `), 0644)
-	if _, err := exec.LookPath("cargo"); err == nil {
-		os.MkdirAll(filepath.Join(dir, "src"), 0755)
-		cmd := exec.Command("cargo", "test")
-		cmd.Dir = dir
-		cmd.Run()
-	} else {
-		time.Sleep(50 * time.Millisecond)
-	}
+	cmd := exec.Command("cargo", "test")
+	cmd.Dir = dir
+	cmd.Run()
 	os.RemoveAll(dir)
 	return time.Since(start)
 }

@@ -1,7 +1,7 @@
 # F19: Runtime Selection & Fallback
 
 > Source: `SPEC.md` §6 Features F19
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)

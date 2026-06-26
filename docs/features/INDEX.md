@@ -38,7 +38,7 @@ Dashboard of all features for this project.
 | [F18](F18-secure-backend.md) | Secure Backend | 🟡 Written | ✅ Implemented | M4 | F15, F17, F19 |
 | [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | 🟡 Written | ✅ Implemented | M4 | F03, F15, F18 |
 | [F20](F20-microvm-backend.md) | MicroVM Backend | 🟡 Written | ✅ Implemented | M5 | F19, F21 |
-| [F21](F21-microvm-guest-control-plane.md) | MicroVM Guest Control Plane | 🟡 Written | 🟢 Implemented | M5 | F20 |
+| [F21](F21-microvm-guest-control-plane.md) | MicroVM Guest Control Plane | 🟡 Written | ✅ Implemented | M5 | F20 |
 | [F22](F22-remote-daemon-contexts.md) | Remote Daemon Contexts | 🟡 Written | ✅ Implemented | M6 | F02, F23 |
 | [F23](F23-remote-daemon-transport-auth.md) | Remote Daemon Transport & Auth | 🟡 Written | ✅ Implemented | M6 | F02, F16, F22 |
 
@@ -55,6 +55,6 @@ Dashboard of all features for this project.
 
 ## Summary
 
-23 feature specs tracked. F18-F19 are implemented (M4). F20-F23 are unblocked by PROP-003 and ready for implementation.
+All 23 feature specs tracked and implemented. Milestones M1–M6 complete.
 
 > Note: existing feature document numbering predates PROP-002 and has known drift from `SPEC.md` §6. `SPEC.md` remains the source of truth; a follow-up cascade should reconcile legacy F01-F17 filenames and IDs.

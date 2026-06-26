@@ -1,7 +1,7 @@
 # F11: Benchmarks
 
 > Source: `SPEC.md` §6 Features F14
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)

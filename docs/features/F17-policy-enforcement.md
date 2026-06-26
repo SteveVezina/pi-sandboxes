@@ -1,7 +1,7 @@
 # F17: Policy Enforcement
 
 > Source: `SPEC.md` §6 Features F17
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)

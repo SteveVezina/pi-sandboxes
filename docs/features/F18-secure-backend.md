@@ -1,7 +1,7 @@
 # F18: Secure Backend
 
 > Source: `SPEC.md` §6 Features F18
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer / Infrastructure
 
 ## Definition (from block spec)

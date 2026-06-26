@@ -5,8 +5,8 @@
 
 ## Active Cursor
 
-**Current phase:** F20-F23 unblocked by PROP-003
-**Next work:** Continue M5 microVM implementation with F20 backend lifecycle now that F21 guest control protocol is implemented
+**Current phase:** All phases complete — F01 through F23 implemented
+**Next work:** None — plan is finished
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph
@@ -70,13 +70,18 @@ F23 (Remote Transport/Auth) ──→ F22 (Remote Daemon Contexts)
 21. **F18** Secure Backend ✅
 22. **F24** Compatibility Documentation ✅
 
-### 🔴 Phase 7 — M5 microVM backend
+### ✅ Phase 7 — M5 microVM backend
 23. **F21** MicroVM Guest Control Plane ✅
-24. **F20** MicroVM Backend 🟡
+24. **F20** MicroVM Backend ✅
 
-### 🔴 Phase 8 — M6 remote daemon mode
-25. **F23** Remote Daemon Transport & Auth 🔴
-26. **F22** Remote Daemon Contexts 🔴
+### ✅ Phase 8 — M6 remote daemon mode
+25. **F23** Remote Daemon Transport & Auth ✅
+26. **F22** Remote Daemon Contexts ✅
+
+### ✅ Code quality closes (CORE.md watch-outs)
+27. **Benchmarks** Replace `time.Sleep()` fallbacks with proper tool-absent returns ✅
+28. **Doctor** Add config.yaml creation, system command validation, daemon binary check ✅
+29. **Shell** Implement WebSocket PTY shell (`pkg/api/sandbox_shell.go`, `pkg/terminal/`) ✅
 
 ## Risk Tracking
 

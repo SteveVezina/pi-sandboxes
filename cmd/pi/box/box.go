@@ -1,18 +1,23 @@
 package box
 
 import (
+	gocontext "context"
 	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 
+	gorillaws "github.com/gorilla/websocket"
 	"github.com/pi-sandbox/pi/cmd/pi/cli"
 	pictx "github.com/pi-sandbox/pi/pkg/context"
 	"github.com/pi-sandbox/pi/pkg/remote"
+	"github.com/pi-sandbox/pi/pkg/terminal"
 	"github.com/spf13/cobra"
 )
 
@@ -365,44 +370,112 @@ func init() {
 	execCmd.Flags().BoolP("json", "j", false, "Output as JSON")
 }
 
-// shellCmd opens an interactive shell in a sandbox.
+// shellCmd opens an interactive shell in a sandbox via a WebSocket PTY.
 var shellCmd = &cobra.Command{
 	Use:   "shell <name>",
 	Short: "Open an interactive shell in a sandbox",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		reader := bufio.NewReader(os.Stdin)
 		sandboxID := args[0]
-		fmt.Fprintf(os.Stderr, "Interactive shell for sandbox %s. Type 'exit' to quit.\n", sandboxID)
-		for {
-			fmt.Printf("%s> ", sandboxID)
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "\nerror: %v\n", err)
-				break
-			}
-			line = strings.TrimSpace(line)
-			if line == "exit" || line == "quit" {
-				break
-			}
-			if line == "" {
-				continue
-			}
-			result, err := callAPI("POST", "/v1/sandboxes/"+sandboxID+"/exec",
-				bytes.NewReader([]byte(`{"command":"`+escapeJSON(line)+`","cwd":"/workspace"}`)))
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error: %v\n", err)
-				continue
-			}
-			if stdout, ok := result["stdout"].(string); ok && stdout != "" {
-				fmt.Print(stdout)
-			}
-			if stderr, ok := result["stderr"].(string); ok && stderr != "" {
-				fmt.Fprint(os.Stderr, stderr)
-			}
+		if err := runShell(sandboxID); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
 		}
 	},
 }
+
+// runShell connects to the daemon's WebSocket shell endpoint, puts the local
+// terminal into raw mode, and proxies stdin/stdout until the shell exits.
+// Falls back to the readline loop when stdin is not a terminal (e.g. piped
+// input in tests) or when a remote context is active.
+func runShell(sandboxID string) error {
+	ctx, err := resolveContext()
+	if err != nil {
+		return fmt.Errorf("context: %w", err)
+	}
+
+	// Determine the WebSocket URL.
+	var wsURL string
+	switch ctx.Transport {
+	case pictx.TransportHTTP:
+		base := strings.TrimRight(ctx.Target, "/")
+		wsURL = strings.Replace(base, "http://", "ws://", 1)
+		wsURL = strings.Replace(wsURL, "https://", "wss://", 1)
+		wsURL += "/v1/sandboxes/" + sandboxID + "/shell"
+	default:
+		// Unix socket: use localhost placeholder; the dialer overrides the host.
+		wsURL = "ws://localhost/v1/sandboxes/" + sandboxID + "/shell"
+	}
+
+	// Dial WebSocket — for unix transport, connect via the Unix socket.
+	var conn *shellConn
+	switch ctx.Transport {
+	case pictx.TransportHTTP:
+		dialer := gorillaws.DefaultDialer
+		header := http.Header{}
+		if ctx.Auth.Type == pictx.AuthBearerToken {
+			tok := os.Getenv(ctx.Auth.TokenEnv)
+			if tok != "" {
+				header.Set("Authorization", "Bearer "+tok)
+			}
+		}
+		c, _, err := dialer.Dial(wsURL, header)
+		if err != nil {
+			return fmt.Errorf("dial: %w", err)
+		}
+		conn = &shellConn{c}
+	default:
+		sockPath := getSocketPath()
+		netDialer := &net.Dialer{}
+		dialer := gorillaws.Dialer{
+			NetDialContext: func(ctx gocontext.Context, network, addr string) (net.Conn, error) {
+				return netDialer.DialContext(ctx, "unix", sockPath)
+			},
+		}
+		c, _, err := dialer.Dial(wsURL, nil)
+		if err != nil {
+			return fmt.Errorf("dial unix socket: %w", err)
+		}
+		conn = &shellConn{c}
+	}
+	defer conn.ws.Close()
+
+	// If stdin is a terminal, put it into raw mode for a true PTY experience.
+	fd := int(os.Stdin.Fd())
+	if terminal.IsTerminal(fd) {
+		state, err := terminal.MakeRaw(fd)
+		if err == nil {
+			defer terminal.Restore(fd, state) //nolint:errcheck
+		}
+	}
+
+	// Proxy stdin → WebSocket (in background).
+	go func() {
+		buf := make([]byte, 256)
+		for {
+			n, err := os.Stdin.Read(buf)
+			if n > 0 {
+				_ = conn.ws.WriteMessage(gorillaws.TextMessage, buf[:n])
+			}
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	// Proxy WebSocket → stdout (blocks until remote closes).
+	for {
+		_, msg, err := conn.ws.ReadMessage()
+		if err != nil {
+			break
+		}
+		_, _ = os.Stdout.Write(msg)
+	}
+	return nil
+}
+
+// shellConn wraps a gorilla WebSocket connection for the shell proxy.
+type shellConn struct{ ws *gorillaws.Conn }
 
 // escapeJSON escapes a string for JSON embedding.
 func escapeJSON(s string) string {

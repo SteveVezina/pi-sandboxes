@@ -1,7 +1,7 @@
 # F15: Compat Backend
 
 > Source: `SPEC.md` §6 Features F4
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Infrastructure
 
 ## Definition (from block spec)

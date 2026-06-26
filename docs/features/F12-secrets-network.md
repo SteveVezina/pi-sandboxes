@@ -1,7 +1,7 @@
 # F12: Secrets & Network Model
 
 > Source: `SPEC.md` §6 Features F11
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)

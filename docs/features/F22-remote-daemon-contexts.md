@@ -1,7 +1,7 @@
 # F22: Remote Daemon Contexts
 
 > Source: `SPEC.md` §6 Features F22
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -20,14 +20,14 @@ Per ADR-003, context state is stored in `~/.pi/contexts.yaml`. Each context has 
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-25.1: `pi context create workstation ssh://gpu-box.local` creates a remote context
-- [ ] AC-25.2: `pi context use workstation` switches the active context
-- [ ] AC-25.3: `pi context list` shows local and remote contexts
-- [ ] AC-25.4: `pi box create` uses the active context
-- [ ] AC-25.5: Commands can override the active context explicitly
-- [ ] AC-25.6: Contexts persist in `~/.pi/contexts.yaml`
-- [ ] AC-25.7: Context schema supports `target`, `transport`, and `auth.type`
-- [ ] AC-25.8: `--context <name>` overrides the active context
+- [x] AC-25.1: `pi context create workstation ssh://gpu-box.local` creates a remote context
+- [x] AC-25.2: `pi context use workstation` switches the active context
+- [x] AC-25.3: `pi context list` shows local and remote contexts
+- [x] AC-25.4: `pi box create` uses the active context
+- [x] AC-25.5: Commands can override the active context explicitly
+- [x] AC-25.6: Contexts persist in `~/.pi/contexts.yaml`
+- [x] AC-25.7: Context schema supports `target`, `transport`, and `auth.type`
+- [x] AC-25.8: `--context <name>` overrides the active context
 
 ## Interface Impact
 
@@ -63,33 +63,33 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Tasks
 
-### T22.1: Context store and CLI
+### T22.1: Context store and CLI ✅
 
 **Acceptance criteria:**
-- [ ] Create/use/list/inspect/delete commands work
-- [ ] Active context persists in user config
-- [ ] Contexts persist in `~/.pi/contexts.yaml`
-- [ ] Context schema supports `target`, `transport`, and `auth.type`
+- [x] Create/use/list/inspect/delete commands work
+- [x] Active context persists in user config
+- [x] Contexts persist in `~/.pi/contexts.yaml`
+- [x] Context schema supports `target`, `transport`, and `auth.type`
 
 **Verification:**
-- [ ] Unit tests for context store
-- [ ] CLI integration tests for context commands
+- [x] Unit tests for context store (`tests/context/store_test.go`)
+- [x] CLI integration tests for context commands (`tests/context/cli_test.go`)
 
-**Files:** `cmd/pi/context/commands.go (new — to be created)`, `pkg/context/store.go (new — to be created)`
+**Files:** `cmd/pi/context/commands.go`, `pkg/context/store.go`, `tests/context/store_test.go`, `tests/context/cli_test.go`
 **Size:** M
 **Depends on:** F2
 
-### T22.2: Context-aware command routing
+### T22.2: Context-aware command routing ✅
 
 **Acceptance criteria:**
-- [ ] `pi box` commands use active context
-- [ ] Per-command context override works
-- [ ] Local context remains the default
-- [ ] `--context <name>` overrides active context
+- [x] `pi box` commands use active context
+- [x] Per-command context override works
+- [x] Local context remains the default
+- [x] `--context <name>` overrides active context
 
 **Verification:**
-- [ ] Integration test: active context routes API calls
-- [ ] Integration test: explicit override wins
+- [x] Integration test: active context routes API calls (`tests/context/resolve_test.go`)
+- [x] Integration test: explicit override wins (`tests/context/cli_test.go`)
 
 **Files:** `cmd/pi/cli/root.go`, `cmd/pi/box/box.go`
 **Size:** M
@@ -97,10 +97,10 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Verification Plan
 
-- [ ] Context commands work
-- [ ] `pi box` uses active context
-- [ ] Override behavior is deterministic
-- [ ] Context schema validation works
+- [x] Context commands work
+- [x] `pi box` uses active context
+- [x] Override behavior is deterministic
+- [x] Context schema validation works
 
 ## Spec Gaps
 

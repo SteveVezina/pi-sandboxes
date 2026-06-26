@@ -23,6 +23,9 @@ func NewRouter(store *session.Store) *mux.Router {
 	// Exec
 	router.HandleFunc("/v1/sandboxes/{id}/exec", api.ExecSandbox(store)).Methods("POST")
 
+	// Interactive shell (WebSocket upgrade)
+	router.HandleFunc("/v1/sandboxes/{id}/shell", api.ShellSandbox(store)).Methods("GET")
+
 	// Clone
 	router.HandleFunc("/v1/sandboxes/{id}/clone", api.CloneSandbox(store)).Methods("POST")
 

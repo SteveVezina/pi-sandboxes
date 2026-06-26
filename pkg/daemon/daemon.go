@@ -8,20 +8,24 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/pi-sandbox/pi/pkg/session"
 )
 
 // Daemon is the pi-sandboxd daemon.
 type Daemon struct {
 	socketPath string
 	httpPort   int
+	store      *session.Store
 	server     *http.Server
 }
 
-// New creates a new daemon.
-func New(socketPath string, httpPort int) *Daemon {
+// New creates a new daemon with the given session store.
+func New(socketPath string, httpPort int, store *session.Store) *Daemon {
 	return &Daemon{
 		socketPath: socketPath,
 		httpPort:   httpPort,
+		store:      store,
 	}
 }
 
@@ -48,7 +52,7 @@ func (d *Daemon) Start() error {
 	os.Chmod(d.socketPath, 0755)
 
 	// Create HTTP server with router
-	router := NewRouter()
+	router := NewRouter(d.store)
 	d.server = &http.Server{Handler: router}
 
 	// Start HTTP server on Unix socket

@@ -1,7 +1,7 @@
 # F03: Fast Backend
 
 > Source: `SPEC.md` §6 Features F3
-> Status: 🟡 Spec written
+> Status: 🟡 Partially implemented (T3.5 remaining)
 > Category: Infrastructure
 
 ## Definition (from block spec)

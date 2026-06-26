@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/pi-sandbox/pi/pkg/daemon"
+	"github.com/pi-sandbox/pi/pkg/session"
 )
 
 func main() {
@@ -23,7 +24,12 @@ func main() {
 		*socketPath = filepath.Join(home, ".pi", "sandboxd.sock")
 	}
 
-	d := daemon.New(*socketPath, *httpPort)
+	// Create session store
+	home, _ := os.UserHomeDir()
+	storeDir := filepath.Join(home, ".pi", "sandboxes")
+	store := session.NewStore(storeDir)
+
+	d := daemon.New(*socketPath, *httpPort, store)
 
 	if err := d.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: daemon failed to start: %v\n", err)

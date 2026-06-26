@@ -1,0 +1,73 @@
+# Project Configuration
+#
+# Per-project knobs read by all pi-* skills. Skills are project-agnostic;
+# the project-specific values live here.
+#
+# Copy this file into a new project repo and fill in the values to make
+# the pi-* skills work for that project.
+
+# ─── Identity ────────────────────────────────────────────────────────────
+block:
+  slug: "my-project"                  # used in feature-{slug}.md filename
+  display_name: "My Project"          # human-readable name in commit msgs
+  spec_path: "SPEC.md"
+
+# ─── Code layout ─────────────────────────────────────────────────────────
+code:
+  language: "go"                       # go | python | typescript | rust
+  module_root: "go/"                   # where production code lives
+  tests_root: "go/tests/"              # where integration tests live
+  mocks_root: "go/mocks/"              # where mock services live
+
+# ─── Verification commands ───────────────────────────────────────────────
+verify:
+  build: "go build ./..."
+  test:  "go test -race -count=1 ./..."
+  lint:  "golangci-lint run ./..."
+  mocks_up:   "make mocks-up"
+  mocks_down: "make mocks-down"
+  integration: "PI_RUNTIME_LIVE_K8S=1 go test -race ./tests/integration/..."
+
+# ─── Test naming convention ──────────────────────────────────────────────
+test:
+  naming_pattern: "Test{Module}_{Behavior}_{Outcome}"
+  # examples for other languages:
+  #   python:     "test_{module}_{behavior}_{outcome}"
+  #   typescript: "{module} > {behavior} > {outcome}"
+
+# ─── Security egress allowlist (sandbox or service) ──────────────────────
+# Used by the pre-completion review (pi-execute-plan Step 8a) to verify
+# code does not introduce unapproved network egress.
+security:
+  egress_allowlist:
+    - "Pi Runtime service endpoint"
+    - "Gateway"
+    - "approved Git remotes"
+
+# ─── Upstream block implementations (cross-check sources) ────────────────
+# Real OpenAPI specs / DAT.md files that are the source of truth for
+# interfaces, not just block spec prose. Per AGENTS.md Step 5.
+# Update these paths for your project. Leave empty if no submodule exists.
+upstream:
+  session_manager:
+    openapi: ""
+  workspaces:
+    api_contract: ""
+  secret_manager:
+    dat: ""
+  orchestrator:
+    dat: ""
+
+# ─── Lifecycle event types this block emits ──────────────────────────────
+# Service-level events, distinct from any raw agent stream that's relayed.
+lifecycle_events:
+  - name: "pi.sandbox.created"
+    when: "on pod creation"
+  - name: "pi.run.started"
+    when: "from Pi agent_start event"
+  - name: "pi.run.completed"
+    when: "from Pi agent_end event"
+  - name: "pi.sandbox.destroyed"
+    when: "on pod destruction (TTL or explicit close)"
+  - name: "pi.artifact.delivered"
+    when: "after successful Workspaces POST /output"

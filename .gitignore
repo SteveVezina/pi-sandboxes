@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build artifacts
+*.exe
+*.dll
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# pi internal cache (commented out — uncomment to hide)
+# .pi/cache/
+# .pi/plugins/
+
+# Local/temp files
+tmp/
+*.orig
+
+# Secrets and credentials
+*.key
+*.pem
+*.p12
+.env.local
+.env.*.local
+
+# OS
+Thumbs.db

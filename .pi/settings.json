@@ -1,0 +1,14 @@
+{
+  "skills": [
+    "pi-feature-spec",
+    "pi-runtime-architect",
+    "pi-runtime-developer",
+    "pi-runtime-review",
+    "pi-runtime-sre",
+    "pi-runtime-docs",
+    "pi-runtime-plan",
+    "pi-mock-services",
+    "pi-contract-sync",
+  ],
+  "enableSkillCommands": true
+}

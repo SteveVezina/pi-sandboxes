@@ -55,6 +55,14 @@ type StreamPayload struct {
 	Data   string `json:"data"`
 }
 
+// ExecRequestPayload is the payload for an exec request frame.
+type ExecRequestPayload struct {
+	Command        string `json:"command"`
+	Cwd            string `json:"cwd,omitempty"`
+	TimeoutMs      int64  `json:"timeout_ms,omitempty"`
+	MaxOutputBytes int64  `json:"max_output_bytes,omitempty"`
+}
+
 // ExecResultPayload is the final exec response payload.
 type ExecResultPayload struct {
 	ExitCode   int   `json:"exit_code"`
@@ -130,5 +138,57 @@ func NewStreamFrame(id, sessionID, stream string, data []byte) (Frame, error) {
 		ID:        id,
 		SessionID: sessionID,
 		Payload:   payload,
+	}, nil
+}
+
+// DecodeStreamPayload decodes a stream frame into its stream name and bytes.
+func DecodeStreamPayload(frame Frame) (string, []byte, error) {
+	if frame.Type != FrameTypeStream {
+		return "", nil, fmt.Errorf("frame type %q is not stream", frame.Type)
+	}
+	var payload StreamPayload
+	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
+		return "", nil, fmt.Errorf("decode stream payload: %w", err)
+	}
+	if payload.Stream != "stdout" && payload.Stream != "stderr" {
+		return "", nil, fmt.Errorf("invalid stream %q", payload.Stream)
+	}
+	data, err := base64.StdEncoding.DecodeString(payload.Data)
+	if err != nil {
+		return "", nil, fmt.Errorf("decode stream data: %w", err)
+	}
+	return payload.Stream, data, nil
+}
+
+// NewExecRequestFrame creates an exec request frame.
+func NewExecRequestFrame(id, sessionID string, payload ExecRequestPayload) (Frame, error) {
+	if payload.Command == "" {
+		return Frame{}, fmt.Errorf("exec command is required")
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return Frame{}, fmt.Errorf("encode exec request payload: %w", err)
+	}
+	return Frame{
+		Type:      FrameTypeRequest,
+		ID:        id,
+		SessionID: sessionID,
+		Method:    "exec",
+		Payload:   encoded,
+	}, nil
+}
+
+// NewExecResultFrame creates the final exec response frame.
+func NewExecResultFrame(id, sessionID string, payload ExecResultPayload) (Frame, error) {
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return Frame{}, fmt.Errorf("encode exec result payload: %w", err)
+	}
+	return Frame{
+		Type:      FrameTypeResponse,
+		ID:        id,
+		SessionID: sessionID,
+		Method:    "exec",
+		Payload:   encoded,
 	}, nil
 }

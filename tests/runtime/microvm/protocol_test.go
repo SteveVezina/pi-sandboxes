@@ -84,3 +84,67 @@ func TestProtocol_NewStreamFrame_InvalidStreamReturnsError(t *testing.T) {
 		t.Fatal("expected invalid stream error")
 	}
 }
+
+func TestProtocol_NewExecRequestFrame_EncodesCommandPayload(t *testing.T) {
+	frame, err := microvm.NewExecRequestFrame("req-1", "sandbox-1", microvm.ExecRequestPayload{
+		Command:        "pnpm test",
+		Cwd:            "/workspace",
+		TimeoutMs:      120000,
+		MaxOutputBytes: 8388608,
+	})
+	if err != nil {
+		t.Fatalf("NewExecRequestFrame failed: %v", err)
+	}
+	if frame.Type != microvm.FrameTypeRequest || frame.Method != "exec" {
+		t.Fatalf("frame = %+v, want request exec", frame)
+	}
+
+	var payload microvm.ExecRequestPayload
+	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
+		t.Fatalf("exec request payload did not unmarshal: %v", err)
+	}
+	if payload.Command != "pnpm test" || payload.Cwd != "/workspace" {
+		t.Fatalf("payload = %+v, want command/cwd", payload)
+	}
+}
+
+func TestProtocol_DecodeStreamPayload_DecodesBase64Bytes(t *testing.T) {
+	frame, err := microvm.NewStreamFrame("req-1", "sandbox-1", "stderr", []byte("boom\n"))
+	if err != nil {
+		t.Fatalf("NewStreamFrame failed: %v", err)
+	}
+
+	stream, data, err := microvm.DecodeStreamPayload(frame)
+	if err != nil {
+		t.Fatalf("DecodeStreamPayload failed: %v", err)
+	}
+	if stream != "stderr" {
+		t.Fatalf("stream = %q, want stderr", stream)
+	}
+	if string(data) != "boom\n" {
+		t.Fatalf("data = %q, want boom newline", data)
+	}
+}
+
+func TestProtocol_NewExecResultFrame_IncludesFinalMetadata(t *testing.T) {
+	frame, err := microvm.NewExecResultFrame("req-1", "sandbox-1", microvm.ExecResultPayload{
+		ExitCode:   42,
+		DurationMs: 125,
+		TimedOut:   true,
+		Truncated:  true,
+	})
+	if err != nil {
+		t.Fatalf("NewExecResultFrame failed: %v", err)
+	}
+	if frame.Type != microvm.FrameTypeResponse || frame.Method != "exec" {
+		t.Fatalf("frame = %+v, want response exec", frame)
+	}
+
+	var payload microvm.ExecResultPayload
+	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
+		t.Fatalf("exec result payload did not unmarshal: %v", err)
+	}
+	if payload.ExitCode != 42 || payload.DurationMs != 125 || !payload.TimedOut || !payload.Truncated {
+		t.Fatalf("payload = %+v, want final exec metadata", payload)
+	}
+}

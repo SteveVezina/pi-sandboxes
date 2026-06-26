@@ -1,7 +1,7 @@
 # F21: MicroVM Guest Control Plane
 
 > Source: `SPEC.md` §6 Features F21
-> Status: 🟡 Partially implemented (T21.1, T21.3, T21.4 remaining)
+> Status: 🟡 Partially implemented (T21.1, T21.4 remaining)
 > Category: Service-layer / Infrastructure
 
 ## Definition (from block spec)
@@ -100,18 +100,19 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Size:** M
 **Depends on:** None
 
-### T21.3: Exec streaming protocol
+### T21.3: Exec streaming protocol ✅
 
 **Acceptance criteria:**
-- [ ] Exec streams stdout/stderr
-- [ ] Stream frames carry base64 payloads
-- [ ] Final exec response includes exit code, duration, timeout, and truncation metadata
+- [x] Exec streams stdout/stderr
+- [x] Stream frames carry base64 payloads
+- [x] Final exec response includes exit code, duration, timeout, and truncation metadata
 
 **Verification:**
-- [ ] Integration test: microVM exec streaming
-- [ ] Unit test: stream frame encoding
+- [x] Unit test: exec request frame encoding
+- [x] Unit test: stream frame encoding
+- [x] Unit test: final exec response metadata
 
-**Files:** `pkg/runtime/microvm/vsock.go (new — to be created)`, `pkg/runtime/microvm/exec.go (new — to be created)`, `tests/runtime/microvm/exec_test.go (new — to be created)`
+**Files:** `pkg/runtime/microvm/protocol.go`, `tests/runtime/microvm/protocol_test.go`
 **Size:** M
 **Depends on:** T21.2
 

@@ -1,7 +1,7 @@
 # PROP-001: Add Structured Block Spec Schema to SPEC.md
 
 ## Status
-🟡 Proposed
+✅ Applied to block spec (2026-06-26)
 
 ## Block Spec Reference
 `SPEC.md` — full document
@@ -408,3 +408,10 @@ The amendment preserves all existing technical requirements. No behavior changes
 
 ## Requested By
 2026-06-26 — Bootstrap phase: SPEC.md needs structured format to enable spec-driven development workflow.
+
+## Cascade completed
+- SPEC.md: Added §5 (Core Concepts), §6 (Features), §7 (Acceptance Criteria), §8 (Security Model), §9 (Interface Contract), §10 (Dependencies), §11 (Out of Scope). Original §5-§33 renumbered to §12-§40.
+- docs/proposals/INDEX.md: Status updated to ✅ Applied to block spec.
+- No ADRs affected (none existed).
+- No feature specs existed yet (bootstrap phase).
+- No plan.md (not yet created).

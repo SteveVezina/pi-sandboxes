@@ -16,7 +16,7 @@ Track all PROP (spec amendment proposals) for this project.
 
 | PROP | Title | Status | Impact | Created |
 |------|-------|--------|--------|---------|
-| [PROP-001](PROP-001-spec-format.md) | Add Structured Block Spec Schema to SPEC.md | 🟡 Proposed | All features (enables spec-driven workflow) | 2026-06-26 |
+| [PROP-001](PROP-001-spec-format.md) | Add Structured Block Spec Schema to SPEC.md | ✅ Applied to block spec | All features (enables spec-driven workflow) | 2026-06-26 |
 
 ## Rules
 

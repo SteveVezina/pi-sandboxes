@@ -90,7 +90,321 @@ export patch/artifacts
 repeat
 ```
 
-## 5. High-level architecture
+## 5. Core Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Sandbox session** | An isolated execution environment with a unique ID, workspace, and lifecycle. Created once, kept warm, destroyed on TTL or explicit close. |
+| **Template** | A declarative definition of the language/toolchain environment (base OS, installed tools, cache mounts, network policy). |
+| **Runtime mode** | The isolation backend used for a session: `fast` (namespaces), `compat` (OCI container), `secure` (gVisor), `isolated` (Kata), `microvm` (Firecracker/CH). |
+| **Workspace** | The editable filesystem inside a sandbox: `/workspace` (repo checkout), `/artifacts` (build outputs), `/cache` (dependency caches), `/tmp` (ephemeral). |
+| **Snapshot** | A point-in-time copy of a sandbox's filesystem state, enabling rollback. Implemented via overlay upperdir, reflink, or tar/zstd. |
+| **Artifact** | Files intentionally exported from a sandbox (build outputs, test reports, patches). |
+| **Cache** | Scoped dependency caches (npm, pnpm, pip, uv, go-mod, cargo) mounted into sandboxes to avoid redundant downloads. |
+| **Policy** | The security configuration for a sandbox: filesystem mounts, process limits, network mode, secret exposure. |
+
+## 6. Features
+
+| Feature ID | Name | Description | Milestone |
+|------------|------|-------------|-----------|
+| F1 | CLI Entry Point | `pi` binary with `box` subcommands for sandbox lifecycle management | M1 |
+| F2 | Daemon API | `pi-sandboxd` local daemon exposing Unix socket HTTP API for sandbox operations | M1 |
+| F3 | Fast Backend | Native Linux sandbox using namespaces, cgroups, seccomp, Landlock isolation | M1 |
+| F4 | Compat Backend | OCI container backend (runc/containerd/Podman) for maximum compatibility | M1 |
+| F5 | Template System | Declarative template definition, build, and management (base, node, python, go, rust, node-python, polyglot) | M1 |
+| F6 | Workspace & File Operations | Clone, file read/write, diff, patch, pull/push within sandbox sessions | M1 |
+| F7 | Command Execution | Streaming stdout/stderr exec with timeout, output limits, exit code, and truncation metadata | M1 |
+| F8 | Session Lifecycle | Create, list, inspect, destroy, TTL expiration, warm session reuse | M1 |
+| F9 | Artifact Export | List, pull, and pack artifacts from sandbox sessions | M1 |
+| F10 | Logs & Command History | Command history, stdout/stderr logs, exit codes, duration, timeout status | M1 |
+| F11 | Secrets & Network Model | Configurable network modes (none/restricted/open), domain allowlist, secret broker for Git credentials | M2 |
+| F12 | Cache Model | Scoped dependency cache mounts, cache pruning, cache promotion | M2 |
+| F13 | Snapshot & Rollback | Filesystem-level snapshot creation and rollback (overlay/reflink) | M2 |
+| F14 | Benchmarks | Mandatory benchmark suite measuring warm exec, install, test, snapshot, export, and density | M1 |
+| F15 | SDKs | TypeScript and Python SDKs with streaming output support | M3 |
+| F16 | System Commands | `pi system status/doctor/prune/disk-usage` for local state inspection | M1 |
+| F17 | Policy Enforcement | Default security policy: no host home mount, no Docker socket, process limits, output limits | M2 |
+
+## 7. Acceptance Criteria
+
+### AC-1: CLI Works (F1)
+- [ ] `pi box create --name demo --template node-python --mode fast` creates a sandbox
+- [ ] `pi box list` shows created sandboxes
+- [ ] `pi box inspect demo` shows sandbox details
+- [ ] `pi box destroy demo` cleans up sandbox
+
+### AC-2: Daemon API Responds (F2)
+- [ ] `pi-sandboxd` listens on `~/.pi/sandboxd.sock`
+- [ ] `POST /v1/sandboxes` creates a sandbox
+- [ ] `GET /v1/sandboxes` lists sandboxes
+- [ ] `GET /v1/sandboxes/{id}` returns sandbox state
+- [ ] `DELETE /v1/sandboxes/{id}` destroys a sandbox
+
+### AC-3: Fast Backend Isolates (F3)
+- [ ] Sandbox runs in isolated namespace/cgroup environment
+- [ ] Host filesystem is not mounted by default
+- [ ] Process limits enforced (maxProcesses: 256)
+- [ ] Command timeout enforced (default: 120s)
+- [ ] Output truncation at maxOutput (default: 8MiB)
+
+### AC-4: Compat Backend Works (F4)
+- [ ] Sandbox runs as OCI container via runc/containerd/Podman
+- [ ] No privileged containers by default
+- [ ] No host network by default
+- [ ] No Docker socket mount by default
+- [ ] Seccomp profile enabled
+- [ ] Capabilities dropped by default
+
+### AC-5: Templates Are Usable (F5)
+- [ ] `base`, `node`, `python`, `go`, `rust`, `node-python`, `polyglot` templates defined
+- [ ] `pi template list` shows available templates
+- [ ] `pi template inspect <name>` shows template details
+- [ ] Templates configure correct toolchains and cache mounts
+
+### AC-6: File Operations Work (F6)
+- [ ] `pi box clone <repo>` clones a repository into sandbox workspace
+- [ ] `pi box files read <id> <path>` reads a file from sandbox
+- [ ] `pi box files write <id> <path>` writes a file to sandbox
+- [ ] `pi box diff <id>` shows workspace diff
+- [ ] `pi box patch <id>` exports workspace as patch
+
+### AC-7: Exec Streams Output (F7)
+- [ ] `pi box exec <id> -- <cmd>` runs command with streaming stdout/stderr
+- [ ] Exit code returned accurately
+- [ ] Timeout status reported when exceeded
+- [ ] Output truncated when exceeding maxOutput, with `truncated` flag
+- [ ] `--cwd`, `--timeout`, `--max-output`, `--memory`, `--cpu`, `--json` options honored
+
+### AC-8: Session Lifecycle (F8)
+- [ ] Sandbox created once and kept warm
+- [ ] Multiple exec calls reuse the same session
+- [ ] TTL expiration triggers cleanup
+- [ ] `pi box destroy --all` cleans all sandboxes
+
+### AC-9: Artifacts Export (F9)
+- [ ] `pi box artifacts list <id>` lists available artifacts
+- [ ] `pi box artifacts pull <id> <dest>` pulls artifacts to host
+- [ ] `pi box artifacts pack <id> --output <file>` creates archive
+
+### AC-10: Logs Available (F10)
+- [ ] `pi box logs <id>` shows command logs
+- [ ] `pi box history <id>` shows command history
+- [ ] Each log entry includes: command, exit code, duration, timeout status, output truncation
+
+### AC-11: Network Modes Work (F11)
+- [ ] `none` mode blocks all outbound network
+- [ ] `restricted` mode enforces domain allowlist
+- [ ] `open` mode allows full outbound access
+- [ ] Default deny: metadata endpoint (169.254.169.254), host localhost, private LANs
+
+### AC-12: Caches Are Scoped (F12)
+- [ ] `/cache/npm`, `/cache/pnpm`, `/cache/pip`, `/cache/uv`, `/cache/go-mod`, `/cache/go-build`, `/cache/cargo` mounted
+- [ ] Caches scoped by template/runtime/user
+- [ ] `pi system prune` can clean caches
+
+### AC-13: Snapshots Work (F13)
+- [ ] `pi box snapshot <id> <name>` creates a named snapshot
+- [ ] `pi box rollback <id> <name>` restores to snapshot
+- [ ] Snapshot creation uses overlay upperdir or reflink
+- [ ] Snapshot metadata stored under `~/.pi/sandboxes/<id>/snapshots/`
+
+### AC-14: Benchmarks Run (F14)
+- [ ] `pi bench run` executes full benchmark suite
+- [ ] All 13 required benchmarks execute: warm_exec_echo, warm_exec_shell, file_scan_rg, git_clone_small, pnpm_install_cached, uv_sync_cached, go_test_cached, cargo_test_cached, snapshot_create, snapshot_rollback, artifact_export_20mb, parallel_10, parallel_100
+- [ ] Output includes p50/p95 latency and memory per sandbox
+- [ ] Per-mode comparison (fast vs compat)
+
+### AC-15: SDKs Work (F15)
+- [ ] TypeScript SDK: `client.sandboxes.create()`, `.clone()`, `.exec()`, `.diff()`
+- [ ] Python SDK: `client.sandboxes.create()`, `.clone()`, `.exec()`, `.diff()`
+- [ ] Both support streaming output
+
+### AC-16: System Commands Work (F16)
+- [ ] `pi system status` shows daemon and sandbox status
+- [ ] `pi system doctor` validates configuration
+- [ ] `pi system prune` cleans old state
+- [ ] `pi system disk-usage` shows storage breakdown
+
+### AC-17: Policy Enforced (F17)
+- [ ] Host home directory not mounted by default
+- [ ] Docker socket not mounted by default
+- [ ] Cloud metadata credentials not accessible
+- [ ] SSH private keys not mounted by default
+- [ ] Git credentials brokered (not dumped into environment)
+- [ ] Exec output limited to 8MiB by default
+- [ ] Exec timeout 120s by default
+- [ ] Max processes 256 by default
+
+### AC-18: End-to-End Agent Loop (F1, F2, F3, F5-F10)
+- [ ] `pi box create --name demo --template node-python --mode fast`
+- [ ] `pi box clone demo https://github.com/some/repo`
+- [ ] `pi box exec demo -- pnpm install`
+- [ ] `pi box exec demo -- pnpm test`
+- [ ] `pi box diff demo`
+- [ ] `pi box artifacts pull demo ./out`
+- [ ] `pi box destroy demo`
+- [ ] All steps succeed without direct host filesystem access
+
+### AC-19: Warm Exec Performance (F3, F4, F14)
+- [ ] Fast mode warm exec p50 < 10ms
+- [ ] Compat mode warm exec p50 < 100ms
+- [ ] New warm session assignment < 100ms
+- [ ] Artifact export 20MB < 500ms local
+- [ ] Idle fast sandbox memory < 64 MiB
+
+### AC-20: Multi-Language Support (F5, F7)
+- [ ] Node.js: `npm install`, `pnpm install`, `pnpm test`, `pnpm build`, `npm run dev`
+- [ ] Python: `pip install -r requirements.txt`, `uv sync`, `uv run pytest`, `python script.py`
+- [ ] Go: `go mod download`, `go test ./...`, `go build ./...`
+- [ ] Rust: `cargo fetch`, `cargo test`, `cargo build`
+
+## 8. Security Model
+
+### Filesystem Isolation
+- Host home directory (`$HOME`) not mounted by default
+- `/var/run/docker.sock` not mounted by default
+- Host root (`/`) not mounted by default
+- Cloud metadata credentials (169.254.169.254) not accessible
+- SSH private keys not mounted by default
+- Kubernetes/cloud config directories not mounted by default
+- Workspace (`/workspace`) and artifacts (`/artifacts`) are read-write
+- Root filesystem is read-only where possible
+- `/tmp` is process-local
+
+### Process Limits
+- Maximum processes: 256 (configurable)
+- Default timeout: 120s (configurable)
+- Max output: 8MiB (configurable)
+- cgroup v2 enforces CPU/memory/disk limits
+
+### Network Isolation
+- Default mode: `restricted`
+- Domain allowlist enforced (github.com, registry.npmjs.org, pypi.org, files.pythonhosted.org, proxy.golang.org, crates.io, static.crates.io)
+- Default deny: metadata endpoint, host localhost, private LANs, cluster-local ranges
+- Domain-aware egress (not only IP-based) because registries use dynamic IPs
+
+### Secrets Model
+- Environment variables: deny-by-default
+- SSH agent: opt-in only
+- Git credentials: brokered (not dumped into environment)
+- Long-term: per-secret `exposeTo` policy (e.g., github-token → git only, never to shell)
+
+### Runtime Mode Security
+- `fast`: Linux namespaces, cgroups, seccomp, Landlock — suitable for trusted local use
+- `compat`: OCI containers with hardened defaults (no privileged, no host network, caps dropped, seccomp enabled)
+- `secure`: gVisor for unknown/untrusted repos — may have syscall compatibility issues
+- `microvm`: VM-grade isolation — snapshot-first, read-only rootfs, virtio-vsock control channel
+
+## 9. Interface Contract
+
+### Daemon API (Unix socket: `~/.pi/sandboxd.sock`, optional HTTP: `127.0.0.1:7777`)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/v1/sandboxes` | Create sandbox session |
+| GET | `/v1/sandboxes` | List sandbox sessions |
+| GET | `/v1/sandboxes/{id}` | Inspect sandbox state |
+| DELETE | `/v1/sandboxes/{id}` | Destroy sandbox session |
+| POST | `/v1/sandboxes/{id}/clone` | Clone repository into workspace |
+| POST | `/v1/sandboxes/{id}/exec` | Execute command (streaming) |
+| POST | `/v1/sandboxes/{id}/files/write` | Write file to workspace |
+| GET | `/v1/sandboxes/{id}/files/read` | Read file from workspace |
+| GET | `/v1/sandboxes/{id}/diff` | Get workspace diff |
+| GET | `/v1/sandboxes/{id}/patch` | Get workspace patch |
+| POST | `/v1/sandboxes/{id}/artifacts/export` | Export artifacts |
+| POST | `/v1/sandboxes/{id}/snapshot` | Create snapshot |
+| POST | `/v1/sandboxes/{id}/rollback` | Rollback to snapshot |
+| GET | `/v1/sandboxes/{id}/logs` | Get command logs |
+
+### Create Request
+```json
+{
+  "template": "node-python",
+  "mode": "fast",
+  "ttlSeconds": 7200,
+  "workspace": { "mode": "copy", "maxSize": "5Gi" },
+  "resources": { "cpu": "2", "memory": "2Gi", "processes": 256 },
+  "network": { "mode": "restricted", "allowDomains": ["github.com", "..."] }
+}
+```
+
+### Exec Request
+```json
+{
+  "command": "pnpm test",
+  "cwd": "/workspace",
+  "timeoutMs": 60000,
+  "maxOutputBytes": 8388608,
+  "network": "restricted"
+}
+```
+
+### Exec Response
+```json
+{
+  "exitCode": 0,
+  "durationMs": 1842,
+  "stdout": "...",
+  "stderr": "...",
+  "truncated": false,
+  "timedOut": false
+}
+```
+
+### CLI Commands (all map to API calls)
+```
+pi box create <name> [template] [flags]
+pi box list
+pi box inspect <name>
+pi box clone <name> <url>
+pi box exec <name> -- <cmd> [flags]
+pi box shell <name>
+pi box files list|read|write|pull|push <name> [args]
+pi box diff <name>
+pi box patch <name>
+pi box artifacts list|pull|pack <name> [flags]
+pi box snapshot <name> <action> [name]
+pi box logs <name>
+pi box destroy <name> [--all]
+pi system status|doctor|prune|disk-usage
+pi bench run [flags]
+pi template list|inspect|build|update|prune [flags]
+```
+
+## 10. Dependencies
+
+| Dependency | Type | Required For | Notes |
+|-----------|------|-------------|-------|
+| Linux kernel namespaces (user, mount, PID) | OS feature | F3 (Fast backend) | Linux-only; macOS/Windows require workaround |
+| cgroup v2 | OS feature | F3, F17 | Linux-only |
+| seccomp | OS feature | F3, F17 | Linux-only |
+| Landlock | OS feature | F3 | Kernel ≥ 5.13, optional |
+| runc / containerd / Podman | External tool | F4 (Compat backend) | Any OCI runtime |
+| gVisor (runsc) | External tool | F16 (Secure backend) | Optional, later milestone |
+| Firecracker / Cloud Hypervisor | External tool | F17 (MicroVM backend) | Optional, later milestone |
+| Git | External tool | F6 (Clone) | Required for all backends |
+| Template base images (Debian slim, etc.) | OCI images | F5 (Templates) | Pull-on-demand |
+
+## 11. Out of Scope
+
+The following are explicitly NOT part of the first release:
+
+- Kubernetes controller or CRDs
+- Multi-region control plane
+- Full SaaS product
+- Firecracker rewrite (phase 5 only uses it, doesn't rewrite it)
+- Custom VMM implementation
+- Docker-in-Docker as a default capability
+- GPU workloads
+- GUI/browser desktop agents
+- Full Docker Compose compatibility
+- Complex enterprise identity management
+- Background cloud scheduler
+- Windows/macOS native backends (initial target: Linux-first; macOS uses Lima/Colima/Docker; Windows uses WSL2)
+- Desktop mode (future)
+- WASM/WASI tool sandboxing (future)
+
+## 12. High-level architecture
 
 ```text
 PI Agent / CLI / IDE / SDK
@@ -120,7 +434,7 @@ PI Agent / CLI / IDE / SDK
 
 The CLI is thin. PI Agent and other tools should talk directly to `pi-sandboxd` over a local Unix socket or localhost API.
 
-## 6. User-facing runtime modes
+## 13. User-facing runtime modes
 
 Expose simple profiles. Do not expose low-level runtime complexity to normal users.
 
@@ -151,7 +465,7 @@ Windows:
 
 The initial target is Linux-first.
 
-## 7. Isolation strategy
+## 14. Isolation strategy
 
 ### 7.1 Fast mode
 
@@ -240,7 +554,7 @@ MicroVM design goals:
 - snapshot-first template restore
 - explicit reseed-on-restore hook
 
-## 8. Local filesystem layout
+## 15. Local filesystem layout
 
 Use predictable state under `~/.pi` by default.
 
@@ -296,7 +610,7 @@ pi system prune
 pi system disk-usage
 ```
 
-## 9. Workspace model
+## 16. Workspace model
 
 Each sandbox session has:
 
@@ -320,7 +634,7 @@ Support three workspace modes:
 | `bind` | Bind mount explicit host directory. User must opt in. |
 | `overlay` | Read-only base plus writable upperdir. Good for snapshots and rollback. |
 
-## 10. Cache model
+## 17. Cache model
 
 Dependency caches are first-class. Coding-agent latency is often dominated by package installation and builds.
 
@@ -353,7 +667,7 @@ Recommended fast tools:
 - Go: GOMODCACHE and GOCACHE
 - Rust: cargo cache and optional sccache
 
-## 11. Templates
+## 18. Templates
 
 Templates define language/runtime environments.
 
@@ -459,7 +773,7 @@ pi template update node-python
 pi template prune
 ```
 
-## 12. CLI requirements
+## 19. CLI requirements
 
 The CLI binary should be named `pi` initially, with `box` as the sandbox subcommand.
 
@@ -569,7 +883,7 @@ pi box destroy app1
 pi box destroy --all
 ```
 
-## 13. Daemon API
+## 20. Daemon API
 
 `pi-sandboxd` exposes a local API over Unix socket by default.
 
@@ -663,7 +977,7 @@ Example exec response:
 }
 ```
 
-## 14. Agent SDK requirements
+## 21. Agent SDK requirements
 
 Provide TypeScript and Python SDKs.
 
@@ -691,7 +1005,7 @@ diff = box.diff()
 
 SDKs must support streaming output.
 
-## 15. Security defaults
+## 22. Security defaults
 
 Default policy:
 
@@ -741,7 +1055,7 @@ Never mount these by default:
 - Kubernetes config
 - cloud provider config directories
 
-## 16. Secrets model
+## 23. Secrets model
 
 Do not dump secrets into sandbox environment by default.
 
@@ -764,7 +1078,7 @@ secrets:
     neverExposeToShell: true
 ```
 
-## 17. Network model
+## 24. Network model
 
 The network must be configurable per sandbox and per exec.
 
@@ -788,7 +1102,7 @@ local Kubernetes ranges when applicable
 
 Domain-aware egress is preferred over only IP-based filtering because package registries and Git hosts use dynamic IPs.
 
-## 18. Snapshot and rollback
+## 25. Snapshot and rollback
 
 Initial implementation can use filesystem-level snapshots:
 
@@ -817,7 +1131,7 @@ on_restore:
   notify pi-agentd
 ```
 
-## 19. Artifact model
+## 26. Artifact model
 
 Artifacts are files intentionally exported from the sandbox.
 
@@ -842,7 +1156,7 @@ pi box artifacts pack app1 --output artifacts.tar.zst
 
 Artifact export should avoid copying the whole workspace unless requested.
 
-## 20. Logs and telemetry
+## 27. Logs and telemetry
 
 Each sandbox should produce:
 
@@ -866,7 +1180,7 @@ pi box metrics app1
 
 Telemetry must be local-only by default.
 
-## 21. Benchmarks
+## 28. Benchmarks
 
 Benchmark suite is mandatory.
 
@@ -923,7 +1237,7 @@ Initial target metrics:
 | Artifact export 20 MB | under 500 ms local |
 | Idle fast sandbox memory | as small as practical, target under 64 MiB where possible |
 
-## 22. Implementation language
+## 29. Implementation language
 
 Recommended implementation:
 
@@ -949,7 +1263,7 @@ Phase 3:
 
 Do not rewrite Firecracker in phase 1.
 
-## 23. Repository structure
+## 30. Repository structure
 
 Preferred repo layout:
 
@@ -1015,7 +1329,7 @@ pibox/
     benchmarks.md
 ```
 
-## 24. Milestones
+## 31. Milestones
 
 ### Milestone 1: Local Linux MVP
 
@@ -1117,7 +1431,7 @@ pi context use workstation
 pi box create node-python
 ```
 
-## 25. Compatibility expectations
+## 32. Compatibility expectations
 
 The platform must support common commands:
 
@@ -1179,7 +1493,7 @@ If app needs services, use platform-managed side services later instead of Docke
 If browser automation fails, use a browser-specific template or future desktop mode.
 ```
 
-## 26. Service dependencies later
+## 33. Service dependencies later
 
 Do not make Docker Compose inside the sandbox the default answer.
 
@@ -1195,7 +1509,7 @@ services:
 
 The platform should run side services next to the sandbox, expose them on a private network, and inject connection strings into the sandbox through the broker.
 
-## 27. Configuration file
+## 34. Configuration file
 
 Default config:
 
@@ -1228,7 +1542,7 @@ cache:
   maxSize: 50Gi
 ```
 
-## 28. Error handling requirements
+## 35. Error handling requirements
 
 Errors must be actionable.
 
@@ -1257,7 +1571,7 @@ Install docs: pi docs gvisor
 Try: pi box create --mode compat node-python
 ```
 
-## 29. Documentation requirements
+## 36. Documentation requirements
 
 Must include:
 
@@ -1275,7 +1589,7 @@ Must include:
 - Troubleshooting
 - Known incompatibilities
 
-## 30. Success criteria
+## 37. Success criteria
 
 The project is successful when:
 
@@ -1288,7 +1602,7 @@ The project is successful when:
 7. Isolation is selectable per sandbox session.
 8. The project can later grow into remote workstation, microVM, and Kubernetes-backed modes without redesigning the API.
 
-## 31. Product north star
+## 38. Product north star
 
 The north star is not simply running containers or microVMs.
 
@@ -1296,7 +1610,7 @@ The north star is:
 
 > A coding agent can get a warm, isolated, language-ready workspace almost instantly, run hundreds of commands with low overhead, safely manage code changes, and export only the useful diff and artifacts.
 
-## 32. First coding-agent task list
+## 39. First coding-agent task list
 
 A coding agent implementing this project should start with the following tasks in order:
 
@@ -1321,7 +1635,7 @@ A coding agent implementing this project should start with the following tasks i
 19. Add MCP server integration.
 20. Add gVisor backend after MVP.
 
-## 33. Important engineering constraints
+## 40. Important engineering constraints
 
 - Keep the hot path simple.
 - Avoid SSH for agent exec.

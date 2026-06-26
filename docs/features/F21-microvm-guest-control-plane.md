@@ -1,7 +1,7 @@
 # F21: MicroVM Guest Control Plane
 
 > Source: `SPEC.md` §6 Features F21
-> Status: 🟡 Partially implemented (T21.1, T21.4 remaining)
+> Status: 🟡 Partially implemented (T21.4 remaining)
 > Category: Service-layer / Infrastructure
 
 ## Definition (from block spec)
@@ -65,21 +65,22 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Tasks
 
-### T21.1: Guest init and readiness
+### T21.1: Guest init and readiness ✅
 
 **Description:** Build `pi-init` and start `pi-agentd` inside the guest.
 
 **Acceptance criteria:**
-- [ ] `pi-init` starts inside the guest
-- [ ] `pi-agentd` starts and reports readiness
-- [ ] Readiness maps to sandbox state
-- [ ] Host marks sandbox warm only after `ready`
+- [x] `pi-init` starts inside the guest
+- [x] `pi-agentd` starts and reports readiness
+- [x] Readiness maps to sandbox state
+- [x] Host marks sandbox warm only after `ready`
 
 **Verification:**
-- [ ] Guest image smoke test
-- [ ] Integration test: readiness reported to host
+- [x] Guest binary smoke test: `pi-init` starts `pi-agentd` and receives `ready`
+- [x] Unit test: readiness maps to sandbox state only after `ready`
+- [x] Integration test: readiness reported to host
 
-**Files:** `cmd/pi-init/main.go (new — to be created)`, `cmd/pi-agentd/main.go (new — to be created)`
+**Files:** `cmd/pi-init/main.go`, `cmd/pi-agentd/main.go`, `pkg/runtime/microvm/readiness.go`, `tests/runtime/microvm/readiness_test.go`
 **Size:** M
 **Depends on:** F20
 

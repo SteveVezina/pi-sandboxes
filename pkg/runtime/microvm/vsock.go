@@ -7,7 +7,6 @@ package microvm
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"sync"
@@ -159,20 +158,6 @@ func (c *Client) Send(frame Frame) (Frame, error) {
 // StreamFrames returns a channel of stream frames from the guest.
 func (c *Client) StreamFrames() (<-chan Frame, <-chan error) {
 	return c.conn.StreamFrames()
-}
-
-// ExecFramePayload decodes an exec result frame into its payload.
-func ExecFramePayload(frame Frame) (ExecResultPayload, error) {
-	var payload ExecResultPayload
-	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
-		return ExecResultPayload{}, fmt.Errorf("decode exec result payload: %w", err)
-	}
-	return payload, nil
-}
-
-// StreamFramePayload decodes a stream frame into its stream name and data.
-func StreamFramePayload(frame Frame) (string, []byte, error) {
-	return DecodeStreamPayload(frame)
 }
 
 // EncodeFrame writes one validated JSON frame followed by a newline.

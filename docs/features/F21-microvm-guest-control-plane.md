@@ -124,9 +124,11 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [ ] No direct host filesystem mount is required
 
 **Verification:**
+- [x] Unit test: file read/write transfer frames
+- [x] Unit test: artifact list/pull transfer frames
 - [ ] Integration test: microVM file/artifact transfer
 
-**Files:** `pkg/runtime/microvm/files.go (new — to be created)`, `pkg/runtime/microvm/artifacts.go (new — to be created)`, `tests/runtime/microvm/transfer_test.go (new — to be created)`
+**Files:** `pkg/runtime/microvm/protocol.go`, `tests/runtime/microvm/transfer_test.go`, `pkg/runtime/microvm/files.go (new — to be created)`, `pkg/runtime/microvm/artifacts.go (new — to be created)`
 **Size:** M
 **Depends on:** T21.2
 

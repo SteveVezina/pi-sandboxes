@@ -71,6 +71,35 @@ type ExecResultPayload struct {
 	Truncated  bool  `json:"truncated"`
 }
 
+// FileReadRequestPayload is the payload for file.read requests.
+type FileReadRequestPayload struct {
+	Path string `json:"path"`
+}
+
+// FileWriteRequestPayload is the payload for file.write requests.
+type FileWriteRequestPayload struct {
+	Path string `json:"path"`
+	Data string `json:"data"`
+	Mode uint32 `json:"mode,omitempty"`
+}
+
+// FileDataPayload carries base64-encoded file or artifact bytes.
+type FileDataPayload struct {
+	Path string `json:"path"`
+	Data string `json:"data"`
+	Mode uint32 `json:"mode,omitempty"`
+}
+
+// ArtifactPullRequestPayload is the payload for artifact.pull requests.
+type ArtifactPullRequestPayload struct {
+	Path string `json:"path"`
+}
+
+// ArtifactListPayload is a response payload for artifact.list.
+type ArtifactListPayload struct {
+	Paths []string `json:"paths"`
+}
+
 // EncodeFrame writes one validated JSON frame followed by a newline.
 func EncodeFrame(w io.Writer, frame Frame) error {
 	if err := frame.Validate(); err != nil {
@@ -191,4 +220,161 @@ func NewExecResultFrame(id, sessionID string, payload ExecResultPayload) (Frame,
 		Method:    "exec",
 		Payload:   encoded,
 	}, nil
+}
+
+// NewFileReadRequestFrame creates a file.read request frame.
+func NewFileReadRequestFrame(id, sessionID, path string) (Frame, error) {
+	if path == "" {
+		return Frame{}, fmt.Errorf("file path is required")
+	}
+	payload, err := json.Marshal(FileReadRequestPayload{Path: path})
+	if err != nil {
+		return Frame{}, fmt.Errorf("encode file read payload: %w", err)
+	}
+	return Frame{
+		Type:      FrameTypeRequest,
+		ID:        id,
+		SessionID: sessionID,
+		Method:    "file.read",
+		Payload:   payload,
+	}, nil
+}
+
+// NewFileWriteRequestFrame creates a file.write request frame.
+func NewFileWriteRequestFrame(id, sessionID, path string, data []byte, mode uint32) (Frame, error) {
+	if path == "" {
+		return Frame{}, fmt.Errorf("file path is required")
+	}
+	payload, err := json.Marshal(FileWriteRequestPayload{
+		Path: path,
+		Data: base64.StdEncoding.EncodeToString(data),
+		Mode: mode,
+	})
+	if err != nil {
+		return Frame{}, fmt.Errorf("encode file write payload: %w", err)
+	}
+	return Frame{
+		Type:      FrameTypeRequest,
+		ID:        id,
+		SessionID: sessionID,
+		Method:    "file.write",
+		Payload:   payload,
+	}, nil
+}
+
+// NewArtifactListRequestFrame creates an artifact.list request frame.
+func NewArtifactListRequestFrame(id, sessionID string) (Frame, error) {
+	frame := Frame{
+		Type:      FrameTypeRequest,
+		ID:        id,
+		SessionID: sessionID,
+		Method:    "artifact.list",
+	}
+	if err := frame.Validate(); err != nil {
+		return Frame{}, err
+	}
+	return frame, nil
+}
+
+// NewArtifactPullRequestFrame creates an artifact.pull request frame.
+func NewArtifactPullRequestFrame(id, sessionID, path string) (Frame, error) {
+	if path == "" {
+		return Frame{}, fmt.Errorf("artifact path is required")
+	}
+	payload, err := json.Marshal(ArtifactPullRequestPayload{Path: path})
+	if err != nil {
+		return Frame{}, fmt.Errorf("encode artifact pull payload: %w", err)
+	}
+	return Frame{
+		Type:      FrameTypeRequest,
+		ID:        id,
+		SessionID: sessionID,
+		Method:    "artifact.pull",
+		Payload:   payload,
+	}, nil
+}
+
+// DecodeFileDataPayload decodes base64 file or artifact bytes from a response frame.
+func DecodeFileDataPayload(frame Frame) (string, []byte, uint32, error) {
+	if frame.Type != FrameTypeResponse {
+		return "", nil, 0, fmt.Errorf("frame type %q is not response", frame.Type)
+	}
+	var payload FileDataPayload
+	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
+		return "", nil, 0, fmt.Errorf("decode file data payload: %w", err)
+	}
+	if payload.Path == "" {
+		return "", nil, 0, fmt.Errorf("file path is required")
+	}
+	data, err := base64.StdEncoding.DecodeString(payload.Data)
+	if err != nil {
+		return "", nil, 0, fmt.Errorf("decode file data: %w", err)
+	}
+	return payload.Path, data, payload.Mode, nil
+}
+
+// EncodeStreamData encodes data as base64 for a stream frame.
+func EncodeStreamData(data []byte) string {
+	return base64.StdEncoding.EncodeToString(data)
+}
+
+// DecodeStreamData decodes base64 data from a stream frame.
+func DecodeStreamData(encoded string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(encoded)
+}
+
+// NewHelloFrame creates a hello request frame.
+func NewHelloFrame(id, sessionID string) (Frame, error) {
+	frame := Frame{
+		Type:      FrameTypeRequest,
+		ID:        id,
+		SessionID: sessionID,
+		Method:    "hello",
+	}
+	if err := frame.Validate(); err != nil {
+		return Frame{}, err
+	}
+	return frame, nil
+}
+
+// NewReadyFrame creates a ready event frame.
+func NewReadyFrame(id, sessionID string) (Frame, error) {
+	frame := Frame{
+		Type:      FrameTypeEvent,
+		ID:        id,
+		SessionID: sessionID,
+		Method:    "ready",
+	}
+	if err := frame.Validate(); err != nil {
+		return Frame{}, err
+	}
+	return frame, nil
+}
+
+// NewShutdownFrame creates a shutdown event frame.
+func NewShutdownFrame(id, sessionID string) (Frame, error) {
+	frame := Frame{
+		Type:      FrameTypeEvent,
+		ID:        id,
+		SessionID: sessionID,
+		Method:    "shutdown",
+	}
+	if err := frame.Validate(); err != nil {
+		return Frame{}, err
+	}
+	return frame, nil
+}
+
+// ExecFramePayload decodes an exec result frame into its payload.
+func ExecFramePayload(frame Frame) (ExecResultPayload, error) {
+	var payload ExecResultPayload
+	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
+		return ExecResultPayload{}, fmt.Errorf("decode exec result payload: %w", err)
+	}
+	return payload, nil
+}
+
+// StreamFramePayload decodes a stream frame into its stream name and data.
+func StreamFramePayload(frame Frame) (string, []byte, error) {
+	return DecodeStreamPayload(frame)
 }

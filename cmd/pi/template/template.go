@@ -1,8 +1,8 @@
 package template
 
 import (
-	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/pi-sandbox/pi/cmd/pi/cli"
 	"github.com/spf13/cobra"
@@ -19,9 +19,22 @@ var Command = templateCmd
 
 func init() {
 	cli.AddCommand(templateCmd)
-	templateCmd.AddCommand(&cobra.Command{Use: "list", Short: "List templates", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	templateCmd.AddCommand(&cobra.Command{Use: "inspect", Short: "Inspect template", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	templateCmd.AddCommand(&cobra.Command{Use: "build", Short: "Build template", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	templateCmd.AddCommand(&cobra.Command{Use: "update", Short: "Update template", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	templateCmd.AddCommand(&cobra.Command{Use: "prune", Short: "Prune templates", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
+
+	// Subcommands
+	templateCmd.AddCommand(List())
+	templateCmd.AddCommand(Inspect())
+	templateCmd.AddCommand(Build())
+	templateCmd.AddCommand(Update())
+	templateCmd.AddCommand(Prune())
+
+	// Global flags
+	templateCmd.PersistentFlags().StringVar(&tmplDir, "templates-dir", defaultTemplatesDir(), "Templates directory")
+}
+
+func defaultTemplatesDir() string {
+	home := os.Getenv("HOME")
+	if home == "" {
+		home = "."
+	}
+	return filepath.Join(home, ".pi", "templates")
 }

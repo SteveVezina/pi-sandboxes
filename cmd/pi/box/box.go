@@ -1,8 +1,14 @@
 package box
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/pi-sandbox/pi/cmd/pi/cli"
 	"github.com/spf13/cobra"
@@ -20,122 +26,505 @@ var Command = boxCmd
 func init() {
 	cli.AddCommand(boxCmd)
 	boxCmd.AddCommand(createCmd, listCmd, inspectCmd, destroyCmd, cloneCmd, execCmd, shellCmd, filesCmd, diffCmd, patchCmd, artifactsCmd, snapshotCmd, logsCmd)
+
+	// Files subcommands
+	filesCmd.AddCommand(filesListCmd, filesReadCmd, filesWriteCmd)
+
+	// Artifacts subcommands
+	artifactsCmd.AddCommand(artifactsListCmd, artifactsPullCmd, artifactsPackCmd)
+
+	// Snapshot subcommands
+	snapshotCmd.AddCommand(snapshotCreateCmd, snapshotListCmd, snapshotRollbackCmd, snapshotDeleteCmd)
+
+	// Set up flags on subcommands
+	artifactsPackCmd.Flags().StringP("output", "o", "/tmp/artifacts.tar.gz", "Output path")
 }
 
+// getSocketPath returns the daemon socket path.
+func getSocketPath() string {
+	home, _ := os.UserHomeDir()
+	if home == "" {
+		home = "."
+	}
+	return fmt.Sprintf("%s/.pi/sandboxd.sock", home)
+}
+
+// callAPI makes an HTTP call to the daemon via curl.
+func callAPI(method, endpoint string, body io.Reader) (map[string]interface{}, error) {
+	args := []string{"-s", "-X", method, "-H", "Content-Type: application/json",
+		"--unix-socket", getSocketPath(), endpoint}
+	if body != nil {
+		args = append(args, "-d", "@-")
+	}
+	cmd := exec.Command("curl", args...)
+	if body != nil {
+		cmd.Stdin = body
+	}
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	var result map[string]interface{}
+	if err := json.Unmarshal(output, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// createCmd creates a new sandbox session.
 var createCmd = &cobra.Command{
 	Use:   "create [name] [template]",
 	Short: "Create a new sandbox session",
+	Args:  cobra.MaximumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintln(os.Stderr, "stub: create — not yet implemented")
-		os.Exit(1)
+		name := "default"
+		template := "base"
+		mode := "fast"
+
+		if len(args) > 0 {
+			name = args[0]
+		}
+		if len(args) > 1 {
+			template = args[1]
+		}
+		if m, _ := cmd.Flags().GetString("mode"); m != "" {
+			mode = m
+		}
+
+		payload := map[string]interface{}{
+			"name":     name,
+			"template": template,
+			"mode":     mode,
+		}
+		data, _ := json.Marshal(payload)
+
+		result, err := callAPI("POST", "/v1/sandboxes", bytes.NewReader(data))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: failed to create sandbox: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Created sandbox: %v\n", result["id"])
 	},
 }
 
+func init() {
+	createCmd.Flags().StringP("mode", "m", "fast", "Runtime mode: fast, compat, secure")
+}
+
+// listCmd lists sandbox sessions.
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List sandbox sessions",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintln(os.Stderr, "stub: list — not yet implemented")
-		os.Exit(1)
+		result, err := callAPI("GET", "/v1/sandboxes", nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: failed to list sandboxes: %v\n", err)
+			os.Exit(1)
+		}
+		data, _ := json.MarshalIndent(result, "", "  ")
+		fmt.Println(string(data))
 	},
 }
 
+// inspectCmd inspects a sandbox session.
 var inspectCmd = &cobra.Command{
 	Use:   "inspect <name>",
 	Short: "Inspect a sandbox session",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintln(os.Stderr, "stub: inspect — not yet implemented")
-		os.Exit(1)
+		result, err := callAPI("GET", "/v1/sandboxes/"+args[0], nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: failed to inspect sandbox: %v\n", err)
+			os.Exit(1)
+		}
+		data, _ := json.MarshalIndent(result, "", "  ")
+		fmt.Println(string(data))
 	},
 }
 
+// destroyCmd destroys a sandbox session.
 var destroyCmd = &cobra.Command{
 	Use:   "destroy <name>",
 	Short: "Destroy a sandbox session",
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintln(os.Stderr, "stub: destroy — not yet implemented")
-		os.Exit(1)
+		if args[0] == "--all" {
+			fmt.Fprintln(os.Stderr, "error: destroy --all not yet implemented")
+			os.Exit(1)
+		}
+		_, err := callAPI("DELETE", "/v1/sandboxes/"+args[0], nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: failed to destroy sandbox: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Destroyed sandbox: %s\n", args[0])
 	},
 }
 
+// cloneCmd clones a repository into a sandbox.
 var cloneCmd = &cobra.Command{
 	Use:   "clone <name> <url>",
 	Short: "Clone a repository into a sandbox",
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintln(os.Stderr, "stub: clone — not yet implemented")
-		os.Exit(1)
+		payload := map[string]interface{}{"url": args[1]}
+		data, _ := json.Marshal(payload)
+		result, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/clone", bytes.NewReader(data))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: clone failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Cloned %s into sandbox %s\n", args[1], result["id"])
 	},
 }
 
+// execCmd executes a command in a sandbox.
 var execCmd = &cobra.Command{
 	Use:   "exec <name> -- <command>",
 	Short: "Execute a command in a sandbox",
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintln(os.Stderr, "stub: exec — not yet implemented")
-		os.Exit(1)
+		cmdIdx := -1
+		for i, a := range os.Args {
+			if a == "--" && i < len(os.Args)-1 {
+				cmdIdx = i
+				break
+			}
+		}
+		if cmdIdx == -1 {
+			fmt.Fprintln(os.Stderr, "error: command required after --")
+			os.Exit(1)
+		}
+		command := strings.Join(os.Args[cmdIdx+1:], " ")
+
+		timeout := int64(120)
+		if t, _ := cmd.Flags().GetInt64("timeout"); t > 0 {
+			timeout = t
+		}
+		cwd := "/workspace"
+		if c, _ := cmd.Flags().GetString("cwd"); c != "" {
+			cwd = c
+		}
+
+		payload := map[string]interface{}{
+			"command":        command,
+			"cwd":            cwd,
+			"timeoutMs":      timeout * 1000,
+			"maxOutputBytes": 8388608,
+		}
+		data, _ := json.Marshal(payload)
+
+		result, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/exec", bytes.NewReader(data))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: exec failed: %v\n", err)
+			os.Exit(1)
+		}
+
+		if stdout, ok := result["stdout"].(string); ok && stdout != "" {
+			fmt.Print(stdout)
+		}
+		if stderr, ok := result["stderr"].(string); ok && stderr != "" {
+			fmt.Fprint(os.Stderr, stderr)
+		}
+		if jsonFlag, _ := cmd.Flags().GetBool("json"); jsonFlag {
+			data, _ := json.MarshalIndent(result, "", "  ")
+			fmt.Println(string(data))
+		}
 	},
 }
 
+func init() {
+	execCmd.Flags().StringP("cwd", "c", "/workspace", "Working directory")
+	execCmd.Flags().Int64P("timeout", "t", 120, "Timeout in seconds")
+	execCmd.Flags().BoolP("json", "j", false, "Output as JSON")
+}
+
+// shellCmd opens an interactive shell in a sandbox.
 var shellCmd = &cobra.Command{
 	Use:   "shell <name>",
 	Short: "Open an interactive shell in a sandbox",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintln(os.Stderr, "stub: shell — not yet implemented")
-		os.Exit(1)
+		result, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/exec",
+			bytes.NewReader([]byte(`{"command":"/bin/sh","cwd":"/workspace"}`)))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: shell failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Shell session: %v\n", result)
 	},
 }
 
+// filesCmd handles file operations.
 var filesCmd = &cobra.Command{
 	Use:   "files",
 	Short: "File operations in a sandbox",
 }
 
+// filesListCmd lists files in workspace.
+var filesListCmd = &cobra.Command{
+	Use:   "list <name> [path]",
+	Short: "List files in workspace",
+	Args:  cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		path := ""
+		if len(args) > 1 {
+			path = args[1]
+		}
+		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/files/read?path="+path, nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: list files failed: %v\n", err)
+			os.Exit(1)
+		}
+		data, _ := json.MarshalIndent(result, "", "  ")
+		fmt.Println(string(data))
+	},
+}
+
+// filesReadCmd reads a file from workspace.
+var filesReadCmd = &cobra.Command{
+	Use:   "read <name> <path>",
+	Short: "Read a file from workspace",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/files/read?path="+args[1], nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: read file failed: %v\n", err)
+			os.Exit(1)
+		}
+		if content, ok := result["content"].(string); ok {
+			fmt.Print(content)
+		}
+	},
+}
+
+// filesWriteCmd writes a file to workspace.
+var filesWriteCmd = &cobra.Command{
+	Use:   "write <name> <path>",
+	Short: "Write a file to workspace",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		if !isPipe() {
+			fmt.Fprintln(os.Stderr, "error: pipe content via stdin: cat file | pi box files write name path")
+			os.Exit(1)
+		}
+		reader := bufio.NewReader(os.Stdin)
+		data, _ := io.ReadAll(reader)
+
+		payload := map[string]interface{}{
+			"path":    args[1],
+			"content": string(data),
+		}
+		dataJSON, _ := json.Marshal(payload)
+		result, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/files/write", bytes.NewReader(dataJSON))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: write file failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Wrote %v bytes to %s\n", result["bytes"], args[1])
+	},
+}
+
+// diffCmd shows workspace diff.
 var diffCmd = &cobra.Command{
 	Use:   "diff <name>",
 	Short: "Show workspace diff",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintln(os.Stderr, "stub: diff — not yet implemented")
-		os.Exit(1)
+		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/diff", nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: diff failed: %v\n", err)
+			os.Exit(1)
+		}
+		if diff, ok := result["diff"].(string); ok {
+			fmt.Print(diff)
+		}
 	},
 }
 
+// patchCmd exports workspace as patch.
 var patchCmd = &cobra.Command{
 	Use:   "patch <name>",
 	Short: "Export workspace as patch",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintln(os.Stderr, "stub: patch — not yet implemented")
-		os.Exit(1)
+		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/patch", nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: patch failed: %v\n", err)
+			os.Exit(1)
+		}
+		if patch, ok := result["patch"].(string); ok {
+			fmt.Print(patch)
+		}
 	},
 }
 
+// artifactsCmd handles artifact management.
 var artifactsCmd = &cobra.Command{
 	Use:   "artifacts",
 	Short: "Artifact management",
 }
 
+// artifactsListCmd lists artifacts.
+var artifactsListCmd = &cobra.Command{
+	Use:   "list <name>",
+	Short: "List artifacts",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/artifacts/list", nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: list artifacts failed: %v\n", err)
+			os.Exit(1)
+		}
+		files, _ := result["files"].([]interface{})
+		for _, f := range files {
+			fileMap, _ := f.(map[string]interface{})
+			fmt.Printf("  %s (%d bytes)\n", fileMap["path"], fileMap["size"])
+		}
+	},
+}
+
+// artifactsPullCmd pulls artifacts to host.
+var artifactsPullCmd = &cobra.Command{
+	Use:   "pull <name> <dest>",
+	Short: "Pull artifacts to host",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		payload := map[string]interface{}{"destination": args[1]}
+		data, _ := json.Marshal(payload)
+		_, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/artifacts/pull", bytes.NewReader(data))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: pull artifacts failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Pulled artifacts to %s\n", args[1])
+	},
+}
+
+// artifactsPackCmd packs artifacts into archive.
+var artifactsPackCmd = &cobra.Command{
+	Use:   "pack <name>",
+	Short: "Pack artifacts into archive",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		output := "/tmp/artifacts.tar.gz"
+		if o, _ := cmd.Flags().GetString("output"); o != "" {
+			output = o
+		}
+		payload := map[string]interface{}{"output": output}
+		data, _ := json.Marshal(payload)
+		result, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/artifacts/pack", bytes.NewReader(data))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: pack artifacts failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Packed artifacts to %s (%v bytes)\n", output, result["bytes"])
+	},
+}
+
+// snapshotCmd handles snapshot management.
 var snapshotCmd = &cobra.Command{
 	Use:   "snapshot",
 	Short: "Snapshot management",
 }
 
-var logsCmd = &cobra.Command{
-	Use:   "logs <name>",
-	Short: "Show sandbox logs",
+// snapshotCreateCmd creates a snapshot.
+var snapshotCreateCmd = &cobra.Command{
+	Use:   "create <name> <snapshot>",
+	Short: "Create a snapshot",
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintln(os.Stderr, "stub: logs — not yet implemented")
-		os.Exit(1)
+		payload := map[string]interface{}{"name": args[1]}
+		data, _ := json.Marshal(payload)
+		_, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/snapshot/create", bytes.NewReader(data))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: create snapshot failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Created snapshot: %s\n", args[1])
 	},
 }
 
-func init() {
-	filesCmd.AddCommand(&cobra.Command{Use: "list", Short: "List files", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	filesCmd.AddCommand(&cobra.Command{Use: "read", Short: "Read file", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	filesCmd.AddCommand(&cobra.Command{Use: "write", Short: "Write file", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	artifactsCmd.AddCommand(&cobra.Command{Use: "list", Short: "List artifacts", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	artifactsCmd.AddCommand(&cobra.Command{Use: "pull", Short: "Pull artifacts", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	artifactsCmd.AddCommand(&cobra.Command{Use: "pack", Short: "Pack artifacts", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	snapshotCmd.AddCommand(&cobra.Command{Use: "create", Short: "Create snapshot", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	snapshotCmd.AddCommand(&cobra.Command{Use: "list", Short: "List snapshots", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	snapshotCmd.AddCommand(&cobra.Command{Use: "rollback", Short: "Rollback", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
-	snapshotCmd.AddCommand(&cobra.Command{Use: "delete", Short: "Delete snapshot", Run: func(*cobra.Command, []string) { fmt.Fprintln(os.Stderr, "stub"); os.Exit(1) }})
+// snapshotListCmd lists snapshots.
+var snapshotListCmd = &cobra.Command{
+	Use:   "list <name>",
+	Short: "List snapshots",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/snapshot/list", nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: list snapshots failed: %v\n", err)
+			os.Exit(1)
+		}
+		snapshots, _ := result["snapshots"].([]interface{})
+		for _, s := range snapshots {
+			snapMap, _ := s.(map[string]interface{})
+			fmt.Printf("  %s (%d bytes, %s)\n", snapMap["name"], snapMap["sizeBytes"], snapMap["method"])
+		}
+	},
+}
+
+// snapshotRollbackCmd rolls back to a snapshot.
+var snapshotRollbackCmd = &cobra.Command{
+	Use:   "rollback <name> <snapshot>",
+	Short: "Rollback to snapshot",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		payload := map[string]interface{}{"name": args[1]}
+		data, _ := json.Marshal(payload)
+		_, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/snapshot/rollback", bytes.NewReader(data))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: rollback failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Rolled back to snapshot: %s\n", args[1])
+	},
+}
+
+// snapshotDeleteCmd deletes a snapshot.
+var snapshotDeleteCmd = &cobra.Command{
+	Use:   "delete <name> <snapshot>",
+	Short: "Delete a snapshot",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		payload := map[string]interface{}{"name": args[1]}
+		data, _ := json.Marshal(payload)
+		_, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/snapshot/delete", bytes.NewReader(data))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: delete snapshot failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Deleted snapshot: %s\n", args[1])
+	},
+}
+
+// logsCmd shows sandbox logs.
+var logsCmd = &cobra.Command{
+	Use:   "logs <name>",
+	Short: "Show sandbox logs",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/logs", nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: logs failed: %v\n", err)
+			os.Exit(1)
+		}
+		entries, _ := result["entries"].([]interface{})
+		for _, e := range entries {
+			entryMap, _ := e.(map[string]interface{})
+			seq := entryMap["sequence"]
+			cmd := entryMap["command"]
+			exitCode := entryMap["exitCode"]
+			fmt.Printf("[%v] %s (exit: %v)\n", seq, cmd, exitCode)
+		}
+	},
+}
+
+// isPipe checks if stdin is a pipe (not a terminal).
+func isPipe() bool {
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return (stat.Mode() & os.ModeNamedPipe) != 0
 }

@@ -48,6 +48,18 @@ func Clone(ctx context.Context, url, localPath string) (*CloneResult, error) {
 	}, nil
 }
 
+// InitIfNotRepo initializes a git repo in the directory if not already a repo.
+func InitIfNotRepo(ctx context.Context, dir string) error {
+	// Check if already a git repo
+	_, err := os.Stat(dir + "/.git")
+	if err == nil {
+		return nil // Already a git repo
+	}
+
+	cmd := exec.CommandContext(ctx, "git", "-C", dir, "init")
+	return cmd.Run()
+}
+
 // validateURL checks that the URL is safe to clone.
 func validateURL(url string) error {
 	// Reject dangerous protocols

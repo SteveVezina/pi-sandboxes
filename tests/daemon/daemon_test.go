@@ -11,13 +11,15 @@ import (
 	"time"
 
 	"github.com/pi-sandbox/pi/pkg/daemon"
+	"github.com/pi-sandbox/pi/pkg/session"
 )
 
 func TestDaemon_StartAndHealth(t *testing.T) {
 	tmpDir := t.TempDir()
 	socketPath := filepath.Join(tmpDir, "sandboxd.sock")
+	store := session.NewStore(tmpDir)
 
-	d := daemon.New(socketPath, 0)
+	d := daemon.New(socketPath, 0, store)
 
 	if err := d.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)
@@ -60,6 +62,7 @@ func TestDaemon_CreatesDir(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 	// Use a nested path that doesn't exist yet
 	socketPath := filepath.Join(tmpDir, "nonexistent", "sandboxd.sock")
+	store := session.NewStore(tmpDir)
 
 	// Verify parent doesn't exist yet
 	parentDir := filepath.Dir(socketPath)
@@ -67,7 +70,7 @@ func TestDaemon_CreatesDir(t *testing.T) {
 		t.Fatal("Parent directory should not exist yet")
 	}
 
-	d := daemon.New(socketPath, 0)
+	d := daemon.New(socketPath, 0, store)
 
 	if err := d.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)
@@ -83,8 +86,9 @@ func TestDaemon_CreatesDir(t *testing.T) {
 func TestDaemon_HTTPPort(t *testing.T) {
 	tmpDir := t.TempDir()
 	socketPath := filepath.Join(tmpDir, "sandboxd.sock")
+	store := session.NewStore(tmpDir)
 
-	d := daemon.New(socketPath, 9999)
+	d := daemon.New(socketPath, 9999, store)
 
 	if err := d.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)
@@ -107,8 +111,9 @@ func TestDaemon_HTTPPort(t *testing.T) {
 func TestDaemon_Stop(t *testing.T) {
 	tmpDir := t.TempDir()
 	socketPath := filepath.Join(tmpDir, "sandboxd.sock")
+	store := session.NewStore(tmpDir)
 
-	d := daemon.New(socketPath, 0)
+	d := daemon.New(socketPath, 0, store)
 
 	if err := d.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)

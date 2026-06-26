@@ -5,8 +5,8 @@
 
 ## Active Cursor
 
-**Current phase:** All Phase 1-3 features complete
-**Next work:** Phase 4+ enhancements, integration testing, CI/CD
+**Current phase:** M4-M6 feature extraction complete per PROP-002
+**Next work:** Reconcile legacy feature-doc ID drift, then start M4 secure backend planning
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph
@@ -28,6 +28,12 @@ F11 (Benchmarks) ─────────────┘ (depends on F03, F15
 F10 (System) ─────────────────┘ (depends on F04)
                               │
 F16 (SDKs) ───────────────────┘ (depends on F02)
+
+F18 (Secure Backend) ──→ F19 (Runtime Selection & Fallback)
+                               │
+                               └──→ F20 (MicroVM Backend) ──→ F21 (MicroVM Guest Control Plane)
+
+F23 (Remote Transport/Auth) ──→ F22 (Remote Daemon Contexts)
 ```
 
 ## Execution Order (All Complete)
@@ -58,6 +64,18 @@ F16 (SDKs) ───────────────────┘ (depends
 
 ### ✅ Phase 5 — M3 agent integrations
 17. **F16** SDKs ✅
+
+### 🔴 Phase 6 — M4 secure backend
+18. **F19** Runtime Selection & Fallback 🔴
+19. **F18** Secure Backend 🔴
+
+### 🔴 Phase 7 — M5 microVM backend
+20. **F21** MicroVM Guest Control Plane 🔴
+21. **F20** MicroVM Backend 🔴
+
+### 🔴 Phase 8 — M6 remote daemon mode
+22. **F23** Remote Daemon Transport & Auth 🔴
+23. **F22** Remote Daemon Contexts 🔴
 
 ## Risk Tracking
 

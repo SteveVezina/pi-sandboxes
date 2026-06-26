@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strings"
 
+
 	"github.com/pi-sandbox/pi/cmd/pi/cli"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +37,7 @@ func init() {
 	// Snapshot subcommands
 	snapshotCmd.AddCommand(snapshotCreateCmd, snapshotListCmd, snapshotRollbackCmd, snapshotDeleteCmd)
 
-	// Set up flags on subcommands
+	// Set up flags
 	artifactsPackCmd.Flags().StringP("output", "o", "/tmp/artifacts.tar.gz", "Output path")
 }
 
@@ -71,6 +72,22 @@ func callAPI(method, endpoint string, body io.Reader) (map[string]interface{}, e
 	return result, nil
 }
 
+// callAPIList makes an HTTP call and returns a JSON array.
+func callAPIList(method, endpoint string) ([]interface{}, error) {
+	args := []string{"-s", "-X", method, "-H", "Content-Type: application/json",
+		"--unix-socket", getSocketPath(), endpoint}
+	cmd := exec.Command("curl", args...)
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	var result []interface{}
+	if err := json.Unmarshal(output, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 // createCmd creates a new sandbox session.
 var createCmd = &cobra.Command{
 	Use:   "create [name] [template]",
@@ -80,7 +97,6 @@ var createCmd = &cobra.Command{
 		name := "default"
 		template := "base"
 		mode := "fast"
-
 		if len(args) > 0 {
 			name = args[0]
 		}
@@ -90,14 +106,12 @@ var createCmd = &cobra.Command{
 		if m, _ := cmd.Flags().GetString("mode"); m != "" {
 			mode = m
 		}
-
 		payload := map[string]interface{}{
 			"name":     name,
 			"template": template,
 			"mode":     mode,
 		}
 		data, _ := json.Marshal(payload)
-
 		result, err := callAPI("POST", "/v1/sandboxes", bytes.NewReader(data))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: failed to create sandbox: %v\n", err)
@@ -116,12 +130,12 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List sandbox sessions",
 	Run: func(cmd *cobra.Command, args []string) {
-		result, err := callAPI("GET", "/v1/sandboxes", nil)
+		sandboxes, err := callAPIList("GET", "/v1/sandboxes")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: failed to list sandboxes: %v\n", err)
 			os.Exit(1)
 		}
-		data, _ := json.MarshalIndent(result, "", "  ")
+		data, _ := json.MarshalIndent(sandboxes, "", "  ")
 		fmt.Println(string(data))
 	},
 }
@@ -149,8 +163,34 @@ var destroyCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if args[0] == "--all" {
-			fmt.Fprintln(os.Stderr, "error: destroy --all not yet implemented")
-			os.Exit(1)
+			sandboxes, err := callAPIList("GET", "/v1/sandboxes")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error: listing sandboxes failed: %v\n", err)
+				os.Exit(1)
+			}
+			count := 0
+			for _, sb := range sandboxes {
+				sbMap, ok := sb.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				id, _ := sbMap["id"].(string)
+				if id == "" {
+					id, _ = sbMap["name"].(string)
+				}
+				if id == "" {
+					continue
+				}
+				_, err := callAPI("DELETE", "/v1/sandboxes/"+id, nil)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "warning: failed to destroy %s: %v\n", id, err)
+					continue
+				}
+				fmt.Printf("Destroyed sandbox: %s\n", id)
+				count++
+			}
+			fmt.Printf("Destroyed %d sandbox(es)\n", count)
+			return
 		}
 		_, err := callAPI("DELETE", "/v1/sandboxes/"+args[0], nil)
 		if err != nil {
@@ -196,7 +236,6 @@ var execCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		command := strings.Join(os.Args[cmdIdx+1:], " ")
-
 		timeout := int64(120)
 		if t, _ := cmd.Flags().GetInt64("timeout"); t > 0 {
 			timeout = t
@@ -205,7 +244,6 @@ var execCmd = &cobra.Command{
 		if c, _ := cmd.Flags().GetString("cwd"); c != "" {
 			cwd = c
 		}
-
 		payload := map[string]interface{}{
 			"command":        command,
 			"cwd":            cwd,
@@ -213,13 +251,11 @@ var execCmd = &cobra.Command{
 			"maxOutputBytes": 8388608,
 		}
 		data, _ := json.Marshal(payload)
-
 		result, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/exec", bytes.NewReader(data))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: exec failed: %v\n", err)
 			os.Exit(1)
 		}
-
 		if stdout, ok := result["stdout"].(string); ok && stdout != "" {
 			fmt.Print(stdout)
 		}
@@ -245,14 +281,47 @@ var shellCmd = &cobra.Command{
 	Short: "Open an interactive shell in a sandbox",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		result, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/exec",
-			bytes.NewReader([]byte(`{"command":"/bin/sh","cwd":"/workspace"}`)))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: shell failed: %v\n", err)
-			os.Exit(1)
+		reader := bufio.NewReader(os.Stdin)
+		sandboxID := args[0]
+		fmt.Fprintf(os.Stderr, "Interactive shell for sandbox %s. Type 'exit' to quit.\n", sandboxID)
+		for {
+			fmt.Printf("%s> ", sandboxID)
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "\nerror: %v\n", err)
+				break
+			}
+			line = strings.TrimSpace(line)
+			if line == "exit" || line == "quit" {
+				break
+			}
+			if line == "" {
+				continue
+			}
+			result, err := callAPI("POST", "/v1/sandboxes/"+sandboxID+"/exec",
+				bytes.NewReader([]byte(`{"command":"`+escapeJSON(line)+`","cwd":"/workspace"}`)))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				continue
+			}
+			if stdout, ok := result["stdout"].(string); ok && stdout != "" {
+				fmt.Print(stdout)
+			}
+			if stderr, ok := result["stderr"].(string); ok && stderr != "" {
+				fmt.Fprint(os.Stderr, stderr)
+			}
 		}
-		fmt.Printf("Shell session: %v\n", result)
 	},
+}
+
+// escapeJSON escapes a string for JSON embedding.
+func escapeJSON(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	s = strings.ReplaceAll(s, "\n", `\n`)
+	s = strings.ReplaceAll(s, "\r", `\r`)
+	s = strings.ReplaceAll(s, "\t", `\t`)
+	return s
 }
 
 // filesCmd handles file operations.
@@ -310,7 +379,6 @@ var filesWriteCmd = &cobra.Command{
 		}
 		reader := bufio.NewReader(os.Stdin)
 		data, _ := io.ReadAll(reader)
-
 		payload := map[string]interface{}{
 			"path":    args[1],
 			"content": string(data),

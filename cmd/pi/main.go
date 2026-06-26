@@ -6,6 +6,7 @@ import (
 	_ "github.com/pi-sandbox/pi/cmd/pi/box"
 	_ "github.com/pi-sandbox/pi/cmd/pi/bench"
 	"github.com/pi-sandbox/pi/cmd/pi/cli"
+	_ "github.com/pi-sandbox/pi/cmd/pi/context"
 	_ "github.com/pi-sandbox/pi/cmd/pi/system"
 	_ "github.com/pi-sandbox/pi/cmd/pi/template"
 )

@@ -35,8 +35,8 @@ Dashboard of all features for this project.
 | [F15](F15-compat-backend.md) | Compat Backend | 🟡 Written | ✅ Implemented | M2 | F04, F07 |
 | [F16](F16-sdk.md) | SDKs | 🟡 Written | ✅ Implemented | M3 | F02 |
 | [F17](F17-policy-enforcement.md) | Policy Enforcement | 🟡 Written | ✅ Implemented | M2 | F03, F04, F12 |
-| [F18](F18-secure-backend.md) | Secure Backend | 🟡 Written | 🔴 Not started | M4 | F15, F17, F19 |
-| [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | 🟡 Written | 🔴 Not started | M4 | F03, F15, F18 |
+| [F18](F18-secure-backend.md) | Secure Backend | 🟡 Written | ✅ Implemented | M4 | F15, F17, F19 |
+| [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | 🟡 Written | ✅ Implemented | M4 | F03, F15, F18 |
 | [F20](F20-microvm-backend.md) | MicroVM Backend | 🟡 Written | 🔴 Not started | M5 | F19, F21 |
 | [F21](F21-microvm-guest-control-plane.md) | MicroVM Guest Control Plane | 🟡 Written | 🔴 Not started | M5 | F20 |
 | [F22](F22-remote-daemon-contexts.md) | Remote Daemon Contexts | 🟡 Written | 🔴 Not started | M6 | F02, F23 |
@@ -49,12 +49,12 @@ Dashboard of all features for this project.
 | M1: Local Linux MVP | F01, F02, F03, F04, F05, F06, F07, F08, F09, F10, F11 | ✅ Implemented |
 | M2: Hardening & Cache | F12, F13, F14, F15, F17 | ✅ Implemented |
 | M3: Agent Integrations | F16 | ✅ Implemented |
-| M4: Secure Backend | F18, F19 | 🔴 Not started |
+| M4: Secure Backend | F18, F19 | ✅ Implemented |
 | M5: MicroVM Backend | F20, F21 | 🔴 Not started |
 | M6: Remote Daemon Mode | F22, F23 | 🔴 Not started |
 
 ## Summary
 
-23 feature specs tracked. F18-F23 were extracted from `SPEC.md` §31 by PROP-002 and are not started.
+23 feature specs tracked. F18-F19 are implemented (M4). F20-F23 are pending (M5-M6).
 
 > Note: existing feature document numbering predates PROP-002 and has known drift from `SPEC.md` §6. `SPEC.md` remains the source of truth; a follow-up cascade should reconcile legacy F01-F17 filenames and IDs.

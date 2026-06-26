@@ -286,6 +286,10 @@ repeat
 - [ ] Artifact export works from microVM sandboxes
 - [ ] Reseed-on-restore hook runs after snapshot restore
 - [ ] Benchmarks include microVM mode comparison
+- [ ] MicroVM backend reports unavailable when `/dev/kvm` or Firecracker is unavailable
+- [ ] Guest rootfs is read-only
+- [ ] Workspace disk is writable ext4
+- [ ] Artifact export uses the guest control plane
 
 ### AC-24: MicroVM Guest Control Plane Works (F21)
 - [ ] `pi-init` starts inside the guest and reports readiness
@@ -293,6 +297,10 @@ repeat
 - [ ] Exec requests stream stdout/stderr over the guest control channel
 - [ ] Guest lifecycle events map back to sandbox state
 - [ ] File and artifact transfer work without direct host filesystem mounting
+- [ ] Host and guest exchange newline-delimited JSON frames over virtio-vsock
+- [ ] Exec stdout/stderr stream frames carry base64 payloads
+- [ ] Final exec response includes exit code, duration, timeout, and truncation metadata
+- [ ] Host marks sandbox warm only after the guest sends `ready`
 
 ### AC-25: Remote Daemon Contexts Work (F22)
 - [ ] `pi context create workstation ssh://gpu-box.local` creates a remote context
@@ -300,6 +308,9 @@ repeat
 - [ ] `pi context list` shows local and remote contexts
 - [ ] `pi box create` uses the active context
 - [ ] Commands can override the active context explicitly
+- [ ] Contexts persist in `~/.pi/contexts.yaml`
+- [ ] Context schema supports `target`, `transport`, and `auth.type`
+- [ ] `--context <name>` overrides the active context
 
 ### AC-26: Remote Transport and Auth Work (F23)
 - [ ] Remote daemon API calls are authenticated
@@ -307,6 +318,9 @@ repeat
 - [ ] Tailscale/WireGuard network paths are supported without API redesign
 - [ ] Credentials are not persisted inside sandbox workspaces
 - [ ] Remote workstation use case works end-to-end
+- [ ] `http` remote contexts require bearer-token auth
+- [ ] `ssh` remote contexts use SSH agent transport authentication
+- [ ] Remote auth failures never fall back to unauthenticated access
 
 ## 8. Security Model
 
@@ -603,6 +617,28 @@ MicroVM design goals:
 - separate workspace, cache, and artifacts disks
 - snapshot-first template restore
 - explicit reseed-on-restore hook
+
+First microVM implementation contract:
+
+- Firecracker is the primary M5 backend.
+- Cloud Hypervisor remains a later compatible backend behind the same runtime interface.
+- MicroVM mode requires Linux with `/dev/kvm` and a supported host kernel.
+- If `/dev/kvm` or Firecracker is unavailable, runtime selection reports microVM as unavailable; it does not silently fall back unless policy permits fallback.
+- The guest rootfs is read-only.
+- Each sandbox receives a writable ext4 workspace disk.
+- Template restore starts from a read-only template snapshot plus a fresh writable workspace disk.
+- The reseed-on-restore hook runs after the workspace disk is attached and before the guest reports ready.
+- Artifact export copies data through the guest control plane, not by directly mounting host paths inside the guest.
+
+MicroVM guest control protocol:
+
+- The host and guest communicate over virtio-vsock using newline-delimited JSON control frames.
+- Each frame has `type`, `id`, `session_id`, `method`, `payload`, and optional `error` fields.
+- `type` is one of `request`, `response`, `event`, or `stream`.
+- `method` is one of `hello`, `ready`, `exec`, `file.read`, `file.write`, `artifact.list`, `artifact.pull`, or `shutdown`.
+- Exec streaming uses `stream` frames whose payload includes `stream: stdout|stderr` and `data: base64-bytes`.
+- The final exec response includes `exit_code`, `duration_ms`, `timed_out`, and `truncated`.
+- Guest readiness is explicit: `pi-init` starts `pi-agentd`, `pi-agentd` sends a `ready` event, and only then may the host mark the sandbox warm.
 
 ## 15. Local filesystem layout
 
@@ -1481,6 +1517,29 @@ pi context use workstation
 pi box create node-python
 ```
 
+Remote daemon context contract:
+
+- Context state is stored in `~/.pi/contexts.yaml`.
+- Required context fields are `target`, `transport`, and `auth.type`.
+- `target` is the daemon endpoint URI.
+- `transport` is one of `unix`, `http`, or `ssh`.
+- `auth.type` is one of `none`, `bearer-token`, or `ssh-agent`.
+- The active context may be overridden per command with `--context <name>`.
+
+Supported remote transports:
+
+- `unix`: local Unix socket.
+- `http`: direct HTTP endpoint, intended for private networks such as Tailscale or WireGuard.
+- `ssh`: SSH-forwarded daemon access.
+
+Authentication rules:
+
+- `unix` contexts may use `auth.type: none`.
+- `http` contexts require bearer-token auth.
+- `ssh` contexts use SSH agent authentication for the transport.
+- Bearer tokens are stored outside sandbox workspaces and are never injected into sandbox environment variables.
+- Remote auth failures return actionable errors and do not fall back to unauthenticated access.
+
 ## 32. Compatibility expectations
 
 The platform must support common commands:
@@ -1564,6 +1623,15 @@ The platform should run side services next to the sandbox, expose them on a priv
 Default config:
 
 ```yaml
+contexts:
+  active: local
+  entries:
+    local:
+      target: unix://~/.pi/sandboxd.sock
+      transport: unix
+      auth:
+        type: none
+
 runtime:
   defaultMode: auto
   allowModes:

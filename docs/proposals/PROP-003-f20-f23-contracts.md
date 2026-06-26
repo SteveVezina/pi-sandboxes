@@ -1,7 +1,7 @@
 # PROP-003: Specify F20-F23 MicroVM and Remote Contracts
 
 ## Status
-🟡 Proposed
+✅ Applied to block spec (2026-06-26)
 
 ## Block Spec Reference
 `SPEC.md` §6 Features F20-F23, §7 AC-23 through AC-26, §15 MicroVM mode, §31 Milestones 5-6, §34 Configuration file
@@ -170,4 +170,16 @@ When this PROP is accepted:
 
 ## Implementation Blocked?
 
-Yes. F20-F23 implementation should not proceed until this contract is accepted because the missing details are public/cross-component contracts.
+Resolved. F20-F23 implementation may proceed against the accepted contracts and ADRs.
+
+## Cascade completed
+
+Completed on 2026-06-26:
+
+- Updated `SPEC.md` with the F20-F23 microVM, guest protocol, context, and remote auth contracts.
+- Added ADR-001 (MicroVM Backend Architecture).
+- Added ADR-002 (MicroVM Guest Control Protocol).
+- Added ADR-003 (Remote Context and Auth Model).
+- Updated F20-F23 feature specs with new acceptance criteria and ADR references.
+- Split L-sized F20, F21, and F23 tasks into M-sized implementation tasks.
+- Updated `docs/features/INDEX.md` and `docs/plan.md` to unblock F20-F23.

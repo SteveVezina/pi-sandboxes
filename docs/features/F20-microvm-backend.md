@@ -14,6 +14,8 @@
 
 MicroVM backend adds VM-grade sandbox isolation. It is snapshot-first: a tiny guest rootfs boots with a template snapshot, attaches a workspace disk, runs a reseed-on-restore hook, and exposes command/file/artifact operations through the guest control plane.
 
+Per ADR-001, the first backend targets Firecracker. Cloud Hypervisor remains a later backend behind the same runtime interface. MicroVM mode requires Linux with `/dev/kvm`; unavailable host support is reported as unavailable instead of silently falling back.
+
 ## Acceptance Criteria
 
 Mapped from `SPEC.md` § Acceptance Criteria:
@@ -25,6 +27,10 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [ ] AC-23.5: Artifact export works from microVM sandboxes
 - [ ] AC-23.6: Reseed-on-restore hook runs after snapshot restore
 - [ ] AC-23.7: Benchmarks include microVM mode comparison
+- [ ] AC-23.8: MicroVM backend reports unavailable when `/dev/kvm` or Firecracker is unavailable
+- [ ] AC-23.9: Guest rootfs is read-only
+- [ ] AC-23.10: Workspace disk is writable ext4
+- [ ] AC-23.11: Artifact export uses the guest control plane
 
 ## Interface Impact
 
@@ -34,6 +40,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | `pkg/runtime/microvm/` | MicroVM backend (new — to be created) |
 | `pkg/bench/` | MicroVM benchmark comparison |
 | `docs/features/F21-microvm-guest-control-plane.md` | Guest control dependency |
+| `docs/decisions/ADR-001-microvm-backend-architecture.md` | Backend architecture decision |
 
 ## Security Considerations
 
@@ -56,38 +63,78 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | **Service-layer** | MicroVM runtime package and manager binary |
 | **Infrastructure** | Firecracker/Cloud Hypervisor configuration and guest rootfs |
 
+**ADR references:** ADR-001 (MicroVM Backend Architecture), ADR-002 (MicroVM Guest Control Protocol).
+**ADR gaps:** None.
+
 ## Tasks
 
-### T20.1: VMM manager and backend lifecycle
+### T20.1: Host capability and runtime availability
+
+**Description:** Detect whether microVM mode can run on the host, including Linux, `/dev/kvm`, and Firecracker availability.
 
 **Acceptance criteria:**
-- [ ] Start/stop microVM sandbox
-- [ ] Boot tiny guest rootfs
-- [ ] Attach workspace disk
+- [ ] Reports unavailable when `/dev/kvm` is missing
+- [ ] Reports unavailable when Firecracker is missing
+- [ ] Does not silently fall back from explicit microVM mode
 
 **Verification:**
 - [ ] `go build ./cmd/pi-vmm-manager/...`
-- [ ] Integration test: microVM start/stop
+- [ ] Unit test: unavailable host capability is reported
 
-**Files:** `cmd/pi-vmm-manager/main.go (new — to be created)`, `pkg/runtime/microvm/runtime.go (new — to be created)`
-**Size:** L
+**Files:** `cmd/pi-vmm-manager/main.go (new — to be created)`, `pkg/runtime/microvm/runtime.go (new — to be created)`, `tests/runtime/microvm/capability_test.go (new — to be created)`
+**Size:** M
 **Depends on:** F19
 
-### T20.2: Snapshot restore, reseed, artifacts, and benchmarks
+### T20.2: Firecracker lifecycle and guest rootfs
+
+**Description:** Start and stop a Firecracker-backed microVM sandbox using a read-only guest rootfs.
 
 **Acceptance criteria:**
-- [ ] Template snapshot restore works
-- [ ] Reseed hook runs after restore
-- [ ] Artifact export works
-- [ ] Benchmarks include microVM mode
+- [ ] `pi-vmm-manager` starts a microVM sandbox
+- [ ] `pi-vmm-manager` stops a microVM sandbox
+- [ ] Guest rootfs is read-only
 
 **Verification:**
-- [ ] Integration test: snapshot restore and artifact export
+- [ ] Integration test: microVM start/stop
+- [ ] Integration test: guest rootfs is read-only
+
+**Files:** `pkg/runtime/microvm/runtime.go (new — to be created)`, `pkg/runtime/microvm/firecracker.go (new — to be created)`, `tests/runtime/microvm/lifecycle_test.go (new — to be created)`
+**Size:** M
+**Depends on:** T20.1
+
+### T20.3: Workspace disk, template restore, and reseed
+
+**Description:** Attach a writable ext4 workspace disk, restore from a read-only template snapshot, and run reseed before readiness.
+
+**Acceptance criteria:**
+- [ ] Workspace disk is writable ext4
+- [ ] Template snapshot restore works
+- [ ] Reseed hook runs after workspace attachment and before guest ready
+
+**Verification:**
+- [ ] Integration test: workspace disk persists session changes
+- [ ] Integration test: reseed hook ordering
+
+**Files:** `pkg/runtime/microvm/disk.go (new — to be created)`, `pkg/runtime/microvm/snapshot.go (new — to be created)`, `tests/runtime/microvm/snapshot_test.go (new — to be created)`
+**Size:** M
+**Depends on:** T20.2, F21
+
+### T20.4: Artifact export and microVM benchmarks
+
+**Description:** Export artifacts through the guest control plane and include microVM mode in benchmark output.
+
+**Acceptance criteria:**
+- [ ] Artifact export uses guest control plane
+- [ ] Artifact export works from microVM sandboxes
+- [ ] Benchmarks include microVM mode comparison
+
+**Verification:**
+- [ ] Integration test: artifact export through guest control plane
 - [ ] `pi bench run --mode microvm --json`
 
-**Files:** `pkg/runtime/microvm/snapshot.go (new — to be created)`, `pkg/runtime/microvm/artifacts.go (new — to be created)`
-**Size:** L
-**Depends on:** T20.1, F21
+**Files:** `pkg/runtime/microvm/artifacts.go (new — to be created)`, `pkg/bench/benchmarks.go`, `tests/runtime/microvm/artifacts_test.go (new — to be created)`
+**Size:** M
+**Depends on:** T20.3, F21
 
 ## Verification Plan
 
@@ -95,6 +142,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [ ] MicroVM sandbox boots
 - [ ] Workspace disk persists session changes
 - [ ] Artifact export and benchmarks work
+- [ ] Host capability failures are actionable
 
 ## Spec Gaps
 
@@ -102,13 +150,13 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
-| Firecracker vs Cloud Hypervisor selection is not decided | §15 MicroVM mode, §31 M5 | PROP-003 |
+| — | — | — |
 
 ### ADR gaps (needs architectural decision)
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
-| MicroVM implementation choice and disk/snapshot format | F20, F21 | ADR for microVM architecture |
+| — | — | — |
 
 ## Out of Scope
 

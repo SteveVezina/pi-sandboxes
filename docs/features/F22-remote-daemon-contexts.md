@@ -14,6 +14,8 @@
 
 Remote daemon contexts let a user switch the CLI between local and remote daemon targets. Context state is explicit, inspectable, and overrideable per command.
 
+Per ADR-003, context state is stored in `~/.pi/contexts.yaml`. Each context has `target`, `transport`, and `auth.type`. The active context may be overridden per command with `--context <name>`.
+
 ## Acceptance Criteria
 
 Mapped from `SPEC.md` § Acceptance Criteria:
@@ -23,6 +25,9 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [ ] AC-25.3: `pi context list` shows local and remote contexts
 - [ ] AC-25.4: `pi box create` uses the active context
 - [ ] AC-25.5: Commands can override the active context explicitly
+- [ ] AC-25.6: Contexts persist in `~/.pi/contexts.yaml`
+- [ ] AC-25.7: Context schema supports `target`, `transport`, and `auth.type`
+- [ ] AC-25.8: `--context <name>` overrides the active context
 
 ## Interface Impact
 
@@ -32,6 +37,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | `cmd/pi/cli` | Global context override flag |
 | `pkg/context/` | Context store (new — to be created) |
 | `cmd/pi/box` | Context-aware daemon client |
+| `docs/decisions/ADR-003-remote-context-and-auth-model.md` | Context/auth model decision |
 
 ## Security Considerations
 
@@ -52,6 +58,9 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 |----------|---------|
 | **Service-layer** | CLI context store and daemon client routing |
 
+**ADR references:** ADR-003 (Remote Context and Auth Model).
+**ADR gaps:** None.
+
 ## Tasks
 
 ### T22.1: Context store and CLI
@@ -59,6 +68,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Acceptance criteria:**
 - [ ] Create/use/list/inspect/delete commands work
 - [ ] Active context persists in user config
+- [ ] Contexts persist in `~/.pi/contexts.yaml`
+- [ ] Context schema supports `target`, `transport`, and `auth.type`
 
 **Verification:**
 - [ ] Unit tests for context store
@@ -74,6 +85,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [ ] `pi box` commands use active context
 - [ ] Per-command context override works
 - [ ] Local context remains the default
+- [ ] `--context <name>` overrides active context
 
 **Verification:**
 - [ ] Integration test: active context routes API calls
@@ -88,6 +100,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [ ] Context commands work
 - [ ] `pi box` uses active context
 - [ ] Override behavior is deterministic
+- [ ] Context schema validation works
 
 ## Spec Gaps
 
@@ -95,13 +108,13 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
-| Context config schema is not specified | §31 M6, §34 Config file | PROP-003 |
+| — | — | — |
 
 ### ADR gaps (needs architectural decision)
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
-| Context file schema and credential references | F22, F23 | ADR for remote context model |
+| — | — | — |
 
 ## Out of Scope
 

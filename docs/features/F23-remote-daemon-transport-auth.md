@@ -14,6 +14,8 @@
 
 Remote transport and auth allow the local CLI/SDK to talk to a remote `pi-sandboxd` without changing the sandbox API. The transport must be compatible with SSH-friendly forwarding and private networks such as Tailscale or WireGuard.
 
+Per ADR-003, remote daemon access keeps the existing daemon HTTP API unchanged. Supported transports are `unix`, `http`, and `ssh`; `http` requires bearer-token auth and `ssh` uses SSH agent transport authentication.
+
 ## Acceptance Criteria
 
 Mapped from `SPEC.md` § Acceptance Criteria:
@@ -23,6 +25,9 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [ ] AC-26.3: Tailscale/WireGuard network paths are supported without API redesign
 - [ ] AC-26.4: Credentials are not persisted inside sandbox workspaces
 - [ ] AC-26.5: Remote workstation use case works end-to-end
+- [ ] AC-26.6: `http` remote contexts require bearer-token auth
+- [ ] AC-26.7: `ssh` remote contexts use SSH agent transport authentication
+- [ ] AC-26.8: Remote auth failures never fall back to unauthenticated access
 
 ## Interface Impact
 
@@ -32,6 +37,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | `cmd/pi/context/` | Contexts reference remote transport settings |
 | `sdk/typescript/` | Remote daemon connection support |
 | `sdk/python/` | Remote daemon connection support |
+| `docs/decisions/ADR-003-remote-context-and-auth-model.md` | Remote context/auth model decision |
 
 ## Security Considerations
 
@@ -54,24 +60,66 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | **Service-layer** | Remote client transport and auth |
 | **Integration** | SSH/private-network friendly access patterns |
 
+**ADR references:** ADR-003 (Remote Context and Auth Model).
+**ADR gaps:** None.
+
 ## Tasks
 
-### T23.1: Remote transport and authentication
+### T23.1: Remote client transport abstraction
+
+**Description:** Implement daemon client transport selection for `unix`, `http`, and `ssh` contexts without changing daemon routes.
 
 **Acceptance criteria:**
-- [ ] Remote API calls authenticate successfully
-- [ ] SSH-friendly transport works
+- [ ] `unix` transport keeps local socket behavior
+- [ ] `http` transport targets direct HTTP endpoints
+- [ ] `ssh` transport supports SSH-forwarded daemon access
 - [ ] Tailscale/WireGuard paths do not require API redesign
 
 **Verification:**
-- [ ] Unit tests for auth handling
+- [ ] Unit tests for transport selection
 - [ ] Integration test: remote daemon request over configured transport
 
-**Files:** `pkg/remote/client.go (new — to be created)`, `pkg/remote/auth.go (new — to be created)`
-**Size:** L
+**Files:** `pkg/remote/client.go (new — to be created)`, `tests/remote/client_test.go (new — to be created)`
+**Size:** M
 **Depends on:** F2, F22
 
-### T23.2: Remote workstation end-to-end flow
+### T23.2: Remote authentication enforcement
+
+**Description:** Enforce remote auth rules for HTTP bearer tokens and SSH agent transport authentication.
+
+**Acceptance criteria:**
+- [ ] Remote API calls authenticate successfully
+- [ ] `http` contexts require bearer-token auth
+- [ ] `ssh` contexts use SSH agent transport authentication
+- [ ] Remote auth failures never fall back to unauthenticated access
+- [ ] Credentials are not persisted in sandbox workspaces
+
+**Verification:**
+- [ ] Unit tests for auth handling
+- [ ] Unit test: auth failure does not fall back
+
+**Files:** `pkg/remote/client.go (new — to be created)`, `pkg/remote/auth.go (new — to be created)`
+**Size:** M
+**Depends on:** T23.1
+
+### T23.3: SDK remote connection support
+
+**Description:** Add remote context connection support to TypeScript and Python SDKs.
+
+**Acceptance criteria:**
+- [ ] TypeScript SDK can use remote context connection options
+- [ ] Python SDK can use remote context connection options
+- [ ] SDK auth failures are actionable
+
+**Verification:**
+- [ ] TypeScript SDK tests pass
+- [ ] Python SDK tests pass
+
+**Files:** `sdk/typescript/src/client.ts`, `sdk/python/src/pi_sandbox/__init__.py`
+**Size:** M
+**Depends on:** T23.2
+
+### T23.4: Remote workstation end-to-end flow
 
 **Acceptance criteria:**
 - [ ] Remote context can create a sandbox
@@ -82,8 +130,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [ ] End-to-end test: remote workstation flow
 
 **Files:** `tests/integration/remote_daemon_test.go (new — to be created)`
-**Size:** L
-**Depends on:** T23.1
+**Size:** M
+**Depends on:** T23.3
 
 ## Verification Plan
 
@@ -91,6 +139,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [ ] SSH-friendly transport works
 - [ ] Remote workstation flow works end-to-end
 - [ ] Credentials are not persisted in sandbox workspaces
+- [ ] Auth failures do not fall back to unauthenticated access
 
 ## Spec Gaps
 
@@ -98,13 +147,13 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
-| Remote authentication scheme is not specified | §31 M6 | PROP-003 |
+| — | — | — |
 
 ### ADR gaps (needs architectural decision)
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
-| Remote auth and transport design | F22, F23 | ADR for remote daemon access |
+| — | — | — |
 
 ## Out of Scope
 

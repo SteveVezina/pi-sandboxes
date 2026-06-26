@@ -18,7 +18,7 @@ Track all PROP (spec amendment proposals) for this project.
 |------|-------|--------|--------|---------|
 | [PROP-001](PROP-001-spec-format.md) | Add Structured Block Spec Schema to SPEC.md | ✅ Applied to block spec | All features (enables spec-driven workflow) | 2026-06-26 |
 | [PROP-002](PROP-002-m1-m6-feature-table.md) | Extract M1-M6 Milestones Into the Features Table | ✅ Applied to block spec | M4-M6 feature extraction and feature-doc ID cascade | 2026-06-26 |
-| [PROP-003](PROP-003-f20-f23-contracts.md) | Specify F20-F23 MicroVM and Remote Contracts | 🟡 Proposed | Blocks F20-F23 implementation | 2026-06-26 |
+| [PROP-003](PROP-003-f20-f23-contracts.md) | Specify F20-F23 MicroVM and Remote Contracts | ✅ Applied to block spec | Unblocks F20-F23 implementation | 2026-06-26 |
 
 ## Rules
 

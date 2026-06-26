@@ -99,7 +99,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
-| Guest control protocol shape is not specified | §15 MicroVM mode, §31 M5 | Add vsock message contract |
+| Guest control protocol shape is not specified | §15 MicroVM mode, §31 M5 | PROP-003 |
 
 ### ADR gaps (needs architectural decision)
 
@@ -110,4 +110,3 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 ## Out of Scope
 
 - Non-microVM backend control protocols
-

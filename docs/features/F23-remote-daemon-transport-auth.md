@@ -98,7 +98,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
-| Remote authentication scheme is not specified | §31 M6 | Add remote auth contract |
+| Remote authentication scheme is not specified | §31 M6 | PROP-003 |
 
 ### ADR gaps (needs architectural decision)
 

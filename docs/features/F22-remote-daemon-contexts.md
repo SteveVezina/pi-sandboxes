@@ -95,7 +95,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
-| Context config schema is not specified | §31 M6, §34 Config file | Add context config schema |
+| Context config schema is not specified | §31 M6, §34 Config file | PROP-003 |
 
 ### ADR gaps (needs architectural decision)
 
@@ -106,4 +106,3 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 ## Out of Scope
 
 - Implementing remote transport/auth internals
-

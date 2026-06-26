@@ -5,9 +5,9 @@
 
 ## Active Cursor
 
-**Current phase:** M1-M4 complete
-**Next work:** M5 microVM backend (Firecracker/Cloud Hypervisor)
-**Blockers:** None
+**Current phase:** F20-F23 goal opened
+**Next work:** Review and accept/deny PROP-003, then apply cascade and begin implementation
+**Blockers:** PROP-003 (F20-F23 contracts)
 
 ## Cross-Feature Dependency Graph
 
@@ -71,12 +71,12 @@ F23 (Remote Transport/Auth) ──→ F22 (Remote Daemon Contexts)
 22. **F24** Compatibility Documentation ✅
 
 ### 🔴 Phase 7 — M5 microVM backend
-23. **F21** MicroVM Guest Control Plane 🔴
-24. **F20** MicroVM Backend 🔴
+23. **F21** MicroVM Guest Control Plane ⏸️ PROP-003
+24. **F20** MicroVM Backend ⏸️ PROP-003
 
 ### 🔴 Phase 8 — M6 remote daemon mode
-25. **F23** Remote Daemon Transport & Auth 🔴
-26. **F22** Remote Daemon Contexts 🔴
+25. **F23** Remote Daemon Transport & Auth ⏸️ PROP-003
+26. **F22** Remote Daemon Contexts ⏸️ PROP-003
 
 ## Risk Tracking
 

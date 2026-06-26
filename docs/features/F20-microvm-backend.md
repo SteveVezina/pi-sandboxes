@@ -102,7 +102,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
-| Firecracker vs Cloud Hypervisor selection is not decided | §15 MicroVM mode, §31 M5 | Add backend choice and host requirements |
+| Firecracker vs Cloud Hypervisor selection is not decided | §15 MicroVM mode, §31 M5 | PROP-003 |
 
 ### ADR gaps (needs architectural decision)
 
@@ -114,4 +114,3 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 - Remote daemon transport
 - Kubernetes-backed execution
-

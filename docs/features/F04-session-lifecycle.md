@@ -1,7 +1,7 @@
 # F04: Session Lifecycle
 
 > Source: `SPEC.md` §6 Features F8
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -121,6 +121,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/session/store.go`, `pkg/session/meta.go`
 **Size:** S
+**Status:** ✅
 **Depends on:** None
 
 ### T4.2: Session state machine
@@ -139,6 +140,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/session/state.go`
 **Size:** S
+**Status:** ✅
 **Depends on:** T4.1 (metadata store)
 
 ### T4.3: TTL expiration
@@ -158,6 +160,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/session/ttl.go`
 **Size:** S
+**Status:** ✅
 **Depends on:** T4.2 (state machine)
 
 ### T4.4: Orphan cleanup on restart
@@ -176,6 +179,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/session/orphans.go`
 **Size:** S
+**Status:** ✅
 **Depends on:** T4.1 (metadata store), T4.2 (state machine)
 
 ## Verification Plan

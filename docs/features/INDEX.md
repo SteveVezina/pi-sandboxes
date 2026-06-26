@@ -21,7 +21,7 @@ Dashboard of all features for this project.
 | [F01](F01-cli-entry-point.md) | CLI Entry Point | 🟡 Written | 🔴 Not started | M1 | — |
 | [F02](F02-daemon-api.md) | Daemon API | 🟡 Written | 🔴 Not started | M1 | F01 |
 | [F03](F03-fast-backend.md) | Fast Backend | 🟡 Written | 🔴 Not started | M1 | F04 |
-| [F04](F04-session-lifecycle.md) | Session Lifecycle | 🟡 Written | 🔴 Not started | M1 | — |
+| [F04.*🟢 Implemented.*✅ Implemented | M1 | — |
 | [F05](F05-command-execution.md) | Command Execution | 🟡 Written | 🔴 Not started | M1 | F03, F04 |
 | [F06](F06-workspace-file-ops.md) | Workspace & File Ops | 🟡 Written | 🔴 Not started | M1 | F04 |
 | [F07](F07-template-system.md) | Template System | 🟡 Written | 🔴 Not started | M1 | F03, F04 |

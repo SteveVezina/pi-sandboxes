@@ -6,7 +6,7 @@
 ## Active Cursor
 
 **Current phase:** Phase 1 — Foundation (M1 core)
-**Next feature to implement:** F04 (Session Lifecycle)
+**Next feature to implement:** F01 (CLI Entry Point)
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph

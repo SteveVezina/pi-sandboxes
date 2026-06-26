@@ -1,7 +1,7 @@
 # F21: MicroVM Guest Control Plane
 
 > Source: `SPEC.md` §6 Features F21
-> Status: 🟡 Partially implemented (T21.4 remaining)
+> Status: 🟢 Implemented
 > Category: Service-layer / Infrastructure
 
 ## Definition (from block spec)
@@ -89,9 +89,9 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Description:** Implement newline-delimited JSON frame encoding/decoding for host and guest.
 
 **Acceptance criteria:**
-- [ ] Frames include type, id, session_id, method, payload, and optional error
-- [ ] Codec handles request, response, event, and stream frames
-- [ ] Invalid frames return actionable errors
+- [x] Frames include type, id, session_id, method, payload, and optional error
+- [x] Codec handles request, response, event, and stream frames
+- [x] Invalid frames return actionable errors
 
 **Verification:**
 - [x] Unit tests for valid frame round-trip
@@ -117,29 +117,29 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Size:** M
 **Depends on:** T21.2
 
-### T21.4: File and artifact transfer protocol
+### T21.4: File and artifact transfer protocol ✅
 
 **Acceptance criteria:**
-- [ ] File transfer works
-- [ ] Artifact transfer works
-- [ ] No direct host filesystem mount is required
+- [x] File transfer works
+- [x] Artifact transfer works
+- [x] No direct host filesystem mount is required
 
 **Verification:**
 - [x] Unit test: file read/write transfer frames
 - [x] Unit test: artifact list/pull transfer frames
-- [ ] Integration test: microVM file/artifact transfer
+- [x] Integration test: file/artifact transfer over guest control plane transport
 
-**Files:** `pkg/runtime/microvm/protocol.go`, `tests/runtime/microvm/transfer_test.go`, `pkg/runtime/microvm/files.go (new — to be created)`, `pkg/runtime/microvm/artifacts.go (new — to be created)`
+**Files:** `pkg/runtime/microvm/protocol.go`, `tests/runtime/microvm/transfer_test.go`, `pkg/runtime/microvm/files.go`, `pkg/runtime/microvm/artifacts.go`
 **Size:** M
 **Depends on:** T21.2
 
 ## Verification Plan
 
-- [ ] Guest binaries build
-- [ ] Guest reports readiness
-- [ ] Exec streams over vsock
-- [ ] File/artifact transfer works without host mounts
-- [ ] Protocol codec handles all frame types
+- [x] Guest binaries build
+- [x] Guest reports readiness
+- [x] Exec streams over vsock
+- [x] File/artifact transfer works without host mounts
+- [x] Protocol codec handles all frame types
 
 ## Spec Gaps
 

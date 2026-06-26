@@ -6,7 +6,7 @@
 ## Active Cursor
 
 **Current phase:** F20-F23 unblocked by PROP-003
-**Next work:** Begin M5 microVM implementation with F21 guest control protocol, then F20 backend lifecycle
+**Next work:** Continue M5 microVM implementation with F20 backend lifecycle now that F21 guest control protocol is implemented
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph
@@ -71,8 +71,8 @@ F23 (Remote Transport/Auth) ──→ F22 (Remote Daemon Contexts)
 22. **F24** Compatibility Documentation ✅
 
 ### 🔴 Phase 7 — M5 microVM backend
-23. **F21** MicroVM Guest Control Plane 🔴
-24. **F20** MicroVM Backend 🔴
+23. **F21** MicroVM Guest Control Plane ✅
+24. **F20** MicroVM Backend 🟡
 
 ### 🔴 Phase 8 — M6 remote daemon mode
 25. **F23** Remote Daemon Transport & Auth 🔴

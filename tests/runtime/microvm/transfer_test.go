@@ -101,3 +101,126 @@ func TestProtocol_DecodeFileDataPayload_DecodesBase64Bytes(t *testing.T) {
 		t.Fatalf("path=%q data=%q mode=%#o", path, data, mode)
 	}
 }
+
+func TestTransferClient_ReadWriteFiles_UsesControlPlane(t *testing.T) {
+	transport := &fakeTransferTransport{}
+	client := microvm.NewTransferClient("sandbox-1", transport)
+
+	data, mode, err := client.ReadFile("/workspace/app.txt")
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if string(data) != "from guest" || mode != 0o640 {
+		t.Fatalf("data=%q mode=%#o, want guest file data", data, mode)
+	}
+	if got := transport.methods[0]; got != "file.read" {
+		t.Fatalf("first method = %q, want file.read", got)
+	}
+
+	if err := client.WriteFile("/workspace/app.txt", []byte("to guest"), 0o600); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+	if got := transport.methods[1]; got != "file.write" {
+		t.Fatalf("second method = %q, want file.write", got)
+	}
+}
+
+func TestTransferClient_ListPullArtifacts_UsesControlPlane(t *testing.T) {
+	transport := &fakeTransferTransport{}
+	client := microvm.NewTransferClient("sandbox-1", transport)
+
+	paths, err := client.ListArtifacts()
+	if err != nil {
+		t.Fatalf("ListArtifacts failed: %v", err)
+	}
+	if len(paths) != 2 || paths[0] != "/artifacts/report.json" || paths[1] != "/artifacts/log.txt" {
+		t.Fatalf("paths = %v, want artifact list", paths)
+	}
+
+	data, mode, err := client.PullArtifact("/artifacts/report.json")
+	if err != nil {
+		t.Fatalf("PullArtifact failed: %v", err)
+	}
+	if string(data) != `{"ok":true}` || mode != 0o600 {
+		t.Fatalf("data=%q mode=%#o, want artifact payload", data, mode)
+	}
+	if got := transport.methods[len(transport.methods)-1]; got != "artifact.pull" {
+		t.Fatalf("last method = %q, want artifact.pull", got)
+	}
+}
+
+type fakeTransferTransport struct {
+	methods []string
+}
+
+func (f *fakeTransferTransport) Send(frame microvm.Frame) (microvm.Frame, error) {
+	f.methods = append(f.methods, frame.Method)
+
+	switch frame.Method {
+	case "file.read":
+		payload, _ := json.Marshal(microvm.FileDataPayload{
+			Path: "/workspace/app.txt",
+			Data: base64.StdEncoding.EncodeToString([]byte("from guest")),
+			Mode: 0o640,
+		})
+		return microvm.Frame{
+			Type:      microvm.FrameTypeResponse,
+			ID:        frame.ID,
+			SessionID: frame.SessionID,
+			Method:    frame.Method,
+			Payload:   payload,
+		}, nil
+	case "file.write":
+		var payload microvm.FileWriteRequestPayload
+		if err := json.Unmarshal(frame.Payload, &payload); err != nil {
+			return microvm.Frame{}, err
+		}
+		if payload.Path != "/workspace/app.txt" || payload.Mode != 0o600 {
+			return microvm.Frame{
+				Type:      microvm.FrameTypeResponse,
+				ID:        frame.ID,
+				SessionID: frame.SessionID,
+				Method:    frame.Method,
+				Error:     &microvm.FrameError{Code: "bad_request", Message: "unexpected write payload"},
+			}, nil
+		}
+		return microvm.Frame{
+			Type:      microvm.FrameTypeResponse,
+			ID:        frame.ID,
+			SessionID: frame.SessionID,
+			Method:    frame.Method,
+		}, nil
+	case "artifact.list":
+		payload, _ := json.Marshal(microvm.ArtifactListPayload{
+			Paths: []string{"/artifacts/report.json", "/artifacts/log.txt"},
+		})
+		return microvm.Frame{
+			Type:      microvm.FrameTypeResponse,
+			ID:        frame.ID,
+			SessionID: frame.SessionID,
+			Method:    frame.Method,
+			Payload:   payload,
+		}, nil
+	case "artifact.pull":
+		payload, _ := json.Marshal(microvm.FileDataPayload{
+			Path: "/artifacts/report.json",
+			Data: base64.StdEncoding.EncodeToString([]byte(`{"ok":true}`)),
+			Mode: 0o600,
+		})
+		return microvm.Frame{
+			Type:      microvm.FrameTypeResponse,
+			ID:        frame.ID,
+			SessionID: frame.SessionID,
+			Method:    frame.Method,
+			Payload:   payload,
+		}, nil
+	default:
+		return microvm.Frame{
+			Type:      microvm.FrameTypeResponse,
+			ID:        frame.ID,
+			SessionID: frame.SessionID,
+			Method:    frame.Method,
+			Error:     &microvm.FrameError{Code: "unknown_method", Message: frame.Method},
+		}, nil
+	}
+}

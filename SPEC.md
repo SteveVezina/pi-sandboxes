@@ -46,7 +46,7 @@ Do not start with these:
 - Custom VMM implementation.
 - Docker-in-Docker as a default capability.
 - GPU workloads.
-- GUI/browser desktop agents.
+- GUI/browser desktop agents in the first release. The GUI workbench is a later M7 client surface.
 - Full Docker Compose compatibility.
 - Complex enterprise identity management.
 - Background cloud scheduler.
@@ -130,6 +130,10 @@ repeat
 | F21 | MicroVM Guest Control Plane | Guest-side `pi-init` and `pi-agentd` over virtio-vsock for command execution, lifecycle coordination, file/artifact transfer, and sandbox readiness reporting | M5 |
 | F22 | Remote Daemon Contexts | CLI context management for local and remote daemons, including `pi context create/use/list/inspect/delete` and context-aware `pi box` commands | M6 |
 | F23 | Remote Daemon Transport & Auth | SSH/Tailscale/WireGuard-friendly remote daemon access with secure local-to-remote API authentication and remote workstation support | M6 |
+| F24 | Cross-Platform GUI Workbench | Desktop application for macOS, Windows, and Linux that connects to local or remote PI daemons, creates and manages sandbox sessions, and exposes common sandbox workflows without replacing the CLI | M7 |
+| F25 | GUI Workspace Authorization | Explicit project-folder selection, allowed folder management, and safe bind/copy workspace setup for GUI-launched sessions | M7 |
+| F26 | GUI Session Operations | Dashboard and session views for create/list/inspect/exec/logs/diff/patch/artifacts/snapshots/destroy using existing daemon API operations | M7 |
+| F27 | GUI Settings and Diagnostics | GUI controls for daemon connection, active context, default template/runtime mode/network policy, engine health, doctor output, and support bundle export | M7 |
 
 ## 7. Acceptance Criteria
 
@@ -322,6 +326,39 @@ repeat
 - [ ] `ssh` remote contexts use SSH agent transport authentication
 - [ ] Remote auth failures never fall back to unauthenticated access
 
+### AC-27: Cross-Platform GUI Workbench Works (F24)
+- [ ] GUI app starts on macOS, Windows, and Linux development hosts
+- [ ] GUI can connect to a local daemon
+- [ ] GUI can connect to a configured remote context
+- [ ] GUI shows connected/disconnected state and daemon version
+- [ ] GUI can create a sandbox session without shelling out for normal lifecycle operations
+- [ ] GUI does not implement a separate sandbox lifecycle outside `pi-sandboxd`
+
+### AC-28: GUI Workspace Authorization Works (F25)
+- [ ] User must explicitly select a project folder before GUI-launched local workspace access
+- [ ] Selected project folder is displayed before session creation
+- [ ] Default workspace mode is `copy`
+- [ ] `bind` mode requires explicit opt-in
+- [ ] Allowed folders can be listed and removed from GUI settings
+- [ ] Host home directory, SSH keys, cloud config, Kubernetes config, and Docker socket are not mounted by default
+
+### AC-29: GUI Session Operations Work (F26)
+- [ ] Dashboard lists recent and active sandbox sessions
+- [ ] GUI can create, inspect, and destroy sessions
+- [ ] GUI can run commands with streaming stdout/stderr
+- [ ] GUI displays command history, logs, exit code, duration, timeout status, and truncation status
+- [ ] GUI can display workspace diff and export patch
+- [ ] GUI can list and pull artifacts
+- [ ] GUI can create and rollback snapshots when the daemon reports snapshot support
+
+### AC-30: GUI Settings and Diagnostics Work (F27)
+- [ ] GUI can view and change active context
+- [ ] GUI can set default template, runtime mode, and network mode preferences
+- [ ] GUI displays runtime/backend availability from daemon diagnostics
+- [ ] GUI exposes `pi system doctor` equivalent results
+- [ ] GUI can export a support bundle containing daemon diagnostics, GUI logs, version metadata, and redacted configuration
+- [ ] Daemon policy overrides conflicting GUI preferences
+
 ## 8. Security Model
 
 ### Filesystem Isolation
@@ -460,7 +497,7 @@ The following are explicitly NOT part of the first release:
 - Custom VMM implementation
 - Docker-in-Docker as a default capability
 - GPU workloads
-- GUI/browser desktop agents
+- Browser/computer-use agents
 - Full Docker Compose compatibility
 - Complex enterprise identity management
 - Background cloud scheduler
@@ -496,7 +533,9 @@ PI Agent / CLI / IDE / SDK
         +-- microvm: Firecracker or Cloud Hypervisor backend, later
 ```
 
-The CLI is thin. PI Agent and other tools should talk directly to `pi-sandboxd` over a local Unix socket or localhost API.
+The CLI is thin. PI Agent, SDKs, IDE integrations, and the GUI workbench should talk directly to `pi-sandboxd` over a local Unix socket, localhost API, or the remote context transport.
+
+The GUI workbench is a client surface, not a second runtime. It must not run sandbox workloads in the UI process or implement a separate sandbox lifecycle. Normal GUI operations use the daemon API or SDK. Shelling out to the `pi` CLI is reserved for diagnostics or compatibility gaps.
 
 ## 13. User-facing runtime modes
 
@@ -509,7 +548,7 @@ Expose simple profiles. Do not expose low-level runtime complexity to normal use
 | `secure` | gVisor/runsc | Better isolation while keeping container-like UX | Later |
 | `isolated` | Kata Containers | Stronger VM-grade enterprise isolation | Later |
 | `microvm` | Firecracker or Cloud Hypervisor | Snapshot-first microVM mode | Later |
-| `desktop` | Full VM/KubeVirt/Apple Virtualization/WSL2 backend | GUI/browser/computer-use agents | Future |
+| `desktop` | Full VM/KubeVirt/Apple Virtualization/WSL2 backend | Later browser/computer-use agents; not required for the M7 GUI workbench | Future |
 | `tool` | WASM/WASI | MCP/plugin tool sandboxing | Future |
 
 Default mode should be `auto`:
@@ -719,6 +758,8 @@ Support three workspace modes:
 | `copy` | Copy repo/files into sandbox workspace. Safest default. |
 | `bind` | Bind mount explicit host directory. User must opt in. |
 | `overlay` | Read-only base plus writable upperdir. Good for snapshots and rollback. |
+
+GUI-launched sessions must preserve this model. The GUI must require explicit project-folder selection before local workspace access, display the selected folder before session creation, default to `copy`, and make `bind` an explicit per-session or per-folder opt-in. Folder picker grants are advisory UI state only; daemon policy remains authoritative.
 
 ## 17. Cache model
 
@@ -1540,6 +1581,41 @@ Authentication rules:
 - Bearer tokens are stored outside sandbox workspaces and are never injected into sandbox environment variables.
 - Remote auth failures return actionable errors and do not fall back to unauthenticated access.
 
+### Milestone 7: Cross-platform GUI workbench
+
+Deliver:
+
+- desktop GUI app for macOS, Windows, and Linux
+- onboarding for local daemon, remote context, or connect later
+- explicit workspace authorization and allowed folder management
+- dashboard for recent and active sandbox sessions
+- session detail with command runner, streaming logs, history, diff, patch export, artifacts, snapshots, rollback, and destroy
+- settings for active context, daemon connection, default template, runtime mode, network mode, allowed folders, and diagnostics
+- support bundle export with redacted configuration
+
+The GUI workbench should use a restrained desktop-tool interface:
+
+- left navigation: Dashboard, Sessions, Templates, Contexts, Policies, Settings
+- status area: active daemon/context, connection state, runtime availability, and current version
+- primary action: create a sandbox session from a project folder, repository URL, or template
+- centered onboarding and authorization flows inspired by the accepted PROP-004 screenshots, with PI-specific text and workflows
+
+Recommended first implementation stack:
+
+- Tauri or another small cross-platform desktop shell
+- TypeScript frontend
+- Rust or native host bridge only for OS integration such as file picking, tray/menu integration, and local process supervision
+
+The GUI should consume existing daemon API operations wherever possible. If these endpoints are missing when F24-F27 begin, they must be specified before implementation:
+
+- list templates and inspect template metadata
+- report runtime/backend availability
+- report daemon version and health
+- return session list with lifecycle state, template, mode, workspace source, created time, TTL, and last command summary
+- stream exec output for a selected session
+- return command history and logs
+- return diff, patch, artifact, snapshot, and storage usage metadata
+
 ## 32. Compatibility expectations
 
 The platform must support common commands:
@@ -1658,7 +1734,20 @@ exec:
 cache:
   enabled: true
   maxSize: 50Gi
+
+gui:
+  rememberLastConnection: true
+  activeContext: local
+  allowedFolders:
+    - path: /Users/example/project
+      defaultWorkspaceMode: copy
+  defaults:
+    template: node-python
+    mode: auto
+    network: restricted
 ```
+
+GUI preferences are user-level client preferences, separate from daemon policy. If GUI preferences conflict with daemon policy, daemon policy wins and the GUI displays the policy error.
 
 ## 35. Error handling requirements
 

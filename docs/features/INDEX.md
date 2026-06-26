@@ -41,6 +41,10 @@ Dashboard of all features for this project.
 | [F21](F21-microvm-guest-control-plane.md) | MicroVM Guest Control Plane | 🟡 Written | ✅ Implemented | M5 | F20 |
 | [F22](F22-remote-daemon-contexts.md) | Remote Daemon Contexts | 🟡 Written | ✅ Implemented | M6 | F02, F23 |
 | [F23](F23-remote-daemon-transport-auth.md) | Remote Daemon Transport & Auth | 🟡 Written | ✅ Implemented | M6 | F02, F16, F22 |
+| [F24](F24-cross-platform-gui-workbench.md) | Cross-Platform GUI Workbench | 🟡 Written | 🔵 In progress | M7 | F02, F16, F22, F23 |
+| [F25](F25-gui-workspace-authorization.md) | GUI Workspace Authorization | 🟡 Written | 🟡 Not started | M7 | F17, F24 |
+| [F26](F26-gui-session-operations.md) | GUI Session Operations | 🟡 Written | 🟡 Not started | M7 | F05, F06, F08, F09, F14, F24 |
+| [F27](F27-gui-settings-diagnostics.md) | GUI Settings and Diagnostics | 🟡 Written | 🟡 Not started | M7 | F10, F17, F19, F22, F24, F25 |
 
 ## Milestone Summary
 
@@ -52,9 +56,10 @@ Dashboard of all features for this project.
 | M4: Secure Backend | F18, F19 | ✅ Implemented |
 | M5: MicroVM Backend | F20, F21 | ✅ Implemented |
 | M6: Remote Daemon Mode | F22, F23 | ✅ Implemented |
+| M7: Cross-Platform GUI Workbench | F24, F25, F26, F27 | 🟡 Spec written |
 
 ## Summary
 
-All 23 feature specs tracked and implemented. Milestones M1–M6 complete.
+All 27 feature specs tracked. Milestones M1–M6 are implemented; M7 GUI workbench specs are written and ready for review/planning.
 
 > Note: existing feature document numbering predates PROP-002 and has known drift from `SPEC.md` §6. `SPEC.md` remains the source of truth; a follow-up cascade should reconcile legacy F01-F17 filenames and IDs.

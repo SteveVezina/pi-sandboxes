@@ -5,8 +5,8 @@
 
 ## Active Cursor
 
-**Current phase:** All phases complete — F01 through F23 implemented
-**Next work:** None — plan is finished
+**Current phase:** Phase 9 — M7 cross-platform GUI workbench
+**Next work:** Review F24-F27 specs, then continue T24.2 daemon and context connection
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph
@@ -34,6 +34,12 @@ F18 (Secure Backend) ──→ F19 (Runtime Selection & Fallback)
                                └──→ F20 (MicroVM Backend) ──→ F21 (MicroVM Guest Control Plane)
 
 F23 (Remote Transport/Auth) ──→ F22 (Remote Daemon Contexts)
+
+F02/F16/F22/F23 ──→ F24 (GUI Workbench) ──→ F25 (Workspace Authorization)
+                                │             ├──→ F26 (Session Operations)
+                                │             └──→ F27 (Settings & Diagnostics)
+F05/F06/F08/F09/F14 ────────────┘
+F10/F17/F19 ───────────────────────────────────────┘
 ```
 
 ## Execution Order (All Complete)
@@ -68,7 +74,7 @@ F23 (Remote Transport/Auth) ──→ F22 (Remote Daemon Contexts)
 ### ✅ Phase 6 — M4 secure backend
 20. **F19** Runtime Selection & Fallback ✅
 21. **F18** Secure Backend ✅
-22. **F24** Compatibility Documentation ✅
+22. **Compatibility documentation** ✅
 
 ### ✅ Phase 7 — M5 microVM backend
 23. **F21** MicroVM Guest Control Plane ✅
@@ -83,6 +89,12 @@ F23 (Remote Transport/Auth) ──→ F22 (Remote Daemon Contexts)
 28. **Doctor** Add config.yaml creation, system command validation, daemon binary check ✅
 29. **Shell** Implement WebSocket PTY shell (`pkg/api/sandbox_shell.go`, `pkg/terminal/`) ✅
 
+### 🟡 Phase 9 — M7 cross-platform GUI workbench
+30. **F24** Cross-Platform GUI Workbench 🔵
+31. **F25** GUI Workspace Authorization 🟡
+32. **F26** GUI Session Operations 🟡
+33. **F27** GUI Settings and Diagnostics 🟡
+
 ## Risk Tracking
 
 | Risk | Status | Mitigation |
@@ -91,3 +103,5 @@ F23 (Remote Transport/Auth) ──→ F22 (Remote Daemon Contexts)
 | seccomp profile complexity | New | Start with minimal profile, expand iteratively |
 | Landlock availability | New | Fallback to mount namespace only |
 | OCI runtime detection | New | Try multiple runtimes in priority order |
+| GUI API metadata gaps | New | Specify missing read-only daemon endpoints before coding GUI operations |
+| Desktop security drift | New | Keep GUI as thin client; daemon policy remains authoritative |

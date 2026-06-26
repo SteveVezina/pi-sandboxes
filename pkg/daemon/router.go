@@ -20,5 +20,8 @@ func NewRouter(store *session.Store) *mux.Router {
 	router.HandleFunc("/v1/sandboxes/{id}", api.GetSandbox(store)).Methods("GET")
 	router.HandleFunc("/v1/sandboxes/{id}", api.DeleteSandbox(store)).Methods("DELETE")
 
+	// Exec
+	router.HandleFunc("/v1/sandboxes/{id}/exec", api.ExecSandbox(store)).Methods("POST")
+
 	return router
 }

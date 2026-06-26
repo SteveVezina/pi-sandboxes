@@ -20,7 +20,7 @@ Dashboard of all features for this project.
 |---------|------|-------------|-------------|-----------|------------|
 | [F01](F01-cli-entry-point.md) | CLI Entry Point | 🟡 Written | 🔴 Not started | M1 | — |
 | [F02](F02-daemon-api.md) | Daemon API | 🟡 Written | 🔴 Not started | M1 | F01 |
-| [F03.*🟡 Written.*🟡 4/5 tasks | M1 | F04 |
+| [F03.*🟡 Written.*✅ Implemented | M1 | F04 |
 | [F04.*🟢 Implemented.*✅ Implemented | M1 | — |
 | [F05](F05-command-execution.md) | Command Execution | 🟡 Written | 🔴 Not started | M1 | F03, F04 |
 | [F06](F06-workspace-file-ops.md) | Workspace & File Ops | 🟡 Written | 🔴 Not started | M1 | F04 |

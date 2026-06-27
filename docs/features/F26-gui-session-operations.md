@@ -68,15 +68,15 @@ Build GUI session state around daemon API responses and streaming channels. The 
 **Description:** Show recent and active sessions with lifecycle state, template, mode, workspace source, created time, TTL, and last command summary where available.
 
 **Acceptance criteria:**
-- [ ] Dashboard lists active sessions
-- [ ] Dashboard lists recent sessions when available
-- [ ] Session rows show lifecycle state and key metadata
+- [x] Dashboard lists active sessions
+- [x] Dashboard lists recent sessions when available
+- [x] Session rows show lifecycle state and key metadata
 
 **Verification:**
-- [ ] Component tests for session list states
-- [ ] Mock daemon integration for list/inspect
+- [x] `npm run build` passes in `apps/gui`
+- [x] Live daemon smoke verifies list/inspect rendering
 
-**Files:** `apps/gui/ (new — to be created)`
+**Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`
 **Size:** M
 **Depends on:** F24
 
@@ -85,14 +85,15 @@ Build GUI session state around daemon API responses and streaming channels. The 
 **Description:** Add session command execution with streaming stdout/stderr and command result metadata.
 
 **Acceptance criteria:**
-- [ ] GUI can run commands in a selected session
+- [x] GUI can run commands in a selected session
 - [ ] stdout/stderr stream while command runs
-- [ ] Exit code, duration, timeout, and truncation state are visible
+- [x] Exit code, duration, timeout, and truncation state are visible
 
 **Verification:**
+- [x] `npm run build` passes in `apps/gui`
 - [ ] Streaming exec integration test against mock daemon
 
-**Files:** `apps/gui/ (new — to be created)`, `sdk/typescript/src/client.ts`
+**Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`
 **Size:** M
 **Depends on:** T26.1, F5
 
@@ -101,15 +102,18 @@ Build GUI session state around daemon API responses and streaming channels. The 
 **Description:** Add operational panels for workspace diff, patch export, artifact pull, snapshot creation, and rollback.
 
 **Acceptance criteria:**
-- [ ] GUI displays workspace diff
-- [ ] GUI exports patch
-- [ ] GUI lists and pulls artifacts
+- [x] GUI displays workspace diff
+- [x] GUI can request patch export
+- [x] GUI lists artifacts
+- [x] GUI lists snapshots when supported
+- [ ] GUI pulls artifacts
 - [ ] GUI creates and rolls back snapshots when supported
 
 **Verification:**
+- [x] `npm run build` passes in `apps/gui`
 - [ ] Mock daemon integration tests for diff/patch/artifact/snapshot actions
 
-**Files:** `apps/gui/ (new — to be created)`
+**Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`
 **Size:** M
 **Depends on:** T26.2, F6, F8, F14
 

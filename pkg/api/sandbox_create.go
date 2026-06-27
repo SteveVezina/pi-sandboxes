@@ -9,10 +9,15 @@ import (
 
 // CreateRequest is the request body for sandbox creation.
 type CreateRequest struct {
-	Template string `json:"template"`
-	Mode     string `json:"mode"`
-	Name     string `json:"name"`
-	TTL      int    `json:"ttlSeconds"`
+	Template  string `json:"template"`
+	Mode      string `json:"mode"`
+	Name      string `json:"name"`
+	TTL       int    `json:"ttlSeconds"`
+	Workspace struct {
+		Mode    string `json:"mode"`
+		Source  string `json:"source"`
+		MaxSize string `json:"maxSize"`
+	} `json:"workspace"`
 }
 
 // CreateSandbox returns an HTTP handler that creates a sandbox session.
@@ -35,7 +40,14 @@ func CreateSandbox(store *session.Store) http.HandlerFunc {
 			req.Mode = "fast"
 		}
 
-		id, err := store.Create(req.Name, req.Template, req.Mode)
+		id, err := store.CreateWithOptions(session.CreateOptions{
+			Name:          req.Name,
+			Template:      req.Template,
+			Mode:          req.Mode,
+			TTL:           req.TTL,
+			Workspace:     req.Workspace.Source,
+			WorkspaceMode: req.Workspace.Mode,
+		})
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 			return

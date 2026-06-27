@@ -89,12 +89,14 @@ Use a thin desktop shell around a TypeScript frontend. The preferred stack is Ta
 - [ ] Remote context connection works
 - [ ] Connected/disconnected state and daemon version are visible
 - [ ] Auth failures are actionable and do not fall back to unauthenticated access
+- [ ] Browser GUI can call the localhost daemon HTTP API without CORS/preflight failures
 
 **Verification:**
 - [ ] Unit tests for connection state
 - [ ] Integration smoke against local daemon API
+- [ ] Daemon router test covers GUI CORS preflight and response headers
 
-**Files:** `apps/gui/ (new — to be created)`, `sdk/typescript/src/client.ts`
+**Files:** `apps/gui/`, `pkg/daemon/router.go`, `tests/daemon/daemon_test.go`
 **Size:** M
 **Depends on:** T24.1, F22, F23
 

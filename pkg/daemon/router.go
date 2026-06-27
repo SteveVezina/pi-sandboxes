@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/pi-sandbox/pi/pkg/api"
@@ -10,6 +11,10 @@ import (
 // NewRouter creates the HTTP router with all endpoints.
 func NewRouter(store *session.Store) *mux.Router {
 	router := mux.NewRouter()
+	router.Use(guiCORSMiddleware)
+	router.PathPrefix("/").Methods(http.MethodOptions).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
 
 	// Health check
 	router.HandleFunc("/health", HealthHandler()).Methods("GET")
@@ -61,4 +66,32 @@ func NewRouter(store *session.Store) *mux.Router {
 	router.HandleFunc("/v1/sandboxes/{id}/logs/history", api.LogsHistory(store)).Methods("GET")
 
 	return router
+}
+
+func guiCORSMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if isAllowedGUIOrigin(origin) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Vary", "Origin")
+			w.Header().Set("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Accept,Authorization")
+		}
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func isAllowedGUIOrigin(origin string) bool {
+	switch origin {
+	case "http://127.0.0.1:5174", "http://localhost:5174":
+		return true
+	default:
+		return false
+	}
 }

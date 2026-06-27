@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/pi-sandbox/pi/pkg/session"
 )
@@ -16,9 +17,16 @@ func ListSandboxes(store *session.Store) http.HandlerFunc {
 		}
 
 		type SandboxInfo struct {
-			ID    string `json:"id"`
-			Name  string `json:"name"`
-			State string `json:"state"`
+			ID            string `json:"id"`
+			Name          string `json:"name"`
+			Template      string `json:"template"`
+			Mode          string `json:"mode"`
+			State         string `json:"state"`
+			Workspace     string `json:"workspace"`
+			WorkspaceMode string `json:"workspace_mode"`
+			CreatedAt     string `json:"created_at"`
+			UpdatedAt     string `json:"updated_at"`
+			LastUsed      string `json:"last_used"`
 		}
 
 		var list []SandboxInfo
@@ -28,10 +36,21 @@ func ListSandboxes(store *session.Store) http.HandlerFunc {
 				continue
 			}
 			list = append(list, SandboxInfo{
-				ID:    meta.ID,
-				Name:  meta.Name,
-				State: string(meta.State),
+				ID:            meta.ID,
+				Name:          meta.Name,
+				Template:      meta.Template,
+				Mode:          meta.Mode,
+				State:         string(meta.State),
+				Workspace:     meta.Workspace,
+				WorkspaceMode: meta.WorkspaceMode,
+				CreatedAt:     meta.CreatedAt.Format(time.RFC3339Nano),
+				UpdatedAt:     meta.UpdatedAt.Format(time.RFC3339Nano),
+				LastUsed:      meta.LastUsedAt.Format(time.RFC3339Nano),
 			})
+		}
+
+		if list == nil {
+			list = []SandboxInfo{}
 		}
 
 		writeJSON(w, http.StatusOK, list)

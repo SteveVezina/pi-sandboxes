@@ -20,15 +20,17 @@ func GetSandbox(store *session.Store) http.HandlerFunc {
 		}
 
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"id":          meta.ID,
-			"name":        meta.Name,
-			"template":    meta.Template,
-			"mode":        meta.Mode,
-			"state":       string(meta.State),
-			"created_at":  meta.CreatedAt,
-			"updated_at":  meta.UpdatedAt,
-			"ttl_seconds": meta.TTL,
-			"last_used":   meta.LastUsedAt,
+			"id":             meta.ID,
+			"name":           meta.Name,
+			"template":       meta.Template,
+			"mode":           meta.Mode,
+			"state":          string(meta.State),
+			"created_at":     meta.CreatedAt,
+			"updated_at":     meta.UpdatedAt,
+			"ttl_seconds":    meta.TTL,
+			"last_used":      meta.LastUsedAt,
+			"workspace":      meta.Workspace,
+			"workspace_mode": meta.WorkspaceMode,
 		})
 	}
 }

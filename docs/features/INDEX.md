@@ -42,8 +42,8 @@ Dashboard of all features for this project.
 | [F22](F22-remote-daemon-contexts.md) | Remote Daemon Contexts | 🟡 Written | ✅ Implemented | M6 | F02, F23 |
 | [F23](F23-remote-daemon-transport-auth.md) | Remote Daemon Transport & Auth | 🟡 Written | ✅ Implemented | M6 | F02, F16, F22 |
 | [F24](F24-cross-platform-gui-workbench.md) | Cross-Platform GUI Workbench | 🟡 Written | 🔵 In progress | M7 | F02, F16, F22, F23 |
-| [F25](F25-gui-workspace-authorization.md) | GUI Workspace Authorization | 🟡 Written | 🟡 Not started | M7 | F17, F24 |
-| [F26](F26-gui-session-operations.md) | GUI Session Operations | 🟡 Written | 🟡 Not started | M7 | F05, F06, F08, F09, F14, F24 |
+| [F25](F25-gui-workspace-authorization.md) | GUI Workspace Authorization | 🟡 Written | 🔵 In progress | M7 | F17, F24 |
+| [F26](F26-gui-session-operations.md) | GUI Session Operations | 🟡 Written | 🔵 In progress | M7 | F05, F06, F08, F09, F14, F24 |
 | [F27](F27-gui-settings-diagnostics.md) | GUI Settings and Diagnostics | 🟡 Written | 🟡 Not started | M7 | F10, F17, F19, F22, F24, F25 |
 
 ## Milestone Summary

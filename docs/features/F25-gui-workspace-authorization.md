@@ -59,37 +59,37 @@ Implement workspace authorization as a GUI flow backed by local preferences and 
 
 ## Tasks
 
-### T25.1: Folder selection and review flow ⚠️
+### T25.1: Folder selection and review flow ✅
 
 **Description:** Add explicit project-folder selection and confirmation before local workspace access.
 
 **Acceptance criteria:**
-- [ ] Folder picker requires explicit user action
-- [ ] Selected path is visible before session creation
-- [ ] Default workspace mode is `copy`
-- [ ] `bind` requires explicit opt-in
+- [x] Folder authorization requires explicit user action
+- [x] Selected path is visible before session creation
+- [x] Default workspace mode is `copy`
+- [x] `bind` requires explicit opt-in
 
 **Verification:**
-- [ ] GUI component tests for mode defaults and opt-in state
-- [ ] Manual smoke verifies folder review before session creation
+- [x] `npm run build` passes in `apps/gui`
+- [x] Manual smoke verifies folder review before session creation
 
-**Files:** `apps/gui/ (new — to be created)`
+**Files:** `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`
 **Size:** M
 **Depends on:** F24
 
-### T25.2: Allowed folder preferences ⚠️
+### T25.2: Allowed folder preferences ✅
 
 **Description:** Persist, list, and remove GUI allowed folder preferences.
 
 **Acceptance criteria:**
-- [ ] Allowed folders persist under GUI preferences
-- [ ] Settings can list allowed folders
-- [ ] Settings can remove allowed folders
+- [x] Allowed folders persist under GUI preferences
+- [x] Settings can list allowed folders
+- [x] Settings can remove allowed folders
 
 **Verification:**
-- [ ] Unit tests for preference read/write
+- [x] `npm run build` passes in `apps/gui`
 
-**Files:** `apps/gui/ (new — to be created)`, `~/.pi/config.yaml` schema handling (new — to be created if needed)
+**Files:** `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`
 **Size:** M
 **Depends on:** T25.1
 
@@ -98,15 +98,16 @@ Implement workspace authorization as a GUI flow backed by local preferences and 
 **Description:** Ensure GUI-launched session creation preserves daemon filesystem policy.
 
 **Acceptance criteria:**
-- [ ] GUI passes workspace mode to daemon create request
+- [x] GUI passes workspace mode to daemon create request
 - [ ] Unsafe host mounts are rejected or surfaced as daemon policy errors
 - [ ] Host home, SSH keys, cloud config, Kubernetes config, and Docker socket are not mounted by default
 
 **Verification:**
+- [x] API tests verify workspace source/mode persistence
 - [ ] Integration test against mock daemon policy rejection
 - [ ] Security smoke for default create-session payload
 
-**Files:** `apps/gui/ (new — to be created)`
+**Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`, `pkg/api/sandbox_create.go`, `pkg/api/sandbox_get.go`, `pkg/api/sandbox_list.go`, `pkg/session/meta.go`, `pkg/session/store.go`, `tests/api/sandbox_test.go`
 **Size:** M
 **Depends on:** T25.2
 

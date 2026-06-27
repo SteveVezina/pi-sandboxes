@@ -91,8 +91,8 @@ F10/F17/F19 ──────────────────────�
 
 ### 🟡 Phase 9 — M7 cross-platform GUI workbench
 30. **F24** Cross-Platform GUI Workbench 🔵
-31. **F25** GUI Workspace Authorization 🟡
-32. **F26** GUI Session Operations 🟡
+31. **F25** GUI Workspace Authorization 🔵
+32. **F26** GUI Session Operations 🔵
 33. **F27** GUI Settings and Diagnostics 🟡
 
 ## Risk Tracking

@@ -33,10 +33,36 @@ func (s *Store) metaPath(id string) string {
 // Create creates a new session and persists its metadata.
 // Returns the session ID.
 func (s *Store) Create(name, template, mode string) (string, error) {
+	return s.CreateWithOptions(CreateOptions{
+		Name: name, Template: template, Mode: mode,
+	})
+}
+
+// CreateOptions contains optional metadata persisted at session creation.
+type CreateOptions struct {
+	Name          string
+	Template      string
+	Mode          string
+	Workspace     string
+	WorkspaceMode string
+	TTL           int
+}
+
+// CreateWithOptions creates a new session and persists its metadata.
+func (s *Store) CreateWithOptions(opts CreateOptions) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	meta := NewMeta(name, template, mode)
+	meta := NewMeta(opts.Name, opts.Template, opts.Mode)
+	if opts.Workspace != "" {
+		meta.Workspace = opts.Workspace
+	}
+	if opts.WorkspaceMode != "" {
+		meta.WorkspaceMode = opts.WorkspaceMode
+	}
+	if opts.TTL > 0 {
+		meta.TTL = opts.TTL
+	}
 
 	dir := s.sandboxDir(meta.ID)
 	if err := os.MkdirAll(dir, 0755); err != nil {

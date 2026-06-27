@@ -87,6 +87,36 @@ func TestCreateSandbox_Defaults(t *testing.T) {
 	if meta.Mode != "fast" {
 		t.Errorf("Expected default mode 'fast', got '%s'", meta.Mode)
 	}
+	if meta.WorkspaceMode != "copy" {
+		t.Errorf("Expected default workspace mode 'copy', got '%s'", meta.WorkspaceMode)
+	}
+}
+
+func TestCreateSandbox_WorkspaceMetadata(t *testing.T) {
+	store, _ := newTestStore(t)
+
+	reqBody := `{"name":"gui-box","template":"node-python","mode":"fast","workspace":{"mode":"bind","source":"/tmp/project","maxSize":"5Gi"}}`
+	req := httptest.NewRequest("POST", "/v1/sandboxes", bytes.NewBufferString(reqBody))
+	w := httptest.NewRecorder()
+
+	api.CreateSandbox(store)(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Expected 201, got %d", w.Code)
+	}
+
+	var resp map[string]string
+	json.NewDecoder(w.Body).Decode(&resp)
+	meta, err := store.Get(resp["id"])
+	if err != nil {
+		t.Fatalf("Get failed: %v", err)
+	}
+	if meta.Workspace != "/tmp/project" {
+		t.Errorf("Expected workspace source, got %q", meta.Workspace)
+	}
+	if meta.WorkspaceMode != "bind" {
+		t.Errorf("Expected workspace mode bind, got %q", meta.WorkspaceMode)
+	}
 }
 
 func TestListSandboxes(t *testing.T) {
@@ -152,6 +182,9 @@ func TestGetSandbox(t *testing.T) {
 	}
 	if resp["state"] != "WARM" {
 		t.Errorf("Expected state 'WARM', got '%v'", resp["state"])
+	}
+	if resp["workspace_mode"] != "copy" {
+		t.Errorf("Expected workspace_mode 'copy', got '%v'", resp["workspace_mode"])
 	}
 }
 

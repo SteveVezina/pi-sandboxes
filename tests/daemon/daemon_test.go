@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -105,6 +106,46 @@ func TestDaemon_HTTPPort(t *testing.T) {
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestRouter_GUICORSPreflight(t *testing.T) {
+	store := session.NewStore(t.TempDir())
+	router := daemon.NewRouter(store)
+
+	req := httptest.NewRequest(http.MethodOptions, "/v1/sandboxes", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:5174")
+	req.Header.Set("Access-Control-Request-Method", "GET")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected %d, got %d", http.StatusNoContent, w.Code)
+	}
+	if got := w.Header().Get("Access-Control-Allow-Origin"); got != "http://127.0.0.1:5174" {
+		t.Fatalf("expected GUI origin to be allowed, got %q", got)
+	}
+	if got := w.Header().Get("Access-Control-Allow-Methods"); got == "" {
+		t.Fatal("expected allowed methods header")
+	}
+}
+
+func TestRouter_GUICORSHealth(t *testing.T) {
+	store := session.NewStore(t.TempDir())
+	router := daemon.NewRouter(store)
+
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.Header.Set("Origin", "http://localhost:5174")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected %d, got %d", http.StatusOK, w.Code)
+	}
+	if got := w.Header().Get("Access-Control-Allow-Origin"); got != "http://localhost:5174" {
+		t.Fatalf("expected localhost GUI origin to be allowed, got %q", got)
 	}
 }
 

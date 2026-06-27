@@ -6,7 +6,7 @@
 ## Active Cursor
 
 **Current phase:** Phase 9 — M7 cross-platform GUI workbench
-**Next work:** Review F24-F27 specs, then continue T24.2 daemon and context connection
+**Next work:** Complete F24 remote context bridge/auth failure handling, then finish F25 workspace authorization hardening
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph
@@ -92,8 +92,8 @@ F10/F17/F19 ──────────────────────�
 ### 🟡 Phase 9 — M7 cross-platform GUI workbench
 30. **F24** Cross-Platform GUI Workbench 🔵
 31. **F25** GUI Workspace Authorization 🔵
-32. **F26** GUI Session Operations 🔵
-33. **F27** GUI Settings and Diagnostics 🟡
+32. **F26** GUI Session Operations ✅
+33. **F27** GUI Settings and Diagnostics ✅
 
 ## Risk Tracking
 

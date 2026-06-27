@@ -27,14 +27,16 @@ import {
   Trash2,
   Wrench
 } from "lucide-react";
-import { ConnectionState, ExecResult, PiDaemonClient, SandboxInfo } from "./api";
+import { ConnectionState, ContextInfo, ExecResult, PiDaemonClient, RuntimeInfo, SandboxInfo, SystemStatus } from "./api";
 import "./styles.css";
 
 const DEFAULT_DAEMON_URL = "http://127.0.0.1:7777";
 const DAEMON_URL_STORAGE_KEY = "pi.gui.daemonUrl.v2";
 const ALLOWED_FOLDERS_STORAGE_KEY = "pi.gui.allowedFolders.v1";
+const GUI_DEFAULTS_STORAGE_KEY = "pi.gui.defaults.v1";
 const templates = ["base", "node-python", "go", "rust", "polyglot"];
 const modes = ["fast", "compat", "secure", "microvm"];
+const networkModes = ["restricted", "none", "open"];
 
 const navItems = [
   { label: "Dashboard", icon: Command, active: true },
@@ -54,8 +56,9 @@ function App() {
   const [error, setError] = useState<string>("");
   const [isBusy, setIsBusy] = useState(false);
   const [newName, setNewName] = useState("gui-session");
-  const [newTemplate, setNewTemplate] = useState("node-python");
-  const [newMode, setNewMode] = useState("fast");
+  const [defaults, setDefaults] = useState(() => loadGUIDefaults());
+  const [newTemplate, setNewTemplate] = useState(defaults.template);
+  const [newMode, setNewMode] = useState(defaults.mode);
   const [projectFolder, setProjectFolder] = useState("/Users/svezina/Projects/playground-perso/pi-sandboxes");
   const [allowedFolders, setAllowedFolders] = useState<string[]>(() => {
     try {
@@ -68,6 +71,13 @@ function App() {
   const [command, setCommand] = useState("pwd");
   const [execResult, setExecResult] = useState<ExecResult | null>(null);
   const [operationOutput, setOperationOutput] = useState<string>("");
+  const [artifactDestination, setArtifactDestination] = useState("/tmp/pi-gui-artifacts");
+  const [snapshotName, setSnapshotName] = useState("gui-checkpoint");
+  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
+  const [runtimeInfo, setRuntimeInfo] = useState<RuntimeInfo | null>(null);
+  const [contexts, setContexts] = useState<ContextInfo[]>([]);
+  const [activeContext, setActiveContext] = useState(defaults.activeContext);
+  const [supportBundle, setSupportBundle] = useState<string>("");
 
   const client = useMemo(() => new PiDaemonClient(daemonUrl), [daemonUrl]);
   const selectedSession = sessions.find((session) => session.id === selectedId) || sessions[0];
@@ -78,9 +88,21 @@ function App() {
     try {
       setConnection("checking");
       const daemonHealth = await client.health();
-      const sandboxList = await client.listSandboxes();
+      const [sandboxList, status, runtimes, contextResponse] = await Promise.all([
+        client.listSandboxes(),
+        client.systemStatus().catch(() => null),
+        client.runtimes().catch(() => null),
+        client.contexts().catch(() => null)
+      ]);
       setHealth(daemonHealth.status || "ok");
       setSessions(sandboxList);
+      setSystemStatus(status);
+      setRuntimeInfo(runtimes);
+      if (contextResponse) {
+        setContexts(contextResponse.contexts);
+        setActiveContext(contextResponse.active);
+        setDefaults((current) => ({ ...current, activeContext: contextResponse.active }));
+      }
       setConnection("connected");
       setSelectedId((current) => current || sandboxList[0]?.id || "");
     } catch (err) {
@@ -98,6 +120,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(ALLOWED_FOLDERS_STORAGE_KEY, JSON.stringify(allowedFolders));
   }, [allowedFolders]);
+
+  useEffect(() => {
+    localStorage.setItem(GUI_DEFAULTS_STORAGE_KEY, JSON.stringify(defaults));
+  }, [defaults]);
 
   useEffect(() => {
     void refresh();
@@ -168,8 +194,26 @@ function App() {
     setExecResult(null);
     setOperationOutput("");
     try {
-      const result = await client.exec(selectedSession.id, command.trim());
-      setExecResult(result);
+      let stdout = "";
+      let stderr = "";
+      for await (const event of client.execStream(selectedSession.id, command.trim())) {
+        if (event.type === "stdout") {
+          stdout += event.data || "";
+          setOperationOutput(stdout + (stderr ? `\nstderr:\n${stderr}` : ""));
+        } else if (event.type === "stderr") {
+          stderr += event.data || "";
+          setOperationOutput(stdout + (stderr ? `\nstderr:\n${stderr}` : ""));
+        } else if (event.type === "done") {
+          setExecResult({
+            exitCode: event.exitCode,
+            durationMs: event.durationMs,
+            truncated: event.truncated,
+            timedOut: event.timedOut,
+            stdout,
+            stderr
+          });
+        }
+      }
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to run command");
@@ -189,6 +233,49 @@ function App() {
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : `${label} failed`);
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  function updateDefaults(next: Partial<GUIDefaults>) {
+    setDefaults((current) => {
+      const updated = { ...current, ...next };
+      setNewTemplate(updated.template);
+      setNewMode(updated.mode);
+      return updated;
+    });
+  }
+
+  async function selectContext(name: string) {
+    setIsBusy(true);
+    setError("");
+    try {
+      const response = await client.useContext(name);
+      const selected = contexts.find((context) => context.name === response.active);
+      setActiveContext(response.active);
+      updateDefaults({ activeContext: response.active });
+      if (selected?.transport === "http" && selected.target.startsWith("http")) {
+        setDaemonUrl(selected.target);
+      } else if (selected?.name === "local") {
+        setDaemonUrl(DEFAULT_DAEMON_URL);
+      }
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to switch context");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function exportSupportBundle() {
+    setIsBusy(true);
+    setError("");
+    try {
+      const bundle = await client.supportBundle();
+      setSupportBundle(formatUnknown(bundle));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to export support bundle");
     } finally {
       setIsBusy(false);
     }
@@ -285,11 +372,11 @@ function App() {
               </span>
               <ChevronRight size={20} />
             </button>
-            <button className="choice-row" title="Remote context selection will use F22/F23 context APIs in the next slice">
+            <button className="choice-row" onClick={() => void refresh()}>
               <Network size={22} />
               <span>
-                <strong>Connect remote context</strong>
-                <small>Uses authenticated HTTP endpoint when configured</small>
+                <strong>{activeContext} context</strong>
+                <small>{contextSummary(contexts.find((context) => context.name === activeContext))}</small>
               </span>
               <ChevronRight size={20} />
             </button>
@@ -409,13 +496,17 @@ function App() {
                 <ListChecks size={19} />
                 Diff
               </button>
+              <button onClick={() => void runOperation("Patch", (id) => client.patch(id))} disabled={!selectedSession || isBusy}>
+                <ListChecks size={19} />
+                Patch
+              </button>
               <button onClick={() => void runOperation("Artifacts", (id) => client.artifacts(id))} disabled={!selectedSession || isBusy}>
                 <Database size={19} />
-                Artifacts
+                List artifacts
               </button>
               <button onClick={() => void runOperation("Snapshots", (id) => client.snapshots(id))} disabled={!selectedSession || isBusy}>
                 <RotateCcw size={19} />
-                Snapshot
+                List snaps
               </button>
               <button onClick={() => void runOperation("Logs", (id) => client.logs(id))} disabled={!selectedSession || isBusy}>
                 <Clock3 size={19} />
@@ -424,6 +515,25 @@ function App() {
               <button onClick={() => void destroySelected()} disabled={!selectedSession || isBusy}>
                 <Trash2 size={19} />
                 Destroy
+              </button>
+            </div>
+            <div className="secondary-operation-grid">
+              <label>
+                Artifact destination
+                <input value={artifactDestination} onChange={(event) => setArtifactDestination(event.target.value)} />
+              </label>
+              <button onClick={() => void runOperation("Artifact pull", (id) => client.artifactPull(id, artifactDestination))} disabled={!selectedSession || isBusy}>
+                Pull artifacts
+              </button>
+              <label>
+                Snapshot name
+                <input value={snapshotName} onChange={(event) => setSnapshotName(event.target.value)} />
+              </label>
+              <button onClick={() => void runOperation("Snapshot create", (id) => client.snapshotCreate(id, snapshotName))} disabled={!selectedSession || isBusy}>
+                Create snapshot
+              </button>
+              <button onClick={() => void runOperation("Snapshot rollback", (id) => client.snapshotRollback(id, snapshotName))} disabled={!selectedSession || isBusy}>
+                Rollback snapshot
               </button>
             </div>
             {execResult ? (
@@ -450,10 +560,53 @@ function App() {
               <strong>{connectionLabel(connection)}</strong>
             </div>
             <div className="metric-row">
+              <Gauge size={18} />
+              <span>runtime best</span>
+              <strong>{runtimeInfo?.best || "unknown"}</strong>
+            </div>
+            <div className="metric-row">
+              <MonitorPlay size={18} />
+              <span>active sessions</span>
+              <strong>{systemStatus?.active_sandboxes ?? sessions.length}</strong>
+            </div>
+            <div className="metric-row">
               <Wrench size={18} />
               <span>support bundle</span>
-              <button disabled>Export</button>
+              <button onClick={() => void exportSupportBundle()} disabled={connection !== "connected" || isBusy}>Export</button>
             </div>
+            <div className="settings-grid">
+              <label>
+                Active context
+                <select value={activeContext} onChange={(event) => void selectContext(event.target.value)} disabled={isBusy || contexts.length === 0}>
+                  {contexts.length === 0 ? (
+                    <option value={activeContext}>{activeContext}</option>
+                  ) : contexts.map((context) => (
+                    <option key={context.name} value={context.name}>
+                      {context.name} · {context.transport}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Default template
+                <select value={defaults.template} onChange={(event) => updateDefaults({ template: event.target.value })}>
+                  {templates.map((template) => <option key={template}>{template}</option>)}
+                </select>
+              </label>
+              <label>
+                Default runtime
+                <select value={defaults.mode} onChange={(event) => updateDefaults({ mode: event.target.value })}>
+                  {modes.map((mode) => <option key={mode}>{mode}</option>)}
+                </select>
+              </label>
+              <label>
+                Default network
+                <select value={defaults.network} onChange={(event) => updateDefaults({ network: event.target.value })}>
+                  {networkModes.map((mode) => <option key={mode}>{mode}</option>)}
+                </select>
+              </label>
+            </div>
+            {supportBundle ? <pre className="terminal-output">{supportBundle}</pre> : null}
           </section>
         </div>
       </section>
@@ -488,6 +641,33 @@ function formatExec(result: ExecResult) {
 function formatUnknown(value: unknown) {
   if (typeof value === "string") return value;
   return JSON.stringify(value, null, 2);
+}
+
+function contextSummary(context?: ContextInfo) {
+  if (!context) return "Loaded from daemon context store";
+  const auth = context.auth_type === "none" ? "no auth" : context.auth_type;
+  return `${context.transport} · ${auth} · ${context.target}`;
+}
+
+type GUIDefaults = {
+  activeContext: string;
+  template: string;
+  mode: string;
+  network: string;
+};
+
+function loadGUIDefaults(): GUIDefaults {
+  const fallback: GUIDefaults = {
+    activeContext: "local",
+    template: "node-python",
+    mode: "fast",
+    network: "restricted"
+  };
+  try {
+    return { ...fallback, ...JSON.parse(localStorage.getItem(GUI_DEFAULTS_STORAGE_KEY) || "{}") };
+  } catch {
+    return fallback;
+  }
 }
 
 createRoot(document.getElementById("root")!).render(

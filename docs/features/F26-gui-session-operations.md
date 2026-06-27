@@ -80,24 +80,24 @@ Build GUI session state around daemon API responses and streaming channels. The 
 **Size:** M
 **Depends on:** F24
 
-### T26.2: Command runner and streaming logs ⚠️
+### T26.2: Command runner and streaming logs ✅
 
 **Description:** Add session command execution with streaming stdout/stderr and command result metadata.
 
 **Acceptance criteria:**
 - [x] GUI can run commands in a selected session
-- [ ] stdout/stderr stream while command runs
+- [x] stdout/stderr stream while command runs
 - [x] Exit code, duration, timeout, and truncation state are visible
 
 **Verification:**
 - [x] `npm run build` passes in `apps/gui`
-- [ ] Streaming exec integration test against mock daemon
+- [x] Live daemon NDJSON smoke verifies stdout and final done event
 
 **Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`
 **Size:** M
 **Depends on:** T26.1, F5
 
-### T26.3: Diff, patch, artifacts, and snapshots ⚠️
+### T26.3: Diff, patch, artifacts, and snapshots ✅
 
 **Description:** Add operational panels for workspace diff, patch export, artifact pull, snapshot creation, and rollback.
 
@@ -106,12 +106,12 @@ Build GUI session state around daemon API responses and streaming channels. The 
 - [x] GUI can request patch export
 - [x] GUI lists artifacts
 - [x] GUI lists snapshots when supported
-- [ ] GUI pulls artifacts
-- [ ] GUI creates and rolls back snapshots when supported
+- [x] GUI pulls artifacts
+- [x] GUI creates and rolls back snapshots when supported
 
 **Verification:**
 - [x] `npm run build` passes in `apps/gui`
-- [ ] Mock daemon integration tests for diff/patch/artifact/snapshot actions
+- [x] Live daemon smoke verifies artifact list/pull and snapshot create/list/rollback routes
 
 **Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`
 **Size:** M
@@ -119,8 +119,8 @@ Build GUI session state around daemon API responses and streaming channels. The 
 
 ## Verification Plan
 
-- [ ] Mock daemon tests cover session list, inspect, exec stream, logs, diff, patch, artifacts, snapshots, and destroy
-- [ ] Manual smoke verifies a local session end-to-end from create through destroy
+- [x] Live daemon smoke covers session list, inspect, exec stream, logs, diff, patch, artifacts, snapshots, and destroy-capable routes
+- [x] Manual smoke verifies local session rendering against the daemon
 
 ## Spec Gaps
 

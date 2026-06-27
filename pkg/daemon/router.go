@@ -65,6 +65,16 @@ func NewRouter(store *session.Store) *mux.Router {
 	router.HandleFunc("/v1/sandboxes/{id}/logs/list", api.LogsList(store)).Methods("GET")
 	router.HandleFunc("/v1/sandboxes/{id}/logs/history", api.LogsHistory(store)).Methods("GET")
 
+	// System diagnostics for GUI and integrations
+	router.HandleFunc("/v1/system/status", api.SystemStatus(store)).Methods("GET")
+	router.HandleFunc("/v1/system/doctor", api.SystemDoctor()).Methods("GET")
+	router.HandleFunc("/v1/system/runtimes", api.SystemRuntimes()).Methods("GET")
+	router.HandleFunc("/v1/support-bundle", api.SupportBundle(store)).Methods("GET")
+
+	// Context selection for GUI and integrations
+	router.HandleFunc("/v1/contexts", api.ContextsList()).Methods("GET")
+	router.HandleFunc("/v1/contexts/use", api.ContextUse()).Methods("POST")
+
 	return router
 }
 

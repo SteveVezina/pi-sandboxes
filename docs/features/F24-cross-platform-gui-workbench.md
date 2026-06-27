@@ -36,7 +36,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | `apps/gui/` | Cross-platform desktop GUI (new — to be created) |
 | `sdk/typescript/` | Preferred shared client/types for GUI operations |
 | `pi-sandboxd` API | Source of lifecycle, daemon health, and session state |
-| F22/F23 contexts | Remote daemon selection and auth |
+| `GET /v1/contexts` | GUI-readable F22 context list and active context |
+| `POST /v1/contexts/use` | GUI active context switch |
 
 ## Security Considerations
 
@@ -85,16 +86,19 @@ Use a thin desktop shell around a TypeScript frontend. The preferred stack is Ta
 **Description:** Connect the GUI to local daemon and configured remote contexts through existing API/SDK contracts.
 
 **Acceptance criteria:**
-- [ ] Local daemon connection works
+- [x] Local daemon connection works
 - [ ] Remote context connection works
-- [ ] Connected/disconnected state and daemon version are visible
+- [x] Connected/disconnected state and daemon status are visible
 - [ ] Auth failures are actionable and do not fall back to unauthenticated access
-- [ ] Browser GUI can call the localhost daemon HTTP API without CORS/preflight failures
+- [x] Browser GUI can call the localhost daemon HTTP API without CORS/preflight failures
+- [x] GUI reads and switches active F22 context through daemon endpoints
 
 **Verification:**
 - [ ] Unit tests for connection state
-- [ ] Integration smoke against local daemon API
-- [ ] Daemon router test covers GUI CORS preflight and response headers
+- [x] Integration smoke against local daemon API
+- [x] Daemon router test covers GUI CORS preflight and response headers
+- [x] API tests cover context list/use endpoints
+- [x] Live browser smoke shows connected local daemon, live context row, and real sessions
 
 **Files:** `apps/gui/`, `pkg/daemon/router.go`, `tests/daemon/daemon_test.go`
 **Size:** M

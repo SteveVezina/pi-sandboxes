@@ -2473,80 +2473,6 @@ body {
   height: 38px;
 }
 
-.notification-control {
-  position: relative;
-}
-
-.notification-button {
-  position: relative;
-  color: var(--muted);
-}
-
-.notification-button.active,
-.notification-button:hover {
-  color: var(--text);
-}
-
-.notification-dot {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 7px;
-  height: 7px;
-  border: 1px solid #090a0b;
-  border-radius: 999px;
-  background: var(--green);
-}
-
-.notification-menu {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  z-index: 10;
-  display: grid;
-  width: min(310px, calc(100vw - 32px));
-  overflow: hidden;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: rgba(18, 20, 22, 0.98);
-  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
-}
-
-.notification-menu-header {
-  display: grid;
-  gap: 3px;
-  border-bottom: 1px solid var(--line);
-  padding: 14px 16px;
-}
-
-.notification-menu-header strong {
-  font-size: 14px;
-}
-
-.notification-menu-header span {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.notification-menu button {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  min-height: 40px;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
-  color: var(--text);
-  padding: 0 16px;
-  text-align: left;
-}
-
-.notification-menu button:last-child {
-  border-bottom: 0;
-}
-
 .primary-action {
   min-height: 38px;
   padding: 0 14px;
@@ -3689,8 +3615,7 @@ button:not(:disabled):active {
   gap: 8px;
 }
 
-.icon-button,
-.notification-menu button {
+.icon-button {
   min-width: 36px;
 }
 
@@ -4114,5 +4039,237 @@ button:not(:disabled):active {
 
   .create-review-values {
     grid-column: auto;
+  }
+}
+
+/* ─── Create Dialog Refinement ───────────────────────────────────────────── */
+
+.create-dialog-backdrop {
+  place-items: start center;
+  padding: 18px;
+}
+
+.create-dialog {
+  width: min(900px, calc(100vw - 36px));
+  max-height: calc(100vh - 36px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  border-color: #2b3037;
+  background: #0a0b0c;
+}
+
+.create-dialog-header {
+  align-items: center;
+  min-height: 84px;
+  padding: 16px 18px;
+}
+
+.create-dialog-header .eyebrow {
+  font-size: 10px;
+}
+
+.create-dialog-header h2 {
+  margin: 4px 0 4px;
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.create-dialog-header p {
+  max-width: 560px;
+  font-size: 12px;
+}
+
+.create-dialog-header .icon-button {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+}
+
+.create-dialog-body {
+  gap: 10px;
+  padding: 12px;
+}
+
+.create-step {
+  gap: 10px;
+  border-color: #22272e;
+  background:
+    linear-gradient(90deg, rgba(79, 149, 255, 0.055), transparent 26%),
+    #0f1114;
+  padding: 12px;
+}
+
+.create-step-identity {
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+}
+
+.create-step-heading {
+  gap: 9px;
+}
+
+.create-step-heading span {
+  width: 25px;
+  height: 25px;
+  border-color: rgba(79, 149, 255, 0.45);
+  background: rgba(79, 149, 255, 0.11);
+  font-size: 10px;
+}
+
+.create-step-heading h3 {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.create-step label,
+.remember-defaults {
+  gap: 6px;
+  font-size: 11px;
+}
+
+.create-step input,
+.create-step select {
+  height: 34px;
+  font-size: 13px;
+}
+
+.create-field-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.create-field-grid-narrow {
+  grid-template-columns: minmax(120px, 0.32fr) minmax(0, 1fr);
+}
+
+.create-folder-row {
+  grid-template-columns: minmax(0, 1fr) 112px;
+  gap: 9px;
+}
+
+.create-folder-row button,
+.create-allowed-folders button {
+  min-height: 34px;
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.create-mode-grid {
+  gap: 7px;
+}
+
+.create-mode-grid .mode-option {
+  min-height: 36px;
+  border-color: #252b32;
+  background: #121518;
+  font-size: 13px;
+}
+
+.create-mode-grid .mode-option.active {
+  border-color: #f4f3ee;
+  background: #f4f3ee;
+  color: #080909;
+}
+
+.workspace-access-state {
+  min-height: 36px;
+  border-color: #252b32;
+  background: #0b0d0f;
+  padding: 9px 10px;
+  font-size: 12px;
+}
+
+.create-allowed-folders {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.create-review-strip {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  border-top-color: #22272e;
+  background: rgba(8, 9, 10, 0.98);
+  padding: 12px;
+}
+
+.create-review-values {
+  grid-column: auto;
+  order: 0;
+  gap: 5px;
+}
+
+.create-review-values code {
+  border-color: #252b32;
+  background: #121518;
+  padding: 4px 8px;
+  font-size: 10px;
+}
+
+.remember-defaults {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.remember-defaults input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+}
+
+.create-review-strip .secondary-action,
+.create-review-strip .primary-action {
+  min-height: 34px;
+  height: 34px;
+}
+
+.create-review-strip .primary-action {
+  min-width: 150px;
+}
+
+@media (max-width: 920px) {
+  .create-dialog {
+    width: min(720px, calc(100vw - 28px));
+  }
+
+  .create-field-grid,
+  .create-field-grid-narrow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .create-review-strip {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .create-review-values {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .create-dialog-backdrop {
+    padding: 10px;
+  }
+
+  .create-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+
+  .create-step-identity,
+  .create-field-grid,
+  .create-field-grid-narrow,
+  .create-folder-row,
+  .create-mode-grid,
+  .create-review-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .remember-defaults {
+    white-space: normal;
+  }
+
+  .create-review-strip .secondary-action,
+  .create-review-strip .primary-action {
+    width: 100%;
   }
 }

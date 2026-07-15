@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Bell,
   Boxes,
   ChevronRight,
   CircleDot,
@@ -60,7 +59,6 @@ import {
   SystemStatus
 } from "./api";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import "./styles.css";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -2321,40 +2319,16 @@ function Topbar({
   health,
   daemonUrl,
   isBusy,
-  notificationPermission,
-  notificationMenuOpen,
-  unreadNotifications,
-  onToggleNotificationMenu,
-  onCloseNotificationMenu,
-  onCreateSession,
-  onEnableNotifications,
-  onTestNotification,
-  onOpenSettings
+  onCreateSession
 }: {
   activeView: string;
   connection: ConnectionState;
   health: string;
   daemonUrl: string;
   isBusy: boolean;
-  notificationPermission: NotificationPermissionState;
-  notificationMenuOpen: boolean;
-  unreadNotifications: number;
-  onToggleNotificationMenu: () => void;
-  onCloseNotificationMenu: () => void;
   onCreateSession: () => void;
-  onEnableNotifications: () => void;
-  onTestNotification: () => void;
-  onOpenSettings: () => void;
 }) {
   const canCreate = connection === "connected" && !isBusy;
-  const notificationLabel =
-    notificationPermission === "granted"
-      ? "Notifications enabled"
-      : notificationPermission === "unsupported"
-      ? "Desktop only"
-      : notificationPermission === "denied"
-      ? "Permission denied"
-      : "Notifications off";
 
   return (
     <header className="topbar">
@@ -2365,45 +2339,6 @@ function Topbar({
         </p>
       </div>
       <div className="topbar-actions">
-        <div className="notification-control">
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`icon-button notification-button ${notificationMenuOpen ? "active" : ""}`}
-            onClick={onToggleNotificationMenu}
-            aria-label="Notifications menu"
-            aria-expanded={notificationMenuOpen}
-          >
-            <Bell size={18} />
-            {unreadNotifications > 0 && <span className="notification-dot" />}
-          </Button>
-          {notificationMenuOpen && (
-            <div className="notification-menu" role="menu">
-              <div className="notification-menu-header">
-                <strong>PI Sandbox is running</strong>
-                <Badge variant={notificationPermission === "granted" ? "success" : "outline"}>
-                  {notificationLabel}
-                </Badge>
-              </div>
-              <Button variant="ghost" onClick={onOpenSettings} role="menuitem">
-                <Settings size={15} />
-                Settings
-              </Button>
-              <Button variant="ghost" onClick={onEnableNotifications} role="menuitem">
-                <Bell size={15} />
-                Enable notifications
-              </Button>
-              <Button variant="ghost" onClick={onTestNotification} role="menuitem">
-                <Play size={15} />
-                Send test notification
-              </Button>
-              <Button variant="ghost" onClick={onCloseNotificationMenu} role="menuitem">
-                <X size={15} />
-                Close
-              </Button>
-            </div>
-          )}
-        </div>
         {(activeView === "dashboard" || activeView === "sessions") && (
           <Button
             className="primary-action"
@@ -2447,10 +2382,9 @@ function App() {
   const [doctorResult, setDoctorResult] = useState<DoctorResult | null>(null);
   const [supportBundle, setSupportBundle] = useState<SupportBundle | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermissionState>("checking");
-  const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const guiLogsRef = useRef<GuiLogEntry[]>([]);
   const lastConnectionRef = useRef<ConnectionState>("checking");
+  const refreshInFlightRef = useRef(false);
 
   // Track whether the user has dismissed the onboarding (skip or connect).
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
@@ -2468,7 +2402,6 @@ function App() {
       try {
         sendNotification({ title, body });
         setNotificationPermission("granted");
-        setUnreadNotifications((count) => count + 1);
       } catch {
         setNotificationPermission("unsupported");
       }
@@ -2487,37 +2420,53 @@ function App() {
   }
 
   const refresh = useCallback(async () => {
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
     setError("");
     setLastError(null);
     try {
-      setConnection("checking");
-      const daemonHealth = await client.health();
-      const [sandboxList, status, runtimes, contextResponse, doctor] = await Promise.all([
-        client.listSandboxes(),
-        client.systemStatus().catch(() => null),
-        client.runtimes().catch(() => null),
-        client.contexts().catch(() => null),
-        client.doctor().catch(() => null)
-      ]);
-      setHealth(daemonHealth.status || "ok");
-      setSessions(sandboxList);
-      setSystemStatus(status);
-      setRuntimeInfo(runtimes);
-      setDoctorResult(doctor);
-      if (contextResponse) {
-        setContexts(contextResponse.contexts);
-        setActiveContext(contextResponse.active);
-        setDefaults((current) => ({ ...current, activeContext: contextResponse.active }));
+      if (lastConnectionRef.current !== "connected") {
+        setConnection("checking");
       }
+      const daemonHealth = await client.health();
+      setHealth(daemonHealth.status || "ok");
       setConnection("connected");
       if (lastConnectionRef.current === "disconnected") {
         void notifySystem("PI Sandbox connected", `Daemon is reachable at ${daemonUrl}.`);
       }
       lastConnectionRef.current = "connected";
       setOnboardingDismissed(true);
-      recordGuiLog("info", `Connected to daemon at ${daemonUrl}; sessions=${sandboxList.length}`);
-      if (!selectedId && sandboxList.length > 0) {
-        setSelectedId(sandboxList[0].id);
+
+      const [sandboxList, status, runtimes, contextResponse, doctor] = await Promise.allSettled([
+        client.listSandboxes(),
+        client.systemStatus(),
+        client.runtimes(),
+        client.contexts(),
+        client.doctor()
+      ]);
+
+      if (sandboxList.status === "fulfilled") {
+        setSessions(sandboxList.value);
+        if (!selectedId && sandboxList.value.length > 0) {
+          setSelectedId(sandboxList.value[0].id);
+        }
+        recordGuiLog("info", `Daemon refresh ok at ${daemonUrl}; sessions=${sandboxList.value.length}`);
+      } else {
+        recordGuiLog("warning", `Session refresh failed while daemon stayed healthy: ${sandboxList.reason}`);
+      }
+      if (status.status === "fulfilled") {
+        setSystemStatus(status.value);
+      }
+      if (runtimes.status === "fulfilled") {
+        setRuntimeInfo(runtimes.value);
+      }
+      if (doctor.status === "fulfilled") {
+        setDoctorResult(doctor.value);
+      }
+      if (contextResponse.status === "fulfilled") {
+        setContexts(contextResponse.value.contexts);
+        setActiveContext(contextResponse.value.active);
+        setDefaults((current) => ({ ...current, activeContext: contextResponse.value.active }));
       }
     } catch (err) {
       setConnection("disconnected");
@@ -2531,6 +2480,8 @@ function App() {
       setError(msg);
       setLastError(msg);
       recordGuiLog("error", `Connection failed for ${daemonUrl}: ${msg}`);
+    } finally {
+      refreshInFlightRef.current = false;
     }
   }, [client, daemonUrl, selectedId]);
 
@@ -2565,7 +2516,6 @@ function App() {
     void listen<string>("pi://navigate", (event) => {
       if (event.payload) {
         setActiveView(event.payload);
-        setNotificationMenuOpen(false);
       }
     }).then((stop) => {
       unlisten = stop;
@@ -2743,25 +2693,7 @@ function App() {
           health={health}
           daemonUrl={daemonUrl}
           isBusy={isBusy}
-          notificationPermission={notificationPermission}
-          notificationMenuOpen={notificationMenuOpen}
-          unreadNotifications={unreadNotifications}
-          onToggleNotificationMenu={() => {
-            setNotificationMenuOpen((open) => !open);
-            setUnreadNotifications(0);
-          }}
-          onCloseNotificationMenu={() => setNotificationMenuOpen(false)}
           onCreateSession={() => setCreateDialogOpen(true)}
-          onEnableNotifications={() => {
-            void ensureNotificationPermission().then(async (granted) => {
-              setNotificationPermission(granted ? "granted" : await readNotificationPermission());
-            });
-          }}
-          onTestNotification={() => void notifySystem("PI Sandbox", "Desktop notifications are ready.")}
-          onOpenSettings={() => {
-            setActiveView("settings");
-            setNotificationMenuOpen(false);
-          }}
         />
 
         {error && <div className="error-banner">{error}</div>}

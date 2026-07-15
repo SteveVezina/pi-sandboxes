@@ -24,7 +24,7 @@ func (c *VsockConn) SendFrame(frame Frame) (Frame, error) {
 }
 
 // SendEvent returns an error on non-Linux.
-func (c *VsockConn) SendEvent(eventType, id, sessionID string) error {
+func (c *VsockConn) SendEvent(eventType, id, sandboxID string) error {
 	return fmt.Errorf("vsock not available on non-Linux platforms")
 }
 
@@ -43,22 +43,22 @@ func (c *VsockConn) Hello() error {
 }
 
 // Ready returns an error on non-Linux.
-func (c *VsockConn) Ready(sessionID string) error {
+func (c *VsockConn) Ready(sandboxID string) error {
 	return fmt.Errorf("vsock not available on non-Linux platforms")
 }
 
 // Shutdown returns an error on non-Linux.
-func (c *VsockConn) Shutdown(sessionID string) error {
+func (c *VsockConn) Shutdown(sandboxID string) error {
 	return fmt.Errorf("vsock not available on non-Linux platforms")
 }
 
 // Client is a stub for non-Linux platforms.
 type Client struct {
-	session string
+	sandboxID string
 }
 
 // NewClient returns an error on non-Linux.
-func NewClient(port uint32, sessionID string) (*Client, error) {
+func NewClient(port uint32, sandboxID string) (*Client, error) {
 	return nil, fmt.Errorf("vsock not available on non-Linux platforms")
 }
 
@@ -67,9 +67,9 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// Session returns the session ID.
-func (c *Client) Session() string {
-	return c.session
+// SandboxID returns the sandbox ID.
+func (c *Client) SandboxID() string {
+	return c.sandboxID
 }
 
 // Send returns an error on non-Linux.

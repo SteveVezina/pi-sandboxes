@@ -47,11 +47,11 @@ func (c *VsockConn) SendFrame(frame Frame) (Frame, error) {
 }
 
 // SendEvent sends an event frame to the guest (fire-and-forget).
-func (c *VsockConn) SendEvent(eventType, id, sessionID string) error {
+func (c *VsockConn) SendEvent(eventType, id, sandboxID string) error {
 	frame := Frame{
 		Type:      FrameTypeEvent,
 		ID:        id,
-		SessionID: sessionID,
+		SandboxID: sandboxID,
 		Method:    eventType,
 	}
 	return EncodeFrame(c.conn, frame)
@@ -87,7 +87,7 @@ func (c *VsockConn) Hello() error {
 	frame := Frame{
 		Type:      FrameTypeRequest,
 		ID:        "hello-1",
-		SessionID: "init",
+		SandboxID: "init",
 		Method:    "hello",
 	}
 	resp, err := c.SendFrame(frame)
@@ -101,11 +101,11 @@ func (c *VsockConn) Hello() error {
 }
 
 // Ready waits for the guest to report ready.
-func (c *VsockConn) Ready(sessionID string) error {
+func (c *VsockConn) Ready(sandboxID string) error {
 	ch, errCh := c.StreamFrames()
 	select {
 	case frame := <-ch:
-		if frame.Method != "ready" || frame.SessionID != sessionID {
+		if frame.Method != "ready" || frame.SandboxID != sandboxID {
 			return fmt.Errorf("unexpected ready frame: %+v", frame)
 		}
 		return nil
@@ -115,26 +115,26 @@ func (c *VsockConn) Ready(sessionID string) error {
 }
 
 // Shutdown sends a shutdown event to the guest.
-func (c *VsockConn) Shutdown(sessionID string) error {
-	return c.SendEvent("shutdown", "shutdown-1", sessionID)
+func (c *VsockConn) Shutdown(sandboxID string) error {
+	return c.SendEvent("shutdown", "shutdown-1", sandboxID)
 }
 
 // Client manages a vsock session with a guest.
 type Client struct {
 	conn    *VsockConn
-	session string
+	sandboxID string
 	mu      sync.Mutex
 }
 
 // NewClient creates a new vsock client.
-func NewClient(port uint32, sessionID string) (*Client, error) {
+func NewClient(port uint32, sandboxID string) (*Client, error) {
 	conn, err := NewVsockConn(port)
 	if err != nil {
 		return nil, fmt.Errorf("create vsock connection: %w", err)
 	}
 	return &Client{
 		conn:    conn,
-		session: sessionID,
+		sandboxID: sandboxID,
 	}, nil
 }
 
@@ -143,9 +143,9 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
-// Session returns the session ID.
-func (c *Client) Session() string {
-	return c.session
+// SandboxID returns the sandbox ID.
+func (c *Client) SandboxID() string {
+	return c.sandboxID
 }
 
 // Send sends a frame and returns the response.

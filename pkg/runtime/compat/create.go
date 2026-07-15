@@ -40,8 +40,8 @@ func defaultLimits() pruntime.ResourceLimits {
 }
 
 // Container represents a running OCI container.
-// ID is the stable session identity; RuntimeObjectID is the engine-owned
-// container ID. The session ID is never mutated after creation.
+// ID is the stable sandbox identity; RuntimeObjectID is the engine-owned
+// container ID. The sandbox ID is never mutated after creation.
 type Container struct {
 	ID              string
 	RuntimeObjectID string

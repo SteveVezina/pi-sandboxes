@@ -16,7 +16,7 @@ import (
 const DefaultCommandTimeout = 2 * time.Minute
 
 // ContainerSpec is the engine-facing container creation request.
-// The caller owns session identity; the engine returns the runtime
+// The caller owns sandbox identity; the engine returns the runtime
 // object ID and never mutates the caller's identifiers.
 type ContainerSpec struct {
 	Name        string
@@ -69,6 +69,9 @@ type Engine interface {
 	List(ctx context.Context) ([]ContainerStatus, error)
 	// Prune removes stopped pi-sandbox containers.
 	Prune(ctx context.Context) error
+	// RemoveVolumes removes daemon-managed volumes whose name contains
+	// the given filter (e.g. a sandbox ID).
+	RemoveVolumes(ctx context.Context, filter string) error
 	// CopyFrom copies a path from the container to the host.
 	CopyFrom(ctx context.Context, name, src, dst string) error
 	// CopyTo copies a path from the host into the container.

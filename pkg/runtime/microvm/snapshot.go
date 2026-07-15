@@ -11,21 +11,21 @@ import (
 var ErrReseedFailed = errors.New("microvm reseed hook failed")
 
 // CreateWorkspaceDisk creates a writable ext4-formatted workspace disk file
-// for the given session under root. The size is in bytes.
+// for the given sandbox under root. The size is in bytes.
 //
 // In this implementation the file is allocated as a sparse ext4 image
 // placeholder. Actual mkfs.ext4 invocation happens in the linux backend.
-func CreateWorkspaceDisk(root, sessionID string, size int64) (Disk, error) {
+func CreateWorkspaceDisk(root, sandboxID string, size int64) (Disk, error) {
 	if root == "" {
 		return Disk{}, fmt.Errorf("workspace disk root is required")
 	}
-	if sessionID == "" {
-		return Disk{}, fmt.Errorf("workspace disk session id is required")
+	if sandboxID == "" {
+		return Disk{}, fmt.Errorf("workspace disk sandbox id is required")
 	}
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		return Disk{}, fmt.Errorf("create workspace disk root: %w", err)
 	}
-	path := filepath.Join(root, sessionID+"-workspace.ext4")
+	path := filepath.Join(root, sandboxID+"-workspace.ext4")
 	f, err := os.Create(path)
 	if err != nil {
 		return Disk{}, fmt.Errorf("create workspace disk: %w", err)

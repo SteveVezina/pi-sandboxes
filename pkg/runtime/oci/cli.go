@@ -278,6 +278,25 @@ func (e *CLIEngine) Prune(ctx context.Context) error {
 	return nil
 }
 
+func (e *CLIEngine) RemoveVolumes(ctx context.Context, filter string) error {
+	if filter == "" {
+		return fmt.Errorf("remove volumes: empty filter")
+	}
+	output, err := e.run(ctx, "volume", "ls", "-q", "--filter", "name="+filter)
+	if err != nil {
+		return fmt.Errorf("list volumes: %w", err)
+	}
+	for _, name := range strings.Split(output, "\n") {
+		if name == "" || !strings.HasPrefix(name, "pi-sandbox-") {
+			continue
+		}
+		if _, err := e.run(ctx, "volume", "rm", "-f", name); err != nil {
+			return fmt.Errorf("remove volume %s: %w", name, err)
+		}
+	}
+	return nil
+}
+
 func (e *CLIEngine) CopyFrom(ctx context.Context, name, src, dst string) error {
 	_, err := e.run(ctx, "cp", name+":"+src, dst)
 	if err != nil {

@@ -49,6 +49,32 @@ func (c *Container) Exec(ctx context.Context, command string) (*ExecResult, erro
 	}, nil
 }
 
+// ExecAsRoot runs a command in the container as root. Used by the daemon
+// for ownership fixups after docker cp (which writes files as root).
+// Docker/Podman only.
+func (c *Container) ExecAsRoot(ctx context.Context, command string) error {
+	if c == nil || c.Spec == nil {
+		return fmt.Errorf("nil container")
+	}
+	rt := Best()
+	if rt == nil {
+		return fmt.Errorf("no OCI runtime found")
+	}
+	var cmd *exec.Cmd
+	switch rt.Name {
+	case RuntimeDocker:
+		cmd = exec.CommandContext(ctx, rt.Path, "exec", "--privileged", "-u", "0:0", c.Spec.Name, "/bin/sh", "-c", command)
+	case RuntimePodman:
+		cmd = exec.CommandContext(ctx, rt.Path, "exec", "--privileged", "-u", "0:0", c.Spec.Name, "/bin/sh", "-c", command)
+	default:
+		return fmt.Errorf("root exec not supported on runtime %s", rt.Name)
+	}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("root exec: %w: %s", err, string(out))
+	}
+	return nil
+}
+
 // ExecStream executes a command in the container and streams output via a channel.
 func (c *Container) ExecStream(ctx context.Context, command string, stdoutChan chan<- string, stderrChan chan<- string) error {
 	if c == nil {

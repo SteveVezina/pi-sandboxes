@@ -102,7 +102,7 @@ func (r *Runtime) EnsureImage(ctx context.Context) (string, error) {
 	return r.eng.EnsureImage(ctx, oci.ImageRef(r.image))
 }
 
-// Create provisions a new sandbox session using gVisor via the shared OCI engine.
+// Create provisions a new sandbox using gVisor via the shared OCI engine.
 func (r *Runtime) Create(ctx context.Context, spec pruntime.SandboxSpec) (pruntime.Handle, error) {
 	if !r.IsAvailable() {
 		return pruntime.Handle{}, fmt.Errorf("gVisor not available: %w", exec.ErrNotFound)
@@ -125,7 +125,7 @@ func (r *Runtime) Create(ctx context.Context, spec pruntime.SandboxSpec) (prunti
 	// Create the container using the shared OCI engine
 	containerID, err := r.eng.Create(ctx, oci.ContainerSpec{
 		ImageID:     imageID,
-		SessionID:   spec.SessionID,
+		SandboxID:   spec.SandboxID,
 		Workspace:   spec.Workspace,
 		Artifacts:   spec.Artifacts,
 		Caches:      spec.Caches,
@@ -139,9 +139,9 @@ func (r *Runtime) Create(ctx context.Context, spec pruntime.SandboxSpec) (prunti
 		return pruntime.Handle{}, fmt.Errorf("create container: %w", err)
 	}
 
-	// Return handle with stable session ID and runtime object ID
+	// Return handle with stable sandbox ID and runtime object ID
 	return pruntime.Handle{
-		SessionID:       spec.SessionID,
+		SandboxID:       spec.SandboxID,
 		RuntimeObjectID: containerID,
 	}, nil
 }

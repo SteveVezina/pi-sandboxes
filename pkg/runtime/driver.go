@@ -18,11 +18,11 @@ const (
 	ModeAuto     Mode = "auto"
 )
 
-// Handle identifies a sandbox at the driver boundary. SessionID is the
+// Handle identifies a sandbox at the driver boundary. SandboxID is the
 // stable user-facing identity; RuntimeObjectID is owned by the driver
-// (container ID, VM ID, ...). SessionID is never mutated after creation.
+// (container ID, VM ID, ...). SandboxID is never mutated after creation.
 type Handle struct {
-	SessionID       string `json:"session_id"`
+	SandboxID       string `json:"sandbox_id"`
 	RuntimeObjectID string `json:"runtime_object_id"`
 	DriverName      string `json:"driver_name"`
 	Mode            Mode   `json:"mode"`
@@ -41,7 +41,7 @@ type ResourceLimits struct {
 // SandboxSpec is the driver-facing creation request. Policy evaluation,
 // template resolution, and path validation happen above this layer.
 type SandboxSpec struct {
-	SessionID     string            `json:"session_id"`
+	SandboxID     string            `json:"sandbox_id"`
 	Name          string            `json:"name"`
 	Image         string            `json:"image,omitempty"`
 	WorkspacePath string            `json:"workspace_path"`

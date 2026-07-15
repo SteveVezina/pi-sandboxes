@@ -36,7 +36,7 @@ func (c *Client) Exec(ctx context.Context, config ExecConfig) (*ExecResult, erro
 	// Create exec request frame
 	reqFrame, err := NewExecRequestFrame(
 		fmt.Sprintf("exec-%d", start.UnixNano()),
-		c.session,
+		c.sandboxID,
 		ExecRequestPayload{
 			Command:        config.Command,
 			Cwd:            config.Cwd,
@@ -94,7 +94,7 @@ func (c *Client) Exec(ctx context.Context, config ExecConfig) (*ExecResult, erro
 		finalResp, err := c.Send(Frame{
 			Type:      FrameTypeRequest,
 			ID:        fmt.Sprintf("exec-resp-%d", start.UnixNano()),
-			SessionID: c.session,
+			SandboxID: c.sandboxID,
 			Method:    "exec",
 		})
 		if err != nil {
@@ -154,7 +154,7 @@ func (c *Client) ExecStreaming(ctx context.Context, config ExecConfig) (<-chan [
 		// Create exec request
 		reqFrame, err := NewExecRequestFrame(
 			fmt.Sprintf("exec-stream-%d", start.UnixNano()),
-			c.session,
+			c.sandboxID,
 			ExecRequestPayload{
 				Command:        config.Command,
 				Cwd:            config.Cwd,
@@ -210,7 +210,7 @@ func (c *Client) ExecStreaming(ctx context.Context, config ExecConfig) (<-chan [
 		finalResp, err := c.Send(Frame{
 			Type:      FrameTypeRequest,
 			ID:        fmt.Sprintf("exec-stream-resp-%d", start.UnixNano()),
-			SessionID: c.session,
+			SandboxID: c.sandboxID,
 			Method:    "exec",
 		})
 

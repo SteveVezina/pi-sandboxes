@@ -12,19 +12,19 @@ type FrameSender interface {
 
 // TransferClient performs file and artifact transfer over the guest control plane.
 type TransferClient struct {
-	sessionID string
+	sandboxID string
 	sender    FrameSender
 	nextID    uint64
 }
 
-// NewTransferClient creates a transfer client scoped to one sandbox session.
-func NewTransferClient(sessionID string, sender FrameSender) *TransferClient {
-	return &TransferClient{sessionID: sessionID, sender: sender}
+// NewTransferClient creates a transfer client scoped to one sandbox.
+func NewTransferClient(sandboxID string, sender FrameSender) *TransferClient {
+	return &TransferClient{sandboxID: sandboxID, sender: sender}
 }
 
 // ReadFile reads a file through the guest control plane.
 func (c *TransferClient) ReadFile(path string) ([]byte, uint32, error) {
-	frame, err := NewFileReadRequestFrame(c.requestID("file-read"), c.sessionID, path)
+	frame, err := NewFileReadRequestFrame(c.requestID("file-read"), c.sandboxID, path)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -44,7 +44,7 @@ func (c *TransferClient) ReadFile(path string) ([]byte, uint32, error) {
 
 // WriteFile writes a file through the guest control plane.
 func (c *TransferClient) WriteFile(path string, data []byte, mode uint32) error {
-	frame, err := NewFileWriteRequestFrame(c.requestID("file-write"), c.sessionID, path, data, mode)
+	frame, err := NewFileWriteRequestFrame(c.requestID("file-write"), c.sandboxID, path, data, mode)
 	if err != nil {
 		return err
 	}
@@ -71,8 +71,8 @@ func (c *TransferClient) send(frame Frame) (Frame, error) {
 	if resp.Type != FrameTypeResponse {
 		return Frame{}, fmt.Errorf("unexpected transfer response type %q", resp.Type)
 	}
-	if resp.SessionID != c.sessionID {
-		return Frame{}, fmt.Errorf("unexpected transfer response session %q", resp.SessionID)
+	if resp.SandboxID != c.sandboxID {
+		return Frame{}, fmt.Errorf("unexpected transfer response sandbox %q", resp.SandboxID)
 	}
 	return resp, nil
 }

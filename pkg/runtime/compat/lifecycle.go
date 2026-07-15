@@ -175,6 +175,15 @@ func ContainerExists(name string) (bool, error) {
 	return eng.Exists(context.Background(), name)
 }
 
+// RemoveManagedVolumes removes all daemon-managed volumes for a sandbox ID.
+func RemoveManagedVolumes(sandboxID string) error {
+	eng, err := Engine()
+	if err != nil {
+		return err
+	}
+	return eng.RemoveVolumes(context.Background(), sandboxID)
+}
+
 // ContainerHealthCheck performs a health check on the container.
 func (c *Container) HealthCheck() error {
 	if c == nil || c.Spec == nil {

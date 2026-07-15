@@ -7,7 +7,7 @@ import (
 
 // ListArtifacts lists guest artifacts through the control plane.
 func (c *TransferClient) ListArtifacts() ([]string, error) {
-	frame, err := NewArtifactListRequestFrame(c.requestID("artifact-list"), c.sessionID)
+	frame, err := NewArtifactListRequestFrame(c.requestID("artifact-list"), c.sandboxID)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func (c *TransferClient) ListArtifacts() ([]string, error) {
 
 // PullArtifact pulls one artifact through the control plane.
 func (c *TransferClient) PullArtifact(path string) ([]byte, uint32, error) {
-	frame, err := NewArtifactPullRequestFrame(c.requestID("artifact-pull"), c.sessionID, path)
+	frame, err := NewArtifactPullRequestFrame(c.requestID("artifact-pull"), c.sandboxID, path)
 	if err != nil {
 		return nil, 0, err
 	}

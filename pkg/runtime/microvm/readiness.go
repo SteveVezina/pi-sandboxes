@@ -15,14 +15,14 @@ const (
 
 // ReadinessTracker maps guest lifecycle frames to host sandbox state.
 type ReadinessTracker struct {
-	sessionID string
+	sandboxID string
 	state     SandboxState
 }
 
-// NewReadinessTracker creates a tracker for one sandbox session.
-func NewReadinessTracker(sessionID string) *ReadinessTracker {
+// NewReadinessTracker creates a tracker for one sandbox.
+func NewReadinessTracker(sandboxID string) *ReadinessTracker {
 	return &ReadinessTracker{
-		sessionID: sessionID,
+		sandboxID: sandboxID,
 		state:     SandboxStateBooting,
 	}
 }
@@ -35,8 +35,8 @@ func (t *ReadinessTracker) Observe(frame Frame) error {
 	if frame.Type != FrameTypeEvent {
 		return fmt.Errorf("ready must be an event frame")
 	}
-	if frame.SessionID != t.sessionID {
-		return fmt.Errorf("unexpected ready session %q", frame.SessionID)
+	if frame.SandboxID != t.sandboxID {
+		return fmt.Errorf("unexpected ready sandbox %q", frame.SandboxID)
 	}
 	t.state = SandboxStateWarm
 	return nil
@@ -53,8 +53,8 @@ func (t *ReadinessTracker) Warm() bool {
 }
 
 // WriteReady writes the guest ready event to the control stream.
-func WriteReady(w io.Writer, sessionID string) error {
-	frame, err := NewReadyFrame("ready-1", sessionID)
+func WriteReady(w io.Writer, sandboxID string) error {
+	frame, err := NewReadyFrame("ready-1", sandboxID)
 	if err != nil {
 		return err
 	}

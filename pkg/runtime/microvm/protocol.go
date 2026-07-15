@@ -37,7 +37,7 @@ var validMethods = map[string]struct{}{
 type Frame struct {
 	Type      string          `json:"type"`
 	ID        string          `json:"id"`
-	SessionID string          `json:"session_id"`
+	SandboxID string          `json:"sandbox_id"`
 	Method    string          `json:"method,omitempty"`
 	Payload   json.RawMessage `json:"payload,omitempty"`
 	Error     *FrameError     `json:"error,omitempty"`
@@ -139,8 +139,8 @@ func (f Frame) Validate() error {
 	if f.ID == "" {
 		return fmt.Errorf("frame id is required")
 	}
-	if f.SessionID == "" {
-		return fmt.Errorf("frame session_id is required")
+	if f.SandboxID == "" {
+		return fmt.Errorf("frame sandbox_id is required")
 	}
 	if f.Type != FrameTypeStream {
 		if _, ok := validMethods[f.Method]; !ok {
@@ -151,7 +151,7 @@ func (f Frame) Validate() error {
 }
 
 // NewStreamFrame creates a stdout/stderr stream frame with base64 payload data.
-func NewStreamFrame(id, sessionID, stream string, data []byte) (Frame, error) {
+func NewStreamFrame(id, sandboxID, stream string, data []byte) (Frame, error) {
 	if stream != "stdout" && stream != "stderr" {
 		return Frame{}, fmt.Errorf("invalid stream %q", stream)
 	}
@@ -165,7 +165,7 @@ func NewStreamFrame(id, sessionID, stream string, data []byte) (Frame, error) {
 	return Frame{
 		Type:      FrameTypeStream,
 		ID:        id,
-		SessionID: sessionID,
+		SandboxID: sandboxID,
 		Payload:   payload,
 	}, nil
 }
@@ -190,7 +190,7 @@ func DecodeStreamPayload(frame Frame) (string, []byte, error) {
 }
 
 // NewExecRequestFrame creates an exec request frame.
-func NewExecRequestFrame(id, sessionID string, payload ExecRequestPayload) (Frame, error) {
+func NewExecRequestFrame(id, sandboxID string, payload ExecRequestPayload) (Frame, error) {
 	if payload.Command == "" {
 		return Frame{}, fmt.Errorf("exec command is required")
 	}
@@ -201,14 +201,14 @@ func NewExecRequestFrame(id, sessionID string, payload ExecRequestPayload) (Fram
 	return Frame{
 		Type:      FrameTypeRequest,
 		ID:        id,
-		SessionID: sessionID,
+		SandboxID: sandboxID,
 		Method:    "exec",
 		Payload:   encoded,
 	}, nil
 }
 
 // NewExecResultFrame creates the final exec response frame.
-func NewExecResultFrame(id, sessionID string, payload ExecResultPayload) (Frame, error) {
+func NewExecResultFrame(id, sandboxID string, payload ExecResultPayload) (Frame, error) {
 	encoded, err := json.Marshal(payload)
 	if err != nil {
 		return Frame{}, fmt.Errorf("encode exec result payload: %w", err)
@@ -216,14 +216,14 @@ func NewExecResultFrame(id, sessionID string, payload ExecResultPayload) (Frame,
 	return Frame{
 		Type:      FrameTypeResponse,
 		ID:        id,
-		SessionID: sessionID,
+		SandboxID: sandboxID,
 		Method:    "exec",
 		Payload:   encoded,
 	}, nil
 }
 
 // NewFileReadRequestFrame creates a file.read request frame.
-func NewFileReadRequestFrame(id, sessionID, path string) (Frame, error) {
+func NewFileReadRequestFrame(id, sandboxID, path string) (Frame, error) {
 	if path == "" {
 		return Frame{}, fmt.Errorf("file path is required")
 	}
@@ -234,14 +234,14 @@ func NewFileReadRequestFrame(id, sessionID, path string) (Frame, error) {
 	return Frame{
 		Type:      FrameTypeRequest,
 		ID:        id,
-		SessionID: sessionID,
+		SandboxID: sandboxID,
 		Method:    "file.read",
 		Payload:   payload,
 	}, nil
 }
 
 // NewFileWriteRequestFrame creates a file.write request frame.
-func NewFileWriteRequestFrame(id, sessionID, path string, data []byte, mode uint32) (Frame, error) {
+func NewFileWriteRequestFrame(id, sandboxID, path string, data []byte, mode uint32) (Frame, error) {
 	if path == "" {
 		return Frame{}, fmt.Errorf("file path is required")
 	}
@@ -256,18 +256,18 @@ func NewFileWriteRequestFrame(id, sessionID, path string, data []byte, mode uint
 	return Frame{
 		Type:      FrameTypeRequest,
 		ID:        id,
-		SessionID: sessionID,
+		SandboxID: sandboxID,
 		Method:    "file.write",
 		Payload:   payload,
 	}, nil
 }
 
 // NewArtifactListRequestFrame creates an artifact.list request frame.
-func NewArtifactListRequestFrame(id, sessionID string) (Frame, error) {
+func NewArtifactListRequestFrame(id, sandboxID string) (Frame, error) {
 	frame := Frame{
 		Type:      FrameTypeRequest,
 		ID:        id,
-		SessionID: sessionID,
+		SandboxID: sandboxID,
 		Method:    "artifact.list",
 	}
 	if err := frame.Validate(); err != nil {
@@ -277,7 +277,7 @@ func NewArtifactListRequestFrame(id, sessionID string) (Frame, error) {
 }
 
 // NewArtifactPullRequestFrame creates an artifact.pull request frame.
-func NewArtifactPullRequestFrame(id, sessionID, path string) (Frame, error) {
+func NewArtifactPullRequestFrame(id, sandboxID, path string) (Frame, error) {
 	if path == "" {
 		return Frame{}, fmt.Errorf("artifact path is required")
 	}
@@ -288,7 +288,7 @@ func NewArtifactPullRequestFrame(id, sessionID, path string) (Frame, error) {
 	return Frame{
 		Type:      FrameTypeRequest,
 		ID:        id,
-		SessionID: sessionID,
+		SandboxID: sandboxID,
 		Method:    "artifact.pull",
 		Payload:   payload,
 	}, nil
@@ -324,11 +324,11 @@ func DecodeStreamData(encoded string) ([]byte, error) {
 }
 
 // NewHelloFrame creates a hello request frame.
-func NewHelloFrame(id, sessionID string) (Frame, error) {
+func NewHelloFrame(id, sandboxID string) (Frame, error) {
 	frame := Frame{
 		Type:      FrameTypeRequest,
 		ID:        id,
-		SessionID: sessionID,
+		SandboxID: sandboxID,
 		Method:    "hello",
 	}
 	if err := frame.Validate(); err != nil {
@@ -338,11 +338,11 @@ func NewHelloFrame(id, sessionID string) (Frame, error) {
 }
 
 // NewReadyFrame creates a ready event frame.
-func NewReadyFrame(id, sessionID string) (Frame, error) {
+func NewReadyFrame(id, sandboxID string) (Frame, error) {
 	frame := Frame{
 		Type:      FrameTypeEvent,
 		ID:        id,
-		SessionID: sessionID,
+		SandboxID: sandboxID,
 		Method:    "ready",
 	}
 	if err := frame.Validate(); err != nil {
@@ -352,11 +352,11 @@ func NewReadyFrame(id, sessionID string) (Frame, error) {
 }
 
 // NewShutdownFrame creates a shutdown event frame.
-func NewShutdownFrame(id, sessionID string) (Frame, error) {
+func NewShutdownFrame(id, sandboxID string) (Frame, error) {
 	frame := Frame{
 		Type:      FrameTypeEvent,
 		ID:        id,
-		SessionID: sessionID,
+		SandboxID: sandboxID,
 		Method:    "shutdown",
 	}
 	if err := frame.Validate(); err != nil {

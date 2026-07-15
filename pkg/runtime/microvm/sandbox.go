@@ -29,25 +29,25 @@ type VMM interface {
 	Running() bool
 }
 
-// Sandbox is the host-side handle for a microVM-backed sandbox session.
+// Sandbox is the host-side handle for a microVM-backed sandbox.
 type Sandbox struct {
-	sessionID string
+	sandboxID string
 	driver    VMM
 	state     SandboxState
 	mu        sync.Mutex
 }
 
-// NewSandbox creates a sandbox bound to the given VMM driver and session ID.
-func NewSandbox(sessionID string, driver VMM) *Sandbox {
+// NewSandbox creates a sandbox bound to the given VMM driver and sandbox ID.
+func NewSandbox(sandboxID string, driver VMM) *Sandbox {
 	return &Sandbox{
-		sessionID: sessionID,
+		sandboxID: sandboxID,
 		driver:    driver,
 		state:     SandboxStateBooting,
 	}
 }
 
-// SessionID returns the sandbox session identifier.
-func (s *Sandbox) SessionID() string { return s.sessionID }
+// SandboxID returns the sandbox identifier.
+func (s *Sandbox) SandboxID() string { return s.sandboxID }
 
 // State returns the current sandbox state.
 func (s *Sandbox) State() SandboxState {
@@ -60,16 +60,16 @@ func (s *Sandbox) State() SandboxState {
 // Returns an error if the configuration violates the read-only rootfs invariant.
 func (s *Sandbox) Start(cfg VMConfig) error {
 	if s.driver == nil {
-		return fmt.Errorf("microvm sandbox %s: nil VMM driver", s.sessionID)
+		return fmt.Errorf("microvm sandbox %s: nil VMM driver", s.sandboxID)
 	}
 	if !cfg.Rootfs.ReadOnly {
-		return fmt.Errorf("microvm sandbox %s: guest rootfs must be read-only (ADR-001)", s.sessionID)
+		return fmt.Errorf("microvm sandbox %s: guest rootfs must be read-only (ADR-001)", s.sandboxID)
 	}
 	if cfg.Workspace.ReadOnly {
-		return fmt.Errorf("microvm sandbox %s: workspace disk must be writable (ADR-001)", s.sessionID)
+		return fmt.Errorf("microvm sandbox %s: workspace disk must be writable (ADR-001)", s.sandboxID)
 	}
 	if err := s.driver.Boot(cfg); err != nil {
-		return fmt.Errorf("microvm sandbox %s: boot: %w", s.sessionID, err)
+		return fmt.Errorf("microvm sandbox %s: boot: %w", s.sandboxID, err)
 	}
 	s.mu.Lock()
 	s.state = SandboxStateBooting
@@ -80,10 +80,10 @@ func (s *Sandbox) Start(cfg VMConfig) error {
 // Stop shuts the microVM down.
 func (s *Sandbox) Stop() error {
 	if s.driver == nil {
-		return fmt.Errorf("microvm sandbox %s: nil VMM driver", s.sessionID)
+		return fmt.Errorf("microvm sandbox %s: nil VMM driver", s.sandboxID)
 	}
 	if err := s.driver.Shutdown(); err != nil {
-		return fmt.Errorf("microvm sandbox %s: shutdown: %w", s.sessionID, err)
+		return fmt.Errorf("microvm sandbox %s: shutdown: %w", s.sandboxID, err)
 	}
 	return nil
 }

@@ -12,11 +12,11 @@ type ArtifactExporter struct {
 	transfer *TransferClient
 }
 
-// NewArtifactExporter creates an exporter for the given session bound to the
+// NewArtifactExporter creates an exporter for the given sandbox bound to the
 // given control-plane sender (vsock client).
-func NewArtifactExporter(sessionID string, sender FrameSender) *ArtifactExporter {
+func NewArtifactExporter(sandboxID string, sender FrameSender) *ArtifactExporter {
 	return &ArtifactExporter{
-		transfer: NewTransferClient(sessionID, sender),
+		transfer: NewTransferClient(sandboxID, sender),
 	}
 }
 

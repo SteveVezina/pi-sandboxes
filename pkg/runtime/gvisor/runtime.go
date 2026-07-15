@@ -402,11 +402,11 @@ func Setup(cfg *NamespaceConfig) *syscall.SysProcAttr {
 
 	if cfg.UserNS {
 		attr.Cloneflags |= syscall.CLONE_NEWUSER
-		attr.UidMappings = []syscall.SysProcIDRange{
+		attr.UidMappings = []syscall.SysProcIDMap{
 			{ContainerID: 0, HostID: cfg.HostUID, Size: 1},
 			{ContainerID: 1, HostID: cfg.HostUID + 1, Size: 65535},
 		}
-		attr.GidMappings = []syscall.SysProcIDRange{
+		attr.GidMappings = []syscall.SysProcIDMap{
 			{ContainerID: 0, HostID: cfg.HostGID, Size: 1},
 			{ContainerID: 1, HostID: cfg.HostGID + 1, Size: 65535},
 		}

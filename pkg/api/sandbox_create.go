@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 	"github.com/pi-sandbox/pi/pkg/runtime/detect"
 	"github.com/pi-sandbox/pi/pkg/session"
@@ -43,17 +44,21 @@ func CreateSandbox(store *session.Store) http.HandlerFunc {
 		if req.Template == "" {
 			req.Template = "base"
 		}
-		if req.Mode == "" {
-			req.Mode = detect.BestMode("")
-			if req.Mode == "unknown" {
-				writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "no sandbox runtime available"})
-				return
-			}
+		requested := req.Mode
+		if requested == "" {
+			requested = string(pruntime.ModeAuto)
 		}
-		if err := validateRuntimeMode(req.Mode); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		sel, err := pruntime.Select(r.Context(), detect.DefaultRegistry(""),
+			pruntime.Mode(requested), pruntime.TrustTrusted, pruntime.FallbackPolicy{})
+		if err != nil {
+			status := http.StatusBadRequest
+			if requested == string(pruntime.ModeAuto) {
+				status = http.StatusServiceUnavailable
+			}
+			writeJSON(w, status, map[string]string{"error": err.Error()})
 			return
 		}
+		req.Mode = string(sel.Resolved)
 		workspaceMode := req.Workspace.Mode
 		if workspaceMode == "" {
 			workspaceMode = "copy"
@@ -64,12 +69,14 @@ func CreateSandbox(store *session.Store) http.HandlerFunc {
 		}
 
 		id, err := store.CreateWithOptions(session.CreateOptions{
-			Name:          req.Name,
-			Template:      req.Template,
-			Mode:          req.Mode,
-			TTL:           req.TTL,
-			Workspace:     req.Workspace.Source,
-			WorkspaceMode: workspaceMode,
+			Name:           req.Name,
+			Template:       req.Template,
+			Mode:           req.Mode,
+			RequestedMode:  string(sel.Requested),
+			FallbackReason: sel.Reason,
+			TTL:            req.TTL,
+			Workspace:      req.Workspace.Source,
+			WorkspaceMode:  workspaceMode,
 		})
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -166,24 +173,6 @@ func validateWorkspaceSource(mode, source string) error {
 		}
 	}
 	return nil
-}
-
-func validateRuntimeMode(mode string) error {
-	known := map[string]bool{
-		"secure":  true,
-		"fast":    true,
-		"compat":  true,
-		"microvm": true,
-	}
-	if !known[mode] {
-		return fmt.Errorf("unsupported runtime mode %s", mode)
-	}
-	for _, available := range detect.AvailableRuntimes("") {
-		if available == mode {
-			return nil
-		}
-	}
-	return fmt.Errorf("runtime mode %s is unavailable on this host", mode)
 }
 
 type unsafeWorkspaceSource struct {

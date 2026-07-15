@@ -6,7 +6,7 @@
 ## Active Cursor
 
 **Current phase:** PROP-008 runtime driver contract (applied 2026-07-14, ADR-005)
-**Next work:** P0 — fast backend build fix (`SysProcIDMap`) + real `Validate()` (F3/T3.1); then P1 driver contract + selector (F19/T19.1-T19.2), P2 shared OCI engine + compat fixes (F4/T15.2), P3 secure rebuild on OCI engine (F18/T18.1)
+**Next work:** P2 — shared OCI engine + compat hardening fixes (F4/T15.2); then P3 secure rebuild on OCI engine (F18/T18.1). Done: P0 fast build fix (T3.1), P1 capability registry + selection engine (T19.1/T19.2).
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph

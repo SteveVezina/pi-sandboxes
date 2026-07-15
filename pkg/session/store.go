@@ -43,9 +43,13 @@ type CreateOptions struct {
 	Name          string
 	Template      string
 	Mode          string
-	Workspace     string
-	WorkspaceMode string
-	TTL           int
+	// RequestedMode preserves the mode the user asked for when selection
+	// resolved a different backend (fallback visibility, SPEC §14.7.5).
+	RequestedMode  string
+	FallbackReason string
+	Workspace      string
+	WorkspaceMode  string
+	TTL            int
 }
 
 // CreateWithOptions creates a new session and persists its metadata.
@@ -54,6 +58,8 @@ func (s *Store) CreateWithOptions(opts CreateOptions) (string, error) {
 	defer s.mu.Unlock()
 
 	meta := NewMeta(opts.Name, opts.Template, opts.Mode)
+	meta.RequestedMode = opts.RequestedMode
+	meta.FallbackReason = opts.FallbackReason
 	if opts.Workspace != "" {
 		meta.Workspace = opts.Workspace
 	}

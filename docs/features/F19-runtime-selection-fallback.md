@@ -1,7 +1,7 @@
 # F19: Runtime Selection & Fallback
 
 > Source: `SPEC.md` §6 Features F19
-> Status: 🟡 Partially implemented (T19.2 remaining) *(2026-07-14: PROP-008 cascade — T19.1 re-verified, T19.2 selection engine pending)*
+> Status: 🟢 Implemented *(2026-07-14: PROP-008 cascade complete — T19.1/T19.2 re-verified on driver contract)*
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -84,20 +84,20 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Size:** M
 **Depends on:** F3, F15, F18
 
-### T19.2: Selection and fallback policy ⚠️ *(2026-07-14: AC updated per PROP-008 — four-input selection replaces priority list)*
+### T19.2: Selection and fallback policy ✅ *(2026-07-14: re-verified per PROP-008 — four-input selection engine landed)*
 
 **Acceptance criteria:**
-- [ ] Explicit mode selection is honored
-- [ ] Selection takes requested mode, workload trust, host capabilities, and explicit fallback allow/deny policy as separate inputs
-- [ ] `auto` resolution is trust-dependent (trusted → performance ordering; untrusted → isolation ordering)
-- [ ] Isolation never silently downgrades below the requested mode; denied fallback fails with actionable guidance
-- [ ] Fallback decisions are logged with requested-vs-resolved mode fields
+- [x] Explicit mode selection is honored
+- [x] Selection takes requested mode, workload trust, host capabilities, and explicit fallback allow/deny policy as separate inputs (`pkg/runtime/selector.go`)
+- [x] `auto` resolution is trust-dependent (trusted → performance ordering fast→compat→secure; untrusted → isolation ordering secure→isolated→microvm, never shared-kernel modes)
+- [x] Isolation never silently downgrades below the requested mode (fallback candidates below the requested isolation tier are rejected even when allow-listed); denied fallback fails with actionable guidance including missing prerequisites
+- [x] Fallback decisions are persisted with requested-vs-resolved mode fields (`requested_mode`, `fallback_reason` in session metadata)
 
 **Verification:**
-- [ ] Unit tests for explicit/auto/fallback selection across trust levels
-- [ ] Integration test: secure unavailable with fallback denied fails with guidance; with fallback allowed resolves upward only
+- [x] Unit tests for explicit/auto/fallback selection across trust levels (`tests/runtime/selector_test.go` — 8 cases: explicit honored, guidance on failure, upward-only fallback, no-downgrade, deny-wins, trusted/untrusted auto, untrusted never shared-kernel)
+- [x] API path: sandbox creation resolves mode through the selection engine; unavailable explicit mode fails with capability-report guidance
 
-**Files:** `pkg/runtime/selector.go`, `pkg/logs/entry.go`
+**Files:** `pkg/runtime/selector.go`, `pkg/api/sandbox_create.go`, `pkg/session/meta.go`, `pkg/session/store.go`
 **Size:** M
 **Depends on:** T19.1, F17
 

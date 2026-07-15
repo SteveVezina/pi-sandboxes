@@ -21,6 +21,9 @@ func newStoreWithSandbox(t *testing.T) (*sandbox.Store, string) {
 	if err != nil {
 		t.Fatalf("create sandbox: %v", err)
 	}
+	if err := store.UpdateState(id, sandbox.StateWarm); err != nil {
+		t.Fatalf("mark sandbox warm: %v", err)
+	}
 	return store, id
 }
 

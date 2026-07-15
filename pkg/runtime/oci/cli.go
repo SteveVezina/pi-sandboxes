@@ -112,7 +112,6 @@ func (e *CLIEngine) createArgs(spec *ContainerSpec) ([]string, error) {
 	args := []string{
 		"run", "-d",
 		"--name", spec.Name,
-		"--rm",
 		"--label", "pi-sandbox=true",
 		"--network", networkMode,
 		"--cap-drop", "ALL",

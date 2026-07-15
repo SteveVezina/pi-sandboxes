@@ -20,6 +20,8 @@ func TestCreateDockerContainer_TimesOutWhenRuntimeStalls(t *testing.T) {
 		t.Fatalf("write fake docker: %v", err)
 	}
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	ResetDetection()
+	t.Cleanup(ResetDetection)
 
 	previousTimeout := containerCommandTimeout
 	containerCommandTimeout = 50 * time.Millisecond
@@ -34,7 +36,7 @@ func TestCreateDockerContainer_TimesOutWhenRuntimeStalls(t *testing.T) {
 		NetworkMode: "bridge",
 	}
 
-	err := createDockerContainer(spec)
+	_, err := CreateContainer(spec)
 	if err == nil {
 		t.Fatal("expected timeout error")
 	}

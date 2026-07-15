@@ -21,8 +21,13 @@ type Daemon struct {
 	server     *http.Server
 }
 
-// New creates a new daemon with the given store and agent run store.
-func New(socketPath string, httpPort int, store *sandbox.Store, runStore *sandbox.AgentRunStore) *Daemon {
+// New creates a new daemon with the given store and optional agent run store.
+func New(socketPath string, httpPort int, store *sandbox.Store, runStores ...*sandbox.AgentRunStore) *Daemon {
+	runStore := sandbox.NewAgentRunStore()
+	if len(runStores) > 0 && runStores[0] != nil {
+		runStore = runStores[0]
+	}
+
 	return &Daemon{
 		socketPath: socketPath,
 		httpPort:   httpPort,

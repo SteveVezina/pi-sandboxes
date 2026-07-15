@@ -71,8 +71,8 @@ func TestGetMount(t *testing.T) {
 	s := cache.Scope{Template: "test", Runtime: "auto", User: "default"}
 	m := cache.NewManager(s)
 
-	// Ensure the npm cache dir exists first
-	s.Ensure(cache.TypeNPM)
+	// Ensure the npm cache volume exists first
+	m.EnsureVolume(cache.TypeNPM)
 
 	mp, err := m.GetMount(cache.TypeNPM)
 	if err != nil {
@@ -101,7 +101,10 @@ func TestSize(t *testing.T) {
 	m := cache.NewManager(s)
 
 	// Create a cache file
-	dir := s.Dir(cache.TypeNPM)
+	dir, err := m.EnsureVolume(cache.TypeNPM)
+	if err != nil {
+		t.Fatalf("EnsureVolume failed: %v", err)
+	}
 	os.MkdirAll(dir, 0755)
 	os.WriteFile(filepath.Join(dir, "test.txt"), []byte("hello world"), 0644)
 

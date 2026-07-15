@@ -1,4 +1,4 @@
-package session_test
+package sandbox_test
 
 import (
 	"testing"
@@ -15,7 +15,7 @@ func TestOrphanCleanup_CleansOrphans(t *testing.T) {
 	store.UpdateState(id, sandbox.StateExecuting)
 
 	// Run orphan cleanup
-	session.OrphanCleanup(store, tmpDir)
+	sandbox.OrphanCleanup(store, tmpDir)
 
 	// Should be marked DESTROYED
 	meta, err := store.Get(id)
@@ -34,7 +34,7 @@ func TestOrphanCleanup_SkipsWarmSessions(t *testing.T) {
 	id, _ := store.Create("warm-box", "node-python", "fast")
 	store.UpdateState(id, sandbox.StateWarm)
 
-	session.OrphanCleanup(store, tmpDir)
+	sandbox.OrphanCleanup(store, tmpDir)
 
 	meta, _ := store.Get(id)
 	if meta.State != sandbox.StateWarm {
@@ -49,7 +49,7 @@ func TestOrphanCleanup_SkipsDestroyed(t *testing.T) {
 	id, _ := store.Create("destroyed-box", "node-python", "fast")
 	store.UpdateState(id, sandbox.StateDestroyed)
 
-	session.OrphanCleanup(store, tmpDir)
+	sandbox.OrphanCleanup(store, tmpDir)
 
 	meta, _ := store.Get(id)
 	if meta.State != sandbox.StateDestroyed {

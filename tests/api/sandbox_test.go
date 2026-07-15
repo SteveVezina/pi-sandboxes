@@ -110,8 +110,11 @@ func TestCreateSandbox_Defaults(t *testing.T) {
 	if meta.Template != "base" {
 		t.Errorf("Expected default template 'base', got '%s'", meta.Template)
 	}
-	if meta.Mode != "fast" {
-		t.Errorf("Expected default mode 'fast', got '%s'", meta.Mode)
+	if meta.RequestedMode != "auto" {
+		t.Errorf("Expected requested mode 'auto', got '%s'", meta.RequestedMode)
+	}
+	if meta.Mode == "" {
+		t.Error("Expected resolved mode to be set")
 	}
 	if meta.WorkspaceMode != "copy" {
 		t.Errorf("Expected default workspace mode 'copy', got '%s'", meta.WorkspaceMode)

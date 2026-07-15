@@ -52,6 +52,9 @@ func TestCLIEngine_Create_ReturnsContainerID(t *testing.T) {
 			t.Errorf("create args missing hardened default %q; got: %s", want, recorded)
 		}
 	}
+	if strings.Contains(recorded, "--rm") {
+		t.Errorf("create args must not include --rm; daemon destroy/reconciliation owns cleanup, got: %s", recorded)
+	}
 }
 
 func TestCLIEngine_Create_WorkspaceExecAllowed(t *testing.T) {
@@ -90,6 +93,38 @@ func TestCLIEngine_Create_WorkspaceExecAllowed(t *testing.T) {
 	}
 	if strings.Contains(recorded, "/home/agent:rw,nosuid,noexec") {
 		t.Errorf("/home/agent must allow exec (user-installed tools), got: %s", recorded)
+	}
+}
+
+func TestCLIEngine_Create_UsesNamedVolumesWithoutHostWorkspaceBind(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	binary, argsFile := fakeCLI(t, "echo abc\n")
+	eng := oci.NewDockerEngine(binary)
+
+	_, err := eng.Create(context.Background(), &oci.ContainerSpec{
+		Name:      "pi-sandbox-managed",
+		Image:     "debian:bookworm-slim",
+		Workspace: "pi-sandbox-s1-workspace",
+		Artifacts: "pi-sandbox-s1-artifacts",
+		Caches:    map[string]string{"npm": "pi-sandbox-s1-cache-npm"},
+	})
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	args, _ := os.ReadFile(argsFile)
+	recorded := string(args)
+	for _, want := range []string{
+		"-v pi-sandbox-s1-workspace:/workspace:",
+		"-v pi-sandbox-s1-artifacts:/artifacts:",
+		"-v pi-sandbox-s1-cache-npm:/cache/npm:",
+	} {
+		if !strings.Contains(recorded, want) {
+			t.Errorf("create args missing managed volume %q; got: %s", want, recorded)
+		}
+	}
+	if strings.Contains(recorded, "-v /workspace:/workspace:") {
+		t.Fatalf("default compat creation must not bind host /workspace; got: %s", recorded)
 	}
 }
 

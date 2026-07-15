@@ -121,7 +121,7 @@ func TestDaemonRouterHasAllSPECRoutes(t *testing.T) {
 		`"/v1/sandboxes/{id}/files/read"`,
 		`"/v1/sandboxes/{id}/diff"`,
 		`"/v1/sandboxes/{id}/patch"`,
-		`"/v1/sandboxes/{id}/artifacts/export"`,
+		`"/v1/sandboxes/{id}/output"`,
 		`"/v1/sandboxes/{id}/snapshot"`,
 		`"/v1/sandboxes/{id}/rollback"`, // SPEC §9 canonical rollback path
 		`"/v1/sandboxes/{id}/logs"`,

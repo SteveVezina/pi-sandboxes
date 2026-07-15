@@ -1,9 +1,11 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
@@ -13,8 +15,34 @@ func DeleteSandbox(store *sandbox.Store) http.HandlerFunc {
 		vars := mux.Vars(r)
 		id := vars["id"]
 
+		meta, err := store.Get(id)
+		if err != nil {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+			return
+		}
+
 		// Transition to destroying
 		store.UpdateState(id, sandbox.StateDestroying)
+
+		containerName := compatContainerName(id)
+		hasCompatContainer := meta.Mode == "compat"
+		if exists, _ := compat.ContainerExists(containerName); exists {
+			hasCompatContainer = true
+		}
+		if hasCompatContainer {
+			c := &compat.Container{
+				ID: id,
+				Spec: &compat.ContainerSpec{
+					ID:   id,
+					Name: containerName,
+				},
+				Ready: true,
+			}
+			if err := c.Destroy(); err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("destroy compat container: %v", err)})
+				return
+			}
+		}
 
 		// Then delete metadata
 		if err := store.Delete(id); err != nil {
@@ -24,4 +52,11 @@ func DeleteSandbox(store *sandbox.Store) http.HandlerFunc {
 
 		writeJSON(w, http.StatusOK, map[string]string{"status": "destroyed"})
 	}
+}
+
+func compatContainerName(id string) string {
+	if len(id) <= 8 {
+		return "pi-sandbox-" + id
+	}
+	return "pi-sandbox-" + id[:8]
 }

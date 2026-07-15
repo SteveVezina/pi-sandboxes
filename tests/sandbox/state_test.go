@@ -1,4 +1,4 @@
-package session_test
+package sandbox_test
 
 import (
 	"testing"
@@ -19,7 +19,7 @@ func TestCanTransition_Valid(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if !session.CanTransition(tt.from, tt.to) {
+		if !sandbox.CanTransition(tt.from, tt.to) {
 			t.Errorf("CanTransition(%s, %s) = false, want true", tt.from, tt.to)
 		}
 	}
@@ -37,26 +37,26 @@ func TestCanTransition_Invalid(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if session.CanTransition(tt.from, tt.to) {
+		if sandbox.CanTransition(tt.from, tt.to) {
 			t.Errorf("CanTransition(%s, %s) = true, want false", tt.from, tt.to)
 		}
 	}
 }
 
 func TestValidateTransition_Valid(t *testing.T) {
-	err := session.ValidateTransition(sandbox.StateWarm, sandbox.StateExecuting)
+	err := sandbox.ValidateTransition(sandbox.StateWarm, sandbox.StateExecuting)
 	if err != nil {
 		t.Fatalf("Expected nil error, got: %v", err)
 	}
 }
 
 func TestValidateTransition_Invalid(t *testing.T) {
-	err := session.ValidateTransition(sandbox.StateDestroyed, sandbox.StateWarm)
+	err := sandbox.ValidateTransition(sandbox.StateDestroyed, sandbox.StateWarm)
 	if err == nil {
 		t.Fatal("Expected error, got nil")
 	}
 
-	_, ok := err.(*session.TransitionError)
+	_, ok := err.(*sandbox.TransitionError)
 	if !ok {
 		t.Errorf("Expected TransitionError, got %T", err)
 	}

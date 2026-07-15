@@ -1,4 +1,4 @@
-package session_test
+package sandbox_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ func TestTTLChecker_ExpiresSession(t *testing.T) {
 	tmpDir := t.TempDir()
 	store := sandbox.NewStore(tmpDir)
 
-	checker := session.NewTTLChecker(store, 500*time.Millisecond)
+	checker := sandbox.NewTTLChecker(store, 500*time.Millisecond)
 	checker.Start()
 	defer checker.Stop()
 
@@ -52,7 +52,7 @@ func TestTTLChecker_InfiniteTTL(t *testing.T) {
 	// TTL of 0 = infinite
 	store.UpdateLastUsed(id)
 
-	checker := session.NewTTLChecker(store, 500*time.Millisecond)
+	checker := sandbox.NewTTLChecker(store, 500*time.Millisecond)
 	checker.Start()
 	defer checker.Stop()
 

@@ -13,14 +13,21 @@ type MountPoint struct {
 	ReadOnly    bool   `json:"readOnly"`
 }
 
-// Manager manages cache mounts for sandbox sessions using daemon-managed volumes.
+// Manager manages cache mounts for sandboxes using daemon-managed volumes.
 type Manager struct {
-	scope Scope
+	scope   Scope
 	rootDir string
 }
 
 // NewManager creates a cache manager for a scope.
-func NewManager(scope Scope, rootDir string) *Manager {
+func NewManager(scope Scope, rootDirs ...string) *Manager {
+	rootDir := ""
+	if len(rootDirs) > 0 {
+		rootDir = rootDirs[0]
+	}
+	if rootDir == "" {
+		rootDir = filepath.Join(os.Getenv("HOME"), ".pi-box")
+	}
 	return &Manager{scope: scope, rootDir: rootDir}
 }
 

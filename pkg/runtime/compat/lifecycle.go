@@ -55,8 +55,9 @@ func (c *Container) Stop() error {
 		return err
 	}
 
-	// Container might already be stopped; ignore stop errors.
-	_ = eng.Stop(context.Background(), c.Spec.Name, 5*time.Second)
+	if err := eng.Stop(context.Background(), c.Spec.Name, 5*time.Second); err != nil {
+		return fmt.Errorf("stop container %s: %w", c.Spec.Name, err)
+	}
 
 	c.Ready = false
 	return nil
@@ -79,8 +80,9 @@ func (c *Container) Destroy() error {
 		return err
 	}
 
-	// Container might already be removed; ignore remove errors.
-	_ = eng.Remove(context.Background(), c.Spec.Name)
+	if err := eng.Remove(context.Background(), c.Spec.Name); err != nil {
+		return fmt.Errorf("remove container %s: %w", c.Spec.Name, err)
+	}
 
 	c.Ready = false
 	return nil

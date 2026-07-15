@@ -13,7 +13,12 @@ import (
 )
 
 // NewRouter creates the HTTP router with all endpoints.
-func NewRouter(store *sandbox.Store, runStore *sandbox.AgentRunStore) *mux.Router {
+func NewRouter(store *sandbox.Store, runStores ...*sandbox.AgentRunStore) *mux.Router {
+	runStore := sandbox.NewAgentRunStore()
+	if len(runStores) > 0 && runStores[0] != nil {
+		runStore = runStores[0]
+	}
+
 	router := mux.NewRouter()
 	router.Use(guiCORSMiddleware)
 	router.Use(activeContextProxyMiddleware)

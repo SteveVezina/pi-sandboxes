@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
@@ -122,23 +123,18 @@ func createCompatContainer(store *sandbox.Store, sandboxID, templateName string)
 	// Resolve the image
 	image := template.ResolveTemplateImage(t)
 
-	// Build cache mounts from daemon-managed volumes (no host bind mounts)
+	// Build cache mounts from runtime-managed volumes (no host bind mounts).
 	caches := make(map[string]string)
 	for name := range t.Caches {
-		volPath := filepath.Join(os.Getenv("HOME"), ".pi-box", "runtime", "caches", "auto", name)
-		// Ensure volume directory exists
-		if err := os.MkdirAll(volPath, 0755); err != nil {
-			return fmt.Errorf("ensure cache volume %s: %w", name, err)
-		}
-		caches[name] = volPath
+		caches[name] = managedVolumeName("cache", sandboxID, name)
 	}
 
 	// Create the container
 	spec := &compat.ContainerSpec{
 		ID:        sandboxID,
 		Image:     image,
-		Workspace: "/workspace",
-		Artifacts: "/artifacts",
+		Workspace: managedVolumeName("workspace", sandboxID),
+		Artifacts: managedVolumeName("artifacts", sandboxID),
 		Caches:    caches,
 	}
 
@@ -155,6 +151,30 @@ func createCompatContainer(store *sandbox.Store, sandboxID, templateName string)
 	}
 
 	return nil
+}
+
+func managedVolumeName(parts ...string) string {
+	cleaned := make([]string, 0, len(parts)+1)
+	cleaned = append(cleaned, "pi-sandbox")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		var b strings.Builder
+		for _, r := range part {
+			switch {
+			case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+				b.WriteRune(r)
+			case r == '.', r == '_', r == '-':
+				b.WriteRune(r)
+			default:
+				b.WriteByte('-')
+			}
+		}
+		cleaned = append(cleaned, b.String())
+	}
+	return strings.Join(cleaned, "-")
 }
 
 func validateWorkspaceSource(mode, source string) error {

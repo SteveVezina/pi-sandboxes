@@ -49,12 +49,8 @@ func NewRouter(store *sandbox.Store, runStore *sandbox.AgentRunStore) *mux.Route
 	// Patch
 	router.HandleFunc("/v1/sandboxes/{id}/patch", api.PatchSandbox(store)).Methods("GET")
 
-	// Artifacts
-	router.HandleFunc("/v1/sandboxes/{id}/artifacts", api.ArtifactsSandbox(store)).Methods("GET", "POST")
-	router.HandleFunc("/v1/sandboxes/{id}/artifacts/list", api.ArtifactsList(store)).Methods("GET")
-	router.HandleFunc("/v1/sandboxes/{id}/artifacts/pull", api.ArtifactsPull(store)).Methods("POST")
-	router.HandleFunc("/v1/sandboxes/{id}/artifacts/pack", api.ArtifactsPack(store)).Methods("POST")
-	router.HandleFunc("/v1/sandboxes/{id}/artifacts/export", api.ArtifactsSandbox(store)).Methods("POST")
+	// Output (consolidated per PROP-009)
+	router.HandleFunc("/v1/sandboxes/{id}/output", api.OutputSandbox(store)).Methods("GET", "POST")
 
 	// Snapshots
 	router.HandleFunc("/v1/sandboxes/{id}/snapshot", api.SnapshotSandbox(store)).Methods("POST")

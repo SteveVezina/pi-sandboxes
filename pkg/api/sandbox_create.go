@@ -122,10 +122,15 @@ func createCompatContainer(store *sandbox.Store, sandboxID, templateName string)
 	// Resolve the image
 	image := template.ResolveTemplateImage(t)
 
-	// Build cache mounts from the template's cache definitions
+	// Build cache mounts from daemon-managed volumes (no host bind mounts)
 	caches := make(map[string]string)
-	for name, path := range t.Caches {
-		caches[name] = path
+	for name := range t.Caches {
+		volPath := filepath.Join(os.Getenv("HOME"), ".pi-box", "runtime", "caches", "auto", name)
+		// Ensure volume directory exists
+		if err := os.MkdirAll(volPath, 0755); err != nil {
+			return fmt.Errorf("ensure cache volume %s: %w", name, err)
+		}
+		caches[name] = volPath
 	}
 
 	// Create the container

@@ -8,7 +8,7 @@
 
 | Feature ID | Name | Description | Milestone |
 |------------|------|-------------|-----------|
-| F20 | MicroVM Backend | Firecracker or Cloud Hypervisor backend with `pi-vmm-manager`, tiny guest rootfs, workspace disk, template snapshot restore, artifact export, and reseed-on-restore behavior | M5 |
+| F20 | MicroVM Backend | Firecracker or Cloud Hypervisor backend with `pi-vmm-manager`, tiny guest rootfs, workspace disk, template snapshot restore, output delivery, and reseed-on-restore behavior | M5 |
 
 ## Expanded Specification
 
@@ -23,14 +23,14 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-23.1: `pi-vmm-manager` can start and stop a microVM sandbox
 - [x] AC-23.2: Firecracker or Cloud Hypervisor backend boots a tiny guest rootfs
 - [x] AC-23.3: Template snapshot restore creates a ready workspace quickly
-- [x] AC-23.4: Workspace disk persists sandbox changes for the session
-- [x] AC-23.5: Artifact export works from microVM sandboxes
+- [x] AC-23.4: Workspace disk persists sandbox changes for the sandbox lifecycle
+- [x] AC-23.5: Output delivery works from microVM sandboxes
 - [x] AC-23.6: Reseed-on-restore hook runs after snapshot restore
 - [x] AC-23.7: Benchmarks include microVM mode comparison
 - [x] AC-23.8: MicroVM backend reports unavailable when `/dev/kvm` or Firecracker is unavailable
 - [x] AC-23.9: Guest rootfs is read-only
 - [x] AC-23.10: Workspace disk is writable ext4
-- [x] AC-23.11: Artifact export uses the guest control plane
+- [x] AC-23.11: Output delivery uses the guest control plane
 
 ## Interface Impact
 
@@ -112,24 +112,24 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] Reseed hook runs after workspace attachment and before guest ready
 
 **Verification:**
-- [x] Integration test: workspace disk persists session changes (`tests/runtime/microvm/snapshot_test.go`)
+- [x] Integration test: workspace disk persists sandbox changes (`tests/runtime/microvm/snapshot_test.go`)
 - [x] Integration test: reseed hook ordering (same file)
 
 **Files:** `pkg/runtime/microvm/snapshot.go`, `tests/runtime/microvm/snapshot_test.go`
 **Size:** M
 **Depends on:** T20.2, F21
 
-### T20.4: Artifact export and microVM benchmarks ✅
+### T20.4: Output delivery and microVM benchmarks ✅
 
-**Description:** Export artifacts through the guest control plane and include microVM mode in benchmark output.
+**Description:** Deliver artifact or patch output through the guest control plane and include microVM mode in benchmark output.
 
 **Acceptance criteria:**
-- [x] Artifact export uses guest control plane
-- [x] Artifact export works from microVM sandboxes
+- [x] Output delivery uses guest control plane
+- [x] Output delivery works from microVM sandboxes
 - [x] Benchmarks include microVM mode comparison
 
 **Verification:**
-- [x] Integration test: artifact export through guest control plane (`tests/runtime/microvm/artifacts_test.go`)
+- [x] Integration test: output delivery through guest control plane (`tests/runtime/microvm/artifacts_test.go`)
 - [x] `pi-box bench run --mode microvm` recognized (`tests/bench/microvm_mode_test.go`)
 
 **Files:** `pkg/runtime/microvm/export.go`, `pkg/bench/modes.go`, `cmd/pi-box/bench/commands.go`, `tests/runtime/microvm/artifacts_test.go`, `tests/bench/microvm_mode_test.go`
@@ -140,8 +140,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 - [x] MicroVM manager builds (`go build ./cmd/pi-vmm-manager/...`)
 - [x] MicroVM sandbox boots (fake-VMM driven unit test, real VMM gated on Linux+KVM host)
-- [x] Workspace disk persists session changes (unit test)
-- [x] Artifact export and benchmarks work (`go test ./tests/runtime/microvm/...`, `go test ./tests/bench/...`)
+- [x] Workspace disk persists sandbox changes (unit test)
+- [x] Output delivery and benchmarks work (`go test ./tests/runtime/microvm/...`, `go test ./tests/bench/...`)
 - [x] Host capability failures are actionable
 
 ## Spec Gaps

@@ -1,27 +1,28 @@
 # F6: Workspace & File Operations
 
 > Source: `SPEC.md` §6 Features F6
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
 
 | Feature ID | Name | Description | Milestone |
 |------------|------|-------------|-----------|
-| F6 | Workspace & File Operations | Clone, file read/write, diff, patch, pull/push within sandbox sessions | M1 |
+| F6 | Workspace & File Operations | Clone, file read/write, diff, patch views, and controlled workspace transfer inside sandboxes | M1 |
 
 ## Expanded Specification
 
-Workspace operations manage the filesystem inside sandbox sessions. The workspace is the primary data plane — where the coding agent reads, writes, and modifies code.
+Workspace operations manage the filesystem inside sandboxes. The workspace is the primary data plane where the coding agent reads, writes, and modifies code.
 
 Operations:
 1. **Clone** — Clone a Git repository into the sandbox workspace. Supports HTTPS and SSH URLs. SSH credentials are brokered (not blindly mounted).
 2. **File read** — Read a file from the sandbox workspace. Returns file content as string.
 3. **File write** — Write content to a file in the sandbox workspace. Creates parent directories if needed.
-4. **Diff** — Compute git diff of the workspace (unstaged + staged changes). Returns unified diff format.
-5. **Patch** — Export workspace changes as a git patch. Same format as diff but intended for `git apply`.
-6. **Pull** — Copy files from sandbox workspace to host destination.
+4. **Diff** — Compute git diff of the workspace (unstaged + staged changes). Returns unified diff format as a read-only view.
+5. **Patch** — Show workspace changes as a git patch read-only view. Exporting the patch uses the output channel.
+6. **Pull** — Debug/inspection copy from sandbox workspace to host destination; not a deliverable export path.
 7. **Push** — Copy files from host to sandbox workspace.
+8. **Output handoff** — Deliver patches and artifacts through `POST /v1/sandboxes/{id}/output`.
 
 Workspace modes (from SPEC.md §9):
 - `copy` — Copy repo/files into sandbox workspace. Safest default.
@@ -50,7 +51,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-6.2: `pi-box box files read <id> <path>` reads a file from sandbox
 - [x] AC-6.3: `pi-box box files write <id> <path>` writes a file to sandbox
 - [x] AC-6.4: `pi-box box diff <id>` shows workspace diff
-- [x] AC-6.5: `pi-box box patch <id>` exports workspace as patch
+- [x] AC-6.5: `pi-box box patch <id>` shows workspace patch as a read-only view *(2026-07-15: AC updated per PROP-009; re-verify)*
+- [ ] AC-6.8: `POST /v1/sandboxes/{id}/output` delivers patches and artifacts through the single output channel *(2026-07-15: added per PROP-009)*
 - [x] AC-6.6: Clone supports HTTPS and SSH URLs
 - [x] AC-6.7: SSH credentials brokered (not blindly mounted)
 
@@ -66,7 +68,7 @@ Each criterion must be:
 | `pkg/workspace/` | Workspace management |
 | `pkg/git/` | Git operations (clone, diff, patch) |
 | F2: Daemon API | Workspace endpoints |
-| F8: Session Lifecycle | Workspace directory management |
+| F8: Sandbox Lifecycle | Workspace directory management |
 
 ## Security Considerations
 
@@ -82,7 +84,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| F8: Session Lifecycle | Internal feature | Available |
+| F8: Sandbox Lifecycle | Internal feature | Available |
 | Git | External tool | Required for clone/diff/patch |
 
 ## Implementation Approach
@@ -116,7 +118,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/workspace/clone.go`, `pkg/git/clone.go`
 **Size:** M
-**Depends on:** F8 (Session Lifecycle — workspace directory)
+**Depends on:** F8 (Sandbox Lifecycle — workspace directory)
 
 ### T6.2: File read/write
 
@@ -136,15 +138,15 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/workspace/files_read.go`, `pkg/workspace/files_write.go`
 **Size:** M
-**Depends on:** F8 (Session Lifecycle)
+**Depends on:** F8 (Sandbox Lifecycle)
 
-### T6.3: Diff and patch
+### T6.3: Diff and patch ⚠️
 
-**Description:** Implement git diff and patch export from workspace.
+**Description:** Implement git diff and patch read-only views from workspace. Patch delivery uses the output channel. *(2026-07-15: AC updated per PROP-009.)*
 
 **Acceptance criteria:**
 - [x] `pi-box box diff <id>` returns unified diff of workspace changes
-- [x] `pi-box box patch <id>` returns git patch format
+- [x] `pi-box box patch <id>` returns git patch format as a read-only view
 - [x] Diff includes both staged and unstaged changes
 - [x] Patch can be applied with `git apply`
 - [x] Empty workspace returns empty diff/patch
@@ -158,9 +160,9 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Size:** S
 **Depends on:** T6.1 (clone — workspace must have a repo)
 
-### T6.4: Pull and push
+### T6.4: Pull and push ⚠️
 
-**Description:** Implement file pull (sandbox → host) and push (host → sandbox) operations.
+**Description:** Implement debug/inspection file pull (sandbox → host) and push (host → sandbox) operations. Pull is not a deliverable export channel. *(2026-07-15: export semantics updated per PROP-009.)*
 
 **Acceptance criteria:**
 - [x] `pi-box box files pull <id> <src> <dest>` copies files from sandbox to host
@@ -183,6 +185,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] File read/write works with path validation
 - [x] Diff/patch works for staged and unstaged changes
 - [x] Pull/push works for files and directories
+- [ ] Deliverable export uses `POST /v1/sandboxes/{id}/output`, not file pull
 - [x] SSH credentials never appear in sandbox environment
 
 ## Spec Gaps

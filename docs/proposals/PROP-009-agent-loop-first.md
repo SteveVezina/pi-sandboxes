@@ -1,7 +1,7 @@
 # PROP-009: Agent-Loop-First Re-Aim — Rename Sessions to Sandboxes, One Output Channel, Host Decoupling
 
 ## Status
-🟡 Proposed (awaiting acceptance)
+✅ Applied to block spec (2026-07-15)
 
 > Note: PROP-006 is still 🟡 Proposed. This PROP was explicitly requested by the human
 > after a platform-landscape review (Cloudflare Sandboxes GA, Vercel Sandbox GA, E2B,
@@ -203,3 +203,15 @@ snapshot-as-export, host cache bind mounts, or host-disk secrets in the interim.
 
 No. Amendment A can be implemented immediately on acceptance. B–E require feature
 specs (step 3–4 above) before implementation.
+
+## Cascade completed
+
+Completed on 2026-07-15 after human acceptance.
+
+- Block spec updated: sandbox lifecycle terminology, F29 Agent Run, F30 Egress Proxy, output channel, cache/snapshot/secrets host-decoupling, `sandbox_id` stream frame field.
+- ADRs updated: ADR-002 (`sandbox_id`, output methods), ADR-005 (`SandboxID` runtime handle identity).
+- Feature specs updated: F6, F8, F9, F11, F12, F13, F17, F26.
+- Feature specs added: F29 Agent Run, F30 Egress Proxy.
+- Feature docs renamed: F04 sandbox lifecycle, F08 output delivery, F26 GUI sandbox operations.
+- INDEX files updated: `docs/features/INDEX.md`, `docs/proposals/INDEX.md`.
+- Tasks reset to ⚠️ / unchecked where acceptance criteria changed: F6 diff/patch and file pull semantics, F8 lifecycle package/terminology, F9 output channel, F11 credential injection, F12 cache mounts, F13 snapshot storage, F17 policy, F26 GUI operations.

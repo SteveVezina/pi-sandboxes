@@ -140,7 +140,7 @@ If an agent, subagent, skill, tool, or spec introduces issues:
 │   ├── daemon/               # Daemon lifecycle & management
 │   ├── exec/                 # Command execution engine
 │   ├── runtime/              # Runtime backends (fast, compat, secure, microvm)
-│   ├── session/              # Session lifecycle management
+│   ├── sandbox/              # Sandbox lifecycle management
 │   ├── workspace/            # File system operations
 │   ├── template/             # Template system
 │   ├── policy/               # Policy enforcement
@@ -306,7 +306,7 @@ make mock-down        # Stop mock services
 
 ```bash
 docker compose -f mocks/docker-compose.mocks.yml up -d
-# Orchestrator:9001, Gateway:9002, Session Manager:9003, Secret Manager:9004
+# Orchestrator:9001, Gateway:9002, Sandbox Manager:9003, Secret Manager:9004
 ```
 
 ## Security Constraints (non-negotiable)
@@ -323,7 +323,7 @@ docker compose -f mocks/docker-compose.mocks.yml up -d
 
 ## Cross-Cutting Requirements
 
-Run-level traceability (`workspace_id`, `actor_id`, `run_id`, `session_id`) is carried in the dispatch payload and completion report.
+Run-level traceability (`workspace_id`, `actor_id`, `run_id`, `sandbox_id`) is carried in the dispatch payload and completion report.
 
 ### Lifecycle Events
 

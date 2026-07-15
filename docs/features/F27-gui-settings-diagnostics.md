@@ -77,7 +77,7 @@ Implement settings as GUI preference management plus read-only daemon diagnostic
 - [x] GUI can set default template preference
 - [x] GUI can set default runtime mode preference
 - [x] GUI can set default network mode preference
-- [x] GUI uses the default network mode for session command execution unless changed in the session view
+- [x] GUI uses the default network mode for sandbox command execution unless changed in the sandbox view
 
 **Verification:**
 - [x] `npm run build` passes in `apps/gui`

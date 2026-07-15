@@ -5,7 +5,7 @@ Accepted
 
 ## Context
 
-F20 requires a microVM backend with a VMM manager, tiny guest rootfs, template snapshot restore, workspace disk, artifact export, and reseed-on-restore behavior. The block spec previously allowed either Firecracker or Cloud Hypervisor without choosing the first implementation target.
+F20 requires a microVM backend with a VMM manager, tiny guest rootfs, template snapshot restore, workspace disk, output delivery, and reseed-on-restore behavior. The block spec previously allowed either Firecracker or Cloud Hypervisor without choosing the first implementation target.
 
 ## Decision
 

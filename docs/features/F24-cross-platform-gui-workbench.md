@@ -8,15 +8,15 @@
 
 | Feature ID | Name | Description | Milestone |
 |------------|------|-------------|-----------|
-| F24 | Cross-Platform GUI Workbench | Desktop application for macOS, Windows, and Linux that connects to local or remote PI daemons, creates and manages sandbox sessions, and exposes common sandbox workflows without replacing the CLI | M7 |
+| F24 | Cross-Platform GUI Workbench | Desktop application for macOS, Windows, and Linux that connects to local or remote PI daemons, creates and manages sandboxes, and exposes common sandbox workflows without replacing the CLI | M7 |
 
 ## Expanded Specification
 
-The GUI workbench is a cross-platform desktop client for PI Agent Sandbox Runtime. It provides onboarding, connection status, top-level navigation, and the primary workflow for creating sandbox sessions from a project folder, repository URL, or template.
+The GUI workbench is a cross-platform desktop client for PI Agent Sandbox Runtime. It provides onboarding, connection status, top-level navigation, and the primary workflow for creating sandboxes from a project folder, repository URL, or template.
 
 The GUI is a client surface over `pi-sandboxd`. It uses the local daemon API, SDKs, and F22/F23 remote context contracts rather than embedding a second runtime. The first screen should be the usable workbench or onboarding flow, not a marketing page.
 
-The visual direction is a calm desktop-tool UI: left navigation, prominent connection state, recent/active sessions, quick-start templates, and a primary create-session action. Text and workflows must be PI-specific.
+The visual direction is a calm desktop-tool UI: left navigation, prominent connection state, recent/active sandboxes, quick-start templates, and a primary create-sandbox action. Text and workflows must be PI-specific.
 
 ## Acceptance Criteria
 
@@ -26,7 +26,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-27.2: GUI can connect to a local daemon
 - [x] AC-27.3: GUI can connect to a configured remote context
 - [x] AC-27.4: GUI shows connected/disconnected state and daemon version
-- [x] AC-27.5: GUI can create a sandbox session without shelling out for normal lifecycle operations
+- [x] AC-27.5: GUI can create a sandbox without shelling out for normal lifecycle operations
 - [x] AC-27.6: GUI does not implement a separate sandbox lifecycle outside `pi-sandboxd`
 
 ## Interface Impact
@@ -35,7 +35,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 |-----------|--------|
 | `apps/gui/` | Cross-platform desktop GUI |
 | `sdk/typescript/` | Preferred shared client/types for GUI operations |
-| `pi-sandboxd` API | Source of lifecycle, daemon health, and session state |
+| `pi-sandboxd` API | Source of lifecycle, daemon health, and sandbox state |
 | `GET /v1/contexts` | GUI-readable F22 context list and active context |
 | `POST /v1/contexts/use` | GUI active context switch |
 
@@ -70,7 +70,7 @@ Use a thin desktop shell around a TypeScript frontend. The preferred stack is Ta
 
 **Acceptance criteria:**
 - [x] App starts locally in development mode
-- [x] App defines Dashboard, Sessions, Templates, Contexts, Policies, and Settings navigation
+- [x] App defines Dashboard, Sandboxes, Templates, Contexts, Policies, and Settings navigation
 - [x] App shell renders without requiring a daemon connection
 - [x] Policies navigation shows daemon-backed diagnostic/policy state rather than static scaffold data
 
@@ -104,29 +104,29 @@ Use a thin desktop shell around a TypeScript frontend. The preferred stack is Ta
 - [x] Integration smoke against local daemon API
 - [x] Daemon router test covers GUI CORS preflight and response headers
 - [x] API tests cover context list/use endpoints
-- [x] Live browser smoke shows connected local daemon, live context row, and real sessions
+- [x] Live browser smoke shows connected local daemon, live context row, and real sandboxes
 - [x] GUI HTTP client sends bearer auth for direct remote daemon connections
 - [x] GUI configured context switches keep using the local daemon proxy so bearer tokens stay daemon-side
 - [x] API tests verify active remote context proxying and local context-management bypass
-- [x] Live browser smoke verifies configured remote context renders proxied remote sessions through the local daemon
+- [x] Live browser smoke verifies configured remote context renders proxied remote sandboxes through the local daemon
 
 **Files:** `apps/gui/`, `pkg/daemon/router.go`, `tests/daemon/daemon_test.go`, `tests/api/contexts_test.go`
 **Size:** M
 **Depends on:** T24.1, F22, F23
 
-### T24.3: Create-session entry flow ✅
+### T24.3: Create-sandbox entry flow ✅
 
-**Description:** Add the primary create-session flow for project folder, repository URL, and template starts.
+**Description:** Add the primary create-sandbox flow for project folder, repository URL, and template starts.
 
 **Acceptance criteria:**
-- [x] User can start a sandbox session through daemon API/SDK calls
+- [x] User can start a sandbox through daemon API/SDK calls
 - [x] User reviews create parameters in an explicit modal/screen before the daemon create request is sent
 - [x] Create flow exposes sandbox name, template, runtime mode, TTL, workspace source, workspace mode, workspace size, and optional repository clone instead of silently relying on GUI defaults
 - [x] Normal lifecycle creation does not shell out to `pi-box`
-- [x] Created session appears in dashboard state
+- [x] Created sandbox appears in dashboard state
 
 **Verification:**
-- [x] GUI integration smoke creates a session against the daemon API
+- [x] GUI integration smoke creates a sandbox against the daemon API
 - [x] `npm run build` passes in `apps/gui` after explicit create parameter flow changes
 
 **Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`
@@ -137,7 +137,7 @@ Use a thin desktop shell around a TypeScript frontend. The preferred stack is Ta
 
 - [x] GUI app starts on all supported host platforms in CI or release smoke checks
 - [x] Local and remote daemon connection states are covered by tests
-- [x] Create-session flow is verified against daemon/API targets
+- [x] Create-sandbox flow is verified against daemon/API targets
 
 ## Spec Gaps
 

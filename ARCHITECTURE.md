@@ -13,7 +13,7 @@ The architecture is shaped by these invariants:
 | **Fix the root cause** | Never add compensating code for agent/tool issues; fix at the source |
 | **Spec-first development** | Code follows spec, never the other way around |
 | **Local-first** | Starts as developer tooling; Kubernetes/remote comes later |
-| **Keep sessions warm** | Do not create/destroy per tool call; reuse sessions |
+| **Keep sandboxes warm** | Do not create/destroy per tool call; reuse sandboxes |
 | **Selectable isolation** | Offer multiple runtime modes; don't force one |
 | **Security by default** | No host mounts, no Docker socket, no cloud metadata by default |
 | **Benchmark-driven** | Measure everything from day one |
@@ -33,7 +33,7 @@ The architecture is shaped by these invariants:
 │                        pi-sandboxd (Daemon)                         │
 │                                                                     │
 │  ┌─────────────┐  ┌──────────────┐  ┌───────────────┐              │
-│  │ Session Mgr │  │ Template Eng │  │  Policy Eng   │              │
+│  │ Sandbox Mgr │  │ Template Eng │  │  Policy Eng   │              │
 │  └──────┬──────┘  └──────┬───────┘  └──────┬────────┘              │
 │         │                 │                  │                       │
 │  ┌──────┴──────┐  ┌──────┴───────┐  ┌──────┴────────┐              │
@@ -102,7 +102,7 @@ cmd/pi-box/
 
 ### 3.2 Daemon (`cmd/pi-sandboxd/`)
 
-The sandbox daemon is the core service. It manages session lifecycle, runtime dispatch, and all sandbox operations.
+The sandbox daemon is the core service. It manages sandbox lifecycle, runtime dispatch, and all sandbox operations.
 
 ```
 cmd/pi-sandboxd/
@@ -116,23 +116,23 @@ cmd/pi-sandboxd/
 3. Start HTTP server on Unix socket
 4. Listen for API requests
 
-### 3.3 Session Manager (`pkg/session/`)
+### 3.3 Sandbox Manager (`pkg/sandbox/`)
 
-Manages the lifecycle of sandbox sessions: create, list, inspect, destroy, TTL expiration.
+Manages the lifecycle of sandboxes: create, list, inspect, destroy, TTL expiration.
 
 ```
-pkg/session/
-├── manager.go           # Session CRUD, warm reuse
+pkg/sandbox/
+├── manager.go           # Sandbox CRUD, warm reuse
 ├── ttl.go               # TTL expiration handling
-├── store.go             # Persistent session state
-└── types.go             # Session, State, Config types
+├── store.go             # Persistent sandbox state
+└── types.go             # Sandbox, State, Config types
 ```
 
-**Key invariant:** Sessions are created once and kept warm. The runtime dispatcher maintains the session handle across exec calls.
+**Key invariant:** Sandboxes are created once and kept warm. The runtime dispatcher maintains the sandbox handle across exec calls.
 
 ### 3.4 Runtime Dispatcher (`pkg/runtime/`)
 
-Routes session operations to the appropriate backend based on the selected mode.
+Routes sandbox operations to the appropriate backend based on the selected mode.
 
 ```
 pkg/runtime/
@@ -184,7 +184,7 @@ pkg/exec/
 
 ### 3.6 Workspace Manager (`pkg/workspace/`)
 
-Handles file operations inside sandbox sessions.
+Handles file operations inside sandboxes.
 
 ```
 pkg/workspace/
@@ -283,9 +283,9 @@ pkg/network/
 └── types.go             # NetworkMode, DomainRule types
 ```
 
-### 3.13 Artifact Exporter (`pkg/artifacts/`)
+### 3.13 Output Delivery (`pkg/artifacts/`)
 
-List, pull, and pack artifacts from sandbox sessions.
+List, pull, and pack artifacts from sandboxes.
 
 ```
 pkg/artifacts/
@@ -323,7 +323,7 @@ Cross-platform desktop application for macOS, Windows, and Linux.
 pkg/gui/
 ├── gui.go               # GUI workbench orchestration
 ├── workspace_auth.go    # Explicit project-folder selection
-├── session_ops.go       # Dashboard and session views
+├── sandbox_ops.go       # Dashboard and sandbox views
 └── settings.go          # Settings and diagnostics
 ```
 
@@ -347,14 +347,14 @@ Runtime Dispatcher
     │ Backend-specific setup
     │ (namespaces, OCI container, gVisor, Kata, MicroVM)
     ▼
-Session Manager
+Sandbox Manager
     │
-    │ Store session state
+    │ Store sandbox state
     │ Start TTL timer
     ▼
-Sandbox session created
+Sandbox created
     │
-    │ Session ID returned to caller
+    │ Sandbox ID returned to caller
 ```
 
 ### 4.2 Command Execution
@@ -366,7 +366,7 @@ CLI/SDK/GUI
     ▼
 Daemon API Handler
     │
-    │ 1. Validate session exists
+    │ 1. Validate sandbox exists
     │ 2. Validate policy (limits, network)
     ▼
 Command Executor
@@ -379,7 +379,7 @@ Runtime Backend
     │
     │ Execute in sandbox context
     ▼
-Session logs stored
+Sandbox logs stored
     │
     │ ExecResult {exitCode, duration, truncated, stdout, stderr}
 ```
@@ -401,7 +401,7 @@ Snapshot stored at ~/.pi-box/sandboxes/{id}/snapshots/{name}/
 
 ## 5. API Surface
 
-### 5.1 Session Endpoints
+### 5.1 Sandbox Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -490,8 +490,8 @@ Snapshot stored at ~/.pi-box/sandboxes/{id}/snapshots/{name}/
 ~/.pi-box/
 ├── sandboxd.sock          # Daemon socket
 ├── sandboxes/
-│   └── {session-id}/
-│       ├── session.json   # Session state
+│   └── {sandbox-id}/
+│       ├── sandbox.json   # Sandbox state
 │       ├── workspace/     # Repo checkout
 │       ├── artifacts/     # Build outputs
 │       ├── cache/         # Dependency caches
@@ -508,7 +508,7 @@ Snapshot stored at ~/.pi-box/sandboxes/{id}/snapshots/{name}/
 
 ### 9.1 Traces
 
-Every operation carries tracing context: `workspace_id`, `actor_id`, `run_id`, `session_id`.
+Every operation carries tracing context: `workspace_id`, `actor_id`, `run_id`, `sandbox_id`.
 
 ### 9.2 Lifecycle Events
 
@@ -516,10 +516,10 @@ The daemon emits service-level lifecycle events:
 
 | Event | When |
 |-------|------|
-| `pi.sandbox.created` | On pod/session creation |
+| `pi.sandbox.created` | On pod/sandbox creation |
 | `pi.run.started` | From Pi `agent_start` event |
 | `pi.run.completed` | From Pi `agent_end` event |
-| `pi.sandbox.destroyed` | On pod/session destruction (TTL or explicit) |
+| `pi.sandbox.destroyed` | On sandbox destruction (TTL or explicit) |
 | `pi.artifact.delivered` | After successful Workspaces POST /output |
 
 ### 9.3 Benchmark Suite
@@ -537,13 +537,13 @@ Mandatory benchmark suite measures:
 
 | Milestone | Status | Scope |
 |-----------|--------|-------|
-| M1 | ✅ | Local Linux MVP (CLI, daemon, backends, templates, workspace, exec, session, artifacts, logs, system, benchmarks) |
+| M1 | ✅ | Local Linux MVP (CLI, daemon, backends, templates, workspace, exec, sandbox lifecycle, output, logs, system, benchmarks) |
 | M2 | ✅ | Hardening & Cache (secrets, network, cache model, snapshots, policy) |
 | M3 | ✅ | Agent Integrations (SDKs) |
 | M4 | ✅ | Secure Backend (gVisor, runtime selection) |
 | M5 | ✅ | MicroVM Backend (Firecracker/CH, guest control plane) |
 | M6 | ✅ | Remote Daemon Mode (contexts, transport, auth) |
-| M7 | ✅ | Cross-Platform GUI (workbench, auth, session ops, settings) |
+| M7 | ✅ | Cross-Platform GUI (workbench, auth, sandbox ops, settings) |
 
 ## 11. References
 

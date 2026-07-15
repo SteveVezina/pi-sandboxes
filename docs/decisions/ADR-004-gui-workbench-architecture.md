@@ -14,7 +14,7 @@ Accepted
 
 ## Context
 
-PROP-004 adds an M7 cross-platform GUI workbench for PI Agent Sandbox Runtime. The GUI needs to present onboarding, workspace authorization, session operations, settings, diagnostics, and support bundle export while preserving the block's local-first daemon architecture.
+PROP-004 adds an M7 cross-platform GUI workbench for PI Agent Sandbox Runtime. The GUI needs to present onboarding, workspace authorization, sandbox operations, settings, diagnostics, and support bundle export while preserving the block's local-first daemon architecture.
 
 The primary risk is accidentally creating a second sandbox lifecycle in the desktop app or weakening the daemon's filesystem and secret isolation model through UI convenience features.
 
@@ -64,6 +64,6 @@ Daemon policy remains authoritative. GUI preferences are client hints and defaul
 - `SPEC.md` §31 Milestone 7
 - `docs/features/F24-cross-platform-gui-workbench.md`
 - `docs/features/F25-gui-workspace-authorization.md`
-- `docs/features/F26-gui-session-operations.md`
+- `docs/features/F26-gui-sandbox-operations.md`
 - `docs/features/F27-gui-settings-diagnostics.md`
 - PROP-004

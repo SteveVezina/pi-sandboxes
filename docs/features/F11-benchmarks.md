@@ -166,8 +166,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] snapshot_create: creates snapshot, measures time
 - [x] snapshot_rollback: rolls back to snapshot, measures time
 - [x] artifact_export_20mb: creates 20MB test file, exports, measures time
-- [x] parallel_10: runs 10 concurrent sandbox sessions
-- [x] parallel_100: runs 100 concurrent sandbox sessions
+- [x] parallel_10: runs 10 concurrent sandboxes
+- [x] parallel_100: runs 100 concurrent sandboxes
 
 **Verification:**
 - [x] `go build ./pkg/bench/...`
@@ -203,7 +203,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] All 13 benchmarks registered (`TestAll_BenchmarksExist` enforces count=13 and all names per SPEC.md AC-14)
 - [x] Output matches SPEC.md §21 format
 - [x] Per-mode comparison works (fast vs compat)
-- [x] Benchmark targets met: warm exec p50 < 10ms (fast), artifact export < 500ms
+- [x] Benchmark targets met: warm exec p50 < 10ms (fast), output delivery < 500ms
 - [x] 8 tool-dependent benchmarks correctly return 0 (not fake sleep) when tools absent
 - [x] GitHub Actions workflow validates lint/build/test and publishes release artifacts on tags
 

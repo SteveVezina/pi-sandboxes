@@ -12,7 +12,7 @@
 
 ## Expanded Specification
 
-Policy enforcement is the security foundation that applies default constraints to all sandbox sessions. It enforces the security model defined in SPEC.md §8 across all backends.
+Policy enforcement is the security foundation that applies default constraints to all sandboxes. It enforces the security model defined in SPEC.md §8 across all backends.
 
 Default policy:
 ```yaml
@@ -47,8 +47,8 @@ defaults:
 
   secrets:
     env: deny-by-default
-    sshAgent: opt-in
-    gitCredentials: brokered
+    sshAgent: opt-in-through-egress-proxy
+    gitCredentials: egress-proxy-injected
 ```
 
 Never mount these by default:
@@ -64,7 +64,7 @@ Policy is enforced by:
 1. **Fast backend** — namespaces, cgroups, seccomp, Landlock
 2. **Compat backend** — container hardening (no privileged, no host network, caps dropped, seccomp)
 
-Policy is configurable per session via create request flags, but defaults are always applied first.
+Policy is configurable per sandbox via create request flags, but defaults are always applied first.
 
 ## Acceptance Criteria
 
@@ -74,10 +74,12 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-17.2: Docker socket not mounted by default
 - [x] AC-17.3: Cloud metadata credentials not accessible
 - [x] AC-17.4: SSH private keys not mounted by default
-- [x] AC-17.5: Git credentials brokered (not dumped into environment)
+- [ ] AC-17.5: Git credentials brokered through the egress proxy (not dumped into environment) *(2026-07-15: AC updated per PROP-009)*
 - [x] AC-17.6: Exec output limited to 8MiB by default
 - [x] AC-17.7: Exec timeout 120s by default
 - [x] AC-17.8: Max processes 256 by default
+- [ ] AC-34.1: No sandbox has a writable bind mount of any host directory by default *(2026-07-15: added per PROP-009)*
+- [ ] AC-34.3: Secrets are represented as egress-proxy injection rules and are not stored as plaintext files under `~/.pi-box` *(2026-07-15: added per PROP-009)*
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -122,23 +124,24 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Tasks
 
-### T17.1: Policy engine
+### T17.1: Policy engine ⚠️
 
-**Description:** Implement policy engine. Default policy loading, per-session overrides, policy validation.
+**Description:** Implement policy engine. Default policy loading, per-sandbox overrides, policy validation. *(2026-07-15: secrets/cache host-decoupling policy updated per PROP-009.)*
 
 **Acceptance criteria:**
 - [x] Default policy loaded from `~/.pi-box/config.yaml`
 - [x] Filesystem defaults: hostHomeMount=false, workspace=rw, artifacts=rw, caches=scoped, root=readonly
 - [x] Process defaults: maxProcesses=256, defaultTimeout=120s, maxOutput=8MiB
 - [x] Network defaults: mode=restricted, deny list, allow list
-- [x] Secrets defaults: env=deny-by-default, sshAgent=opt-in, gitCredentials=brokered
-- [x] Per-session overrides merge with defaults (override cannot relax defaults)
+- [ ] Secrets defaults: env=deny-by-default, sshAgent=opt-in-through-egress-proxy, gitCredentials=egress-proxy-injected
+- [x] Per-sandbox overrides merge with defaults (override cannot relax defaults)
+- [ ] Policy rejects writable host cache bind mounts by default
 - [x] Policy validated on sandbox creation
 
 **Verification:**
 - [x] `go build ./pkg/policy/...`
 - [x] Unit test: default policy loaded correctly
-- [x] Unit test: per-session overrides merge correctly
+- [x] Unit test: per-sandbox overrides merge correctly
 
 **Files:** `pkg/policy/engine.go`, `pkg/policy/default.go`, `pkg/policy/override.go`
 **Size:** M
@@ -153,6 +156,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Compat backend enforces: no privileged, no host network, caps dropped, seccomp
 - [x] Docker socket never mounted
 - [x] Host home never mounted
+- [ ] Writable host cache bind mounts are rejected by default
 - [x] Cloud metadata never accessible
 - [x] Process limits enforced (maxProcesses=256)
 - [x] Output limits enforced (maxOutput=8MiB)

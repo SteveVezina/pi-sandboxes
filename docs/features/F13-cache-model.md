@@ -30,7 +30,8 @@ Scoped cache mounts:
 Policy:
 - Caches are not secrets
 - Caches scoped by template/runtime/user
-- Shared read-only cache plus per-session writable overlay is preferred
+- Shared read-only cache plus per-sandbox writable overlay is required
+- No sandbox may receive a writable bind mount of a host cache directory
 - Cache promotion must be explicit or validated
 - Cache pruning must be available
 
@@ -40,7 +41,7 @@ Recommended fast tools:
 - Go: GOMODCACHE and GOCACHE
 - Rust: cargo cache and optional sccache
 
-Cache directories stored under `~/.pi-box/caches/<scope>/` where scope is `<template>/<runtime>/<user>`.
+Caches are daemon-managed runtime volumes or template snapshot layers. The local `~/.pi-box` tree may hold cache metadata and daemon-owned storage, but runtime code must not write directly into host cache directories through bind mounts.
 
 ## Acceptance Criteria
 
@@ -49,6 +50,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-12.1: `/cache/npm`, `/cache/pnpm`, `/cache/pip`, `/cache/uv`, `/cache/go-mod`, `/cache/go-build`, `/cache/cargo` mounted
 - [x] AC-12.2: Caches scoped by template/runtime/user
 - [x] AC-12.3: `pi-box system prune` can clean caches
+- [ ] AC-12.4: No sandbox receives a writable bind mount of a host cache directory *(2026-07-15: added per PROP-009)*
+- [ ] AC-12.5: Cache reuse works via read-only shared layer plus per-sandbox writable overlay or runtime-managed volume *(2026-07-15: added per PROP-009)*
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -60,7 +63,7 @@ Each criterion must be:
 | Component | Impact |
 |-----------|--------|
 | `pkg/cache/` | Cache management |
-| `~/.pi-box/caches/` | Cache storage |
+| `~/.pi-box/runtime/caches/` | Daemon-owned cache metadata/storage |
 | F5: Template System | Templates define cache mounts |
 | F3: Fast Backend | Cache mounts in namespace |
 | F4: Compat Backend | Cache mounts in container |
@@ -70,6 +73,7 @@ Each criterion must be:
 
 - Caches are not secrets (no sensitive data)
 - Cache directories scoped per template/runtime/user (isolation)
+- Sandboxes cannot write to host cache directories through bind mounts
 - No world-readable cache directories
 - Cache pruning respects user ownership
 
@@ -87,27 +91,30 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Category | Meaning |
 |----------|---------|
 | **Service-layer** | Go cache package |
-| **Configuration** | Cache directories under `~/.pi-box/caches/` |
+| **Configuration** | Daemon-owned cache state under `~/.pi-box/runtime/caches/` |
 
 **ADR references:** None yet.
 **ADR gaps:** None identified.
 
 ## Tasks
 
-### T13.1: Cache mount management
+### T13.1: Cache mount management ⚠️
 
-**Description:** Implement cache mount management. Scoped cache directories, mount into sandbox sessions.
+**Description:** Implement cache mount management. Scoped daemon-managed cache layers or volumes are exposed inside sandboxes without writable host bind mounts. *(2026-07-15: AC updated per PROP-009.)*
 
 **Acceptance criteria:**
-- [x] Cache directories created under `~/.pi-box/caches/<scope>/`
+- [ ] Cache metadata/storage created under daemon-owned `~/.pi-box/runtime/caches/<scope>/`
 - [x] All 7 cache types mounted: npm, pnpm, pip, uv, go-mod, go-build, cargo
 - [x] Caches scoped by template/runtime/user
-- [x] Caches mounted as read-write in sandbox
+- [ ] Shared cache layer is read-only inside sandbox
+- [ ] Per-sandbox overlay or runtime volume is writable inside sandbox
+- [ ] No writable host cache bind mount is present
 - [x] Cache directories have correct permissions
 
 **Verification:**
 - [x] `go build ./pkg/cache/...`
 - [x] Integration test: cache mounts visible in sandbox
+- [ ] Integration test: sandbox cannot write directly to host cache directory
 
 **Files:** `pkg/cache/mounts.go`, `pkg/cache/scope.go`
 **Size:** M
@@ -120,8 +127,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Acceptance criteria:**
 - [x] `pi-box system prune` cleans unused caches
 - [x] Cache size limit configurable (default: 50Gi)
-- [x] Unused caches detected (no active sessions using them)
-- [x] Pruning is safe (doesn't delete active session caches)
+- [x] Unused caches detected (no active sandboxes using them)
+- [x] Pruning is safe (doesn't delete active sandbox caches)
 
 **Verification:**
 - [x] `go build ./pkg/cache/...`

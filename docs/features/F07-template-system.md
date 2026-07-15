@@ -12,7 +12,7 @@
 
 ## Expanded Specification
 
-Templates define the language/toolchain environment for sandbox sessions. They are declarative YAML files that specify:
+Templates define the language/toolchain environment for sandboxes. They are declarative YAML files that specify:
 - Base OS image or rootfs
 - Installed tools and versions
 - Cache mount points

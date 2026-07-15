@@ -12,7 +12,7 @@
 
 ## Expanded Specification
 
-Command execution is the hot path for the coding agent inner loop. It runs a command inside a sandbox session and streams stdout/stderr back to the caller.
+Command execution is the hot path for the coding agent inner loop. It runs a command inside a sandbox and streams stdout/stderr back to the caller.
 
 The exec endpoint accepts:
 ```json
@@ -92,7 +92,7 @@ Each criterion must be:
 - Shell injection risk is the sandbox's responsibility (seccomp, namespaces, Landlock)
 - Output truncation prevents memory exhaustion from runaway output
 - Timeout prevents resource starvation from hanging commands
-- Network mode per-exec overrides session default (more restrictive only)
+- Network mode per-exec overrides sandbox default (more restrictive only)
 - No environment variables injected by default (deny-by-default per SPEC.md §16)
 
 Reference `SPEC.md` §8 (Security Model) for full security constraints.
@@ -102,7 +102,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Dependency | Type | Status |
 |-----------|------|--------|
 | F3: Fast Backend | Internal feature | ⚠️ Partially — exec needs backend to run in |
-| F8: Session Lifecycle | Internal feature | Available |
+| F8: Sandbox Lifecycle | Internal feature | Available |
 
 ## Implementation Approach
 
@@ -135,7 +135,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/exec/engine.go`
 **Size:** M
-**Depends on:** F8 (Session Lifecycle), F3 (Fast Backend — process execution)
+**Depends on:** F8 (Sandbox Lifecycle), F3 (Fast Backend — process execution)
 
 ### T5.2: Exec API endpoint
 

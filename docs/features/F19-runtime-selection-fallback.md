@@ -91,13 +91,13 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] Selection takes requested mode, workload trust, host capabilities, and explicit fallback allow/deny policy as separate inputs (`pkg/runtime/selector.go`)
 - [x] `auto` resolution is trust-dependent (trusted → performance ordering fast→compat→secure; untrusted → isolation ordering secure→isolated→microvm, never shared-kernel modes)
 - [x] Isolation never silently downgrades below the requested mode (fallback candidates below the requested isolation tier are rejected even when allow-listed); denied fallback fails with actionable guidance including missing prerequisites
-- [x] Fallback decisions are persisted with requested-vs-resolved mode fields (`requested_mode`, `fallback_reason` in session metadata)
+- [x] Fallback decisions are persisted with requested-vs-resolved mode fields (`requested_mode`, `fallback_reason` in sandbox metadata)
 
 **Verification:**
 - [x] Unit tests for explicit/auto/fallback selection across trust levels (`tests/runtime/selector_test.go` — 8 cases: explicit honored, guidance on failure, upward-only fallback, no-downgrade, deny-wins, trusted/untrusted auto, untrusted never shared-kernel)
 - [x] API path: sandbox creation resolves mode through the selection engine; unavailable explicit mode fails with capability-report guidance
 
-**Files:** `pkg/runtime/selector.go`, `pkg/api/sandbox_create.go`, `pkg/session/meta.go`, `pkg/session/store.go`
+**Files:** `pkg/runtime/selector.go`, `pkg/api/sandbox_create.go`, `pkg/sandbox/meta.go`, `pkg/sandbox/store.go`
 **Size:** M
 **Depends on:** T19.1, F17
 
@@ -109,7 +109,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] Runtime discovery reports supported modes as `secure`, `fast`, `compat`, and `microvm`
 - [x] gVisor remains an implementation detail behind the `secure` mode
 - [x] Sandbox creation without an explicit mode uses the detected best available mode
-- [x] Sandbox creation with an unavailable explicit mode fails before creating session metadata
+- [x] Sandbox creation with an unavailable explicit mode fails before creating sandbox metadata
 
 **Verification:**
 - [x] Unit tests verify runtime detection exposes the best mode in the available list

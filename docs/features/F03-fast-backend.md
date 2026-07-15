@@ -59,7 +59,7 @@ Each criterion must be:
 | `deploy/security/seccomp-profile.json` | Syscall whitelist |
 | `~/.pi-box/` | cgroup hierarchy for sandbox processes |
 | F7: Command Execution | Fast backend is the execution target |
-| F8: Session Lifecycle | Fast backend manages process lifecycle |
+| F8: Sandbox Lifecycle | Fast backend manages process lifecycle |
 
 ## Security Considerations
 
@@ -76,7 +76,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| F8: Session Lifecycle | Internal feature | ⚠️ Partially — backend needs session context |
+| F8: Sandbox Lifecycle | Internal feature | ⚠️ Partially — backend needs sandbox context |
 | Linux kernel namespaces | OS feature | Linux-only |
 | cgroup v2 | OS feature | Linux-only |
 | seccomp | OS feature | Linux-only |
@@ -119,11 +119,11 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/runtime/fast/namespace.go`
 **Size:** M
-**Depends on:** F8 (Session Lifecycle — needs sandbox ID context)
+**Depends on:** F8 (Sandbox Lifecycle — needs sandbox ID context)
 
 ### T3.2: cgroup v2 resource limits
 
-**Description:** Implement cgroup v2 hierarchy with CPU, memory, disk I/O, and PID limits. Create cgroup per sandbox session.
+**Description:** Implement cgroup v2 hierarchy with CPU, memory, disk I/O, and PID limits. Create cgroup per sandbox.
 
 **Acceptance criteria:**
 - [x] cgroup v2 hierarchy created under `~/.pi-box/cgroups/<sandbox-id>/`

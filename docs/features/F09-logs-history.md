@@ -12,7 +12,7 @@
 
 ## Expanded Specification
 
-Logs and command history track all activity within sandbox sessions. Each exec command produces a log entry with:
+Logs and command history track all activity within sandboxes. Each exec command produces a log entry with:
 - Command string
 - Exit code
 - Duration (milliseconds)
@@ -108,7 +108,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Acceptance criteria:**
 - [x] Log entries stored as JSON under `~/.pi-box/sandboxes/<id>/logs/exec-{seq}.json`
 - [x] stdout/stderr content stored in separate files
-- [x] Sequence number auto-incremented per session
+- [x] Sequence number auto-incremented per sandbox
 - [x] Timestamp recorded at command completion
 
 **Verification:**
@@ -127,7 +127,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] `pi-box box logs <id>` shows full log entries with stdout/stderr
 - [x] `pi-box box history <id>` shows summary (command, exit code, duration)
 - [x] Logs ordered by sequence number (newest first)
-- [x] Empty session shows "no commands executed" message
+- [x] Empty sandbox shows "no commands executed" message
 
 **Verification:**
 - [x] `go build ./pkg/logs/...`

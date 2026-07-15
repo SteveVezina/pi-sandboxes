@@ -23,18 +23,18 @@ Dashboard of all features for this project.
 | [F3](F03-fast-backend.md) | Fast Backend | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F8 |
 | [F4](F15-compat-backend.md) | Compat Backend | 🟢 Reviewed | 🟡 4/5 tasks (T15.2c remaining) | M1 | F8, F5 |
 | [F5](F07-template-system.md) | Template System | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F3, F4 |
-| [F6](F06-workspace-file-ops.md) | Workspace & File Operations | 🟢 Reviewed | ✅ Implemented | M1 | F8 |
+| [F6](F06-workspace-file-ops.md) | Workspace & File Operations | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F8, F9 |
 | [F7](F05-command-execution.md) | Command Execution | 🟢 Reviewed | ✅ Implemented | M1 | F3, F8 |
-| [F8](F04-session-lifecycle.md) | Session Lifecycle | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | — |
-| [F9](F08-artifact-export.md) | Artifact Export | 🟢 Reviewed | ✅ Implemented | M1 | F6 |
+| [F8](F04-sandbox-lifecycle.md) | Sandbox Lifecycle | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | — |
+| [F9](F08-output-delivery.md) | Output Delivery | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F6 |
 | [F10](F09-logs-history.md) | Logs & Command History | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F7 |
-| [F11](F12-secrets-network.md) | Secrets & Network Model | 🟢 Reviewed | ✅ Implemented | M2 | F17 |
+| [F11](F12-secrets-network.md) | Secrets & Network Model | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F17, F30 |
 | [F12](F13-cache-model.md) | Cache Model | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F5, F16 |
 | [F13](F14-snapshot-rollback.md) | Snapshot & Rollback | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F8 |
 | [F14](F11-benchmarks.md) | Benchmarks | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F3, F4, F13 |
 | [F15](F16-sdk.md) | SDKs | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M3 | F2 |
 | [F16](F10-system-commands.md) | System Commands | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F8 |
-| [F17](F17-policy-enforcement.md) | Policy Enforcement | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F3, F4, F11 |
+| [F17](F17-policy-enforcement.md) | Policy Enforcement | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F3, F4, F11, F30 |
 | [F18](F18-secure-backend.md) | Secure Backend | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M4 | F4, F17, F19 |
 | [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | 🟢 Reviewed | ✅ Implemented | M4 | F3, F4, F18 |
 | [F20](F20-microvm-backend.md) | MicroVM Backend | 🟢 Reviewed | ✅ Implemented | M5 | F19, F21 |
@@ -43,8 +43,10 @@ Dashboard of all features for this project.
 | [F23](F23-remote-daemon-transport-auth.md) | Remote Daemon Transport & Auth | 🟢 Reviewed | ✅ Implemented | M6 | F2, F15, F22 |
 | [F24](F24-cross-platform-gui-workbench.md) | Cross-Platform GUI Workbench | 🟢 Reviewed | ✅ Implemented | M7 | F2, F15, F22, F23 |
 | [F25](F25-gui-workspace-authorization.md) | GUI Workspace Authorization | 🟢 Reviewed | ✅ Implemented | M7 | F17, F24 |
-| [F26](F26-gui-session-operations.md) | GUI Session Operations | 🟢 Reviewed | ✅ Implemented | M7 | F7, F6, F9, F10, F13, F24 |
+| [F26](F26-gui-sandbox-operations.md) | GUI Sandbox Operations | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M7 | F7, F6, F9, F10, F13, F24 |
 | [F27](F27-gui-settings-diagnostics.md) | GUI Settings and Diagnostics | 🟢 Reviewed | ✅ Implemented | M7 | F16, F17, F19, F22, F24, F25 |
+| [F29](F29-agent-run.md) | Agent Run | 🟡 Spec written | 🔴 Not started | M8 | F8, F9, F30 |
+| [F30](F30-egress-proxy.md) | Egress Proxy | 🟡 Spec written | 🔴 Not started | M8 | F11, F17 |
 
 ## Milestone Summary
 
@@ -57,9 +59,10 @@ Dashboard of all features for this project.
 | M5: MicroVM Backend | F20, F21 | ✅ Implemented |
 | M6: Remote Daemon Mode | F22, F23 | ⚠️ Needs re-verify |
 | M7: Cross-Platform GUI Workbench | F24, F25, F26, F27 | ✅ Implemented |
+| M8: Agent Loop and Egress | F29, F30 | 🟡 Spec written |
 
 ## Summary
 
-All 27 feature specs tracked. PROP-005 moved the default Pi Box home to `~/.pi-box`; affected implemented features are marked for re-verification. PROP-008 (2026-07-14) introduced the runtime driver contract, capability reports, shared OCI engine, and no-downgrade selection engine (ADR-005); F3, F4, F18, and F19 tasks were reset where acceptance criteria changed.
+All 29 active feature specs tracked (F28 is reserved by pending PROP-006). PROP-005 moved the default Pi Box home to `~/.pi-box`; affected implemented features are marked for re-verification. PROP-008 (2026-07-14) introduced the runtime driver contract, capability reports, shared OCI engine, and no-downgrade selection engine (ADR-005); F3, F4, F18, and F19 tasks were reset where acceptance criteria changed. PROP-009 (2026-07-15) renamed lifecycle "sessions" to sandboxes, added F29/F30, consolidated deliverables into one output channel, and reset affected F6/F8/F9/F11/F12/F13/F17/F26 specs for re-verification.
 
 > Note: some legacy filenames predate PROP-002, but the feature labels, titles, source IDs, and index rows now use the canonical `SPEC.md` §6 feature IDs.

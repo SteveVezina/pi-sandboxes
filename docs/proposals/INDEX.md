@@ -24,7 +24,7 @@ Track all PROP (spec amendment proposals) for this project.
 | [PROP-006](PROP-006-local-template-library.md) | Add Local Template Library and Lifecycle | 🟡 Proposed | Adds later F28/AC-31 for rich template metadata, local fork/snapshot/import/export/history/diff/rollback/promote workflows, and GUI template management | 2026-07-15 |
 | [PROP-007](PROP-007-image-resolution.md) | Resolve Template `base` Field to OCI Image Name | ✅ Applied to block spec (2026-07-15) | Fixes compat mode sandbox creation — template `base: debian-slim` must resolve to `docker.io/library/debian:bookworm-slim` before container creation | 2026-07-15 |
 | [PROP-008](PROP-008-runtime-driver-contract.md) | Formal Runtime Driver Contract and Shared OCI Engine | ✅ Complete (2026-07-15) | All P0-P3 tasks done: driver contract, capability reports, shared OCI engine, selection engine, compat hardening, secure backend rebuild, lifecycle recovery | 2026-07-14 |
-| [PROP-009](PROP-009-agent-loop-first.md) | Agent-Loop-First Re-Aim — Rename Sessions to Sandboxes, One Output Channel, Host Decoupling | 🟡 Proposed | Renames "session" → "sandbox" (spec, code, GUI, `session_id` frame field), adds F29 Agent Run and F30 Egress Proxy, consolidates artifact/patch export into one output channel, removes host cache bind mounts and host-disk secrets | 2026-07-14 |
+| [PROP-009](PROP-009-agent-loop-first.md) | Agent-Loop-First Re-Aim — Rename Sessions to Sandboxes, One Output Channel, Host Decoupling | ✅ Applied to block spec (2026-07-15) | Renames "session" → "sandbox" (spec/docs, stream frame field), adds F29 Agent Run and F30 Egress Proxy, consolidates artifact/patch export into one output channel, removes host cache bind mounts and host-disk secrets | 2026-07-14 |
 
 ## Rules
 

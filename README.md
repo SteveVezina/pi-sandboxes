@@ -58,8 +58,8 @@ Binaries are available on the [releases page](https://gitlab.com/pi-sandbox/pi-s
                           │ HTTP / Unix socket
 ┌─────────────────────────▼───────────────────────────────┐
 │                    Daemon (pi-sandboxd)                  │
-│  Session Manager │ Template Engine │ Policy Engine      │
-│  Command Executor │ Snapshot Manager │ Artifact Exporter │
+│  Sandbox Manager │ Template Engine │ Policy Engine      │
+│  Command Executor │ Snapshot Manager │ Output Delivery │
 │  Secrets Manager │ Cache Manager │ Workspace Manager    │
 └─────────────────────────┬───────────────────────────────┘
                           │ Runtime selection
@@ -78,13 +78,13 @@ All 27 features across 7 milestones are implemented and reviewed.
 
 | Milestone | Scope | Features |
 |-----------|-------|----------|
-| **M1** | Local Linux MVP | CLI, Daemon API, Fast/Compat Backends, Template System, Workspace Ops, Command Execution, Session Lifecycle, Artifact Export, Logs, System Commands, Benchmarks |
+| **M1** | Local Linux MVP | CLI, Daemon API, Fast/Compat Backends, Template System, Workspace Ops, Command Execution, Sandbox Lifecycle, Output Delivery, Logs, System Commands, Benchmarks |
 | **M2** | Hardening & Cache | Secrets & Network Model, Cache Model, Snapshot & Rollback, Policy Enforcement |
 | **M3** | Agent Integrations | SDKs (Python, TypeScript) |
 | **M4** | Secure Backend | Secure Backend (gVisor), Runtime Selection & Fallback |
 | **M5** | MicroVM Backend | MicroVM Backend, MicroVM Guest Control Plane |
 | **M6** | Remote Daemon Mode | Remote Daemon Contexts, Remote Transport & Auth |
-| **M7** | Cross-Platform GUI | GUI Workbench, Workspace Authorization, Session Operations, Settings & Diagnostics |
+| **M7** | Cross-Platform GUI | GUI Workbench, Workspace Authorization, Sandbox Operations, Settings & Diagnostics |
 
 See [docs/features/INDEX.md](./docs/features/INDEX.md) for the full feature dashboard.
 
@@ -129,7 +129,7 @@ make mock-down
 │   ├── daemon/       # Daemon lifecycle & management
 │   ├── exec/         # Command execution engine
 │   ├── runtime/      # Runtime backend implementations
-│   ├── session/      # Session lifecycle management
+│   ├── sandbox/      # Sandbox lifecycle management
 │   ├── workspace/    # File system operations
 │   ├── template/     # Template system
 │   ├── policy/       # Policy enforcement

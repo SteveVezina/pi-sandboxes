@@ -89,7 +89,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Description:** Implement newline-delimited JSON frame encoding/decoding for host and guest.
 
 **Acceptance criteria:**
-- [x] Frames include type, id, session_id, method, payload, and optional error
+- [x] Frames include type, id, sandbox_id, method, payload, and optional error
 - [x] Codec handles request, response, event, and stream frames
 - [x] Invalid frames return actionable errors
 

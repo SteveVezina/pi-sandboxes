@@ -17,7 +17,7 @@ System commands provide local state inspection and maintenance for the pi-sandbo
 Commands:
 1. **status** — Shows daemon connection status, number of active sandboxes, total state size
 2. **doctor** — Validates configuration file, checks for common issues (missing directories, permission problems, disk space), reports recommendations
-3. **prune** — Removes old sandbox state (destroyed sessions, orphaned data, old logs). Asks for confirmation before destructive operations.
+3. **prune** — Removes old sandbox state (destroyed sandboxes, orphaned data, old logs). Asks for confirmation before destructive operations.
 4. **disk-usage** — Shows storage breakdown by category (sandboxes, templates, caches, images, logs)
 
 State directories under `~/.pi-box/`:
@@ -75,7 +75,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| F4: Session Lifecycle | Internal feature | Available |
+| F4: Sandbox Lifecycle | Internal feature | Available |
 
 ## Implementation Approach
 
@@ -105,7 +105,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/system/status.go`, `cmd/pi-box/system/status.go`
 **Size:** S
-**Depends on:** F4 (Session Lifecycle — sandbox state)
+**Depends on:** F4 (Sandbox Lifecycle — sandbox state)
 
 ### T10.2: System doctor
 
@@ -144,7 +144,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/system/prune.go`, `cmd/pi-box/system/prune.go`
 **Size:** S
-**Depends on:** F4 (Session Lifecycle)
+**Depends on:** F4 (Sandbox Lifecycle)
 
 ### T10.4: System disk-usage
 

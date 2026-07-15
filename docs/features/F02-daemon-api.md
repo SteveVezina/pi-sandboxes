@@ -18,23 +18,23 @@ The daemon exposes 14 API endpoints organized by resource:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/v1/sandboxes` | Create sandbox session |
-| GET | `/v1/sandboxes` | List sandbox sessions |
+| POST | `/v1/sandboxes` | Create sandbox |
+| GET | `/v1/sandboxes` | List sandboxes |
 | GET | `/v1/sandboxes/{id}` | Inspect sandbox state |
-| DELETE | `/v1/sandboxes/{id}` | Destroy sandbox session |
+| DELETE | `/v1/sandboxes/{id}` | Destroy sandbox |
 | POST | `/v1/sandboxes/{id}/clone` | Clone repository into workspace |
 | POST | `/v1/sandboxes/{id}/exec` | Execute command (streaming) |
 | POST | `/v1/sandboxes/{id}/files/write` | Write file to workspace |
 | GET | `/v1/sandboxes/{id}/files/read` | Read file from workspace |
 | GET | `/v1/sandboxes/{id}/diff` | Get workspace diff |
 | GET | `/v1/sandboxes/{id}/patch` | Get workspace patch |
-| POST | `/v1/sandboxes/{id}/artifacts/export` | Export artifacts |
+| POST | `/v1/sandboxes/{id}/output` | Deliver artifact or patch output |
 | POST | `/v1/sandboxes/{id}/snapshot` | Create snapshot |
 | POST | `/v1/sandboxes/{id}/rollback` | Rollback to snapshot |
 | GET | `/v1/sandboxes/{id}/logs` | Get command logs |
 
 The daemon manages:
-- Session lifecycle (create, warm, TTL expiration, destroy)
+- Sandbox lifecycle (create, warm, TTL expiration, destroy)
 - Backend dispatch (delegates to fast/compat backends)
 - Metadata store (sandbox state under `~/.pi-box/sandboxes/<id>/`)
 - Command history and logging
@@ -86,7 +86,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| F8: Session Lifecycle | Internal feature | ⚠️ Partially — API needs lifecycle but can be stubbed |
+| F8: Sandbox Lifecycle | Internal feature | ⚠️ Partially — API needs lifecycle but can be stubbed |
 | Cobra (Go CLI library) | External dependency | Available |
 | Unix socket library (Go stdlib) | Standard library | Available |
 
@@ -143,7 +143,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 **Files:** `pkg/api/sandbox_create.go`, `pkg/api/sandbox_list.go`, `pkg/api/sandbox_get.go`, `pkg/api/sandbox_delete.go`
 **Size:** M
-**Depends on:** F8 (Session Lifecycle — metadata store)
+**Depends on:** F8 (Sandbox Lifecycle — metadata store)
 
 ### T2.3: Workspace endpoints
 
@@ -162,7 +162,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 **Files:** `pkg/api/sandbox_clone.go`, `pkg/api/files_read.go`, `pkg/api/files_write.go`, `pkg/api/sandbox_diff.go`, `pkg/api/sandbox_patch.go`
 **Size:** M
-**Depends on:** F8 (Session Lifecycle), F6 (Workspace & File Ops)
+**Depends on:** F8 (Sandbox Lifecycle), F6 (Workspace & File Ops)
 
 ### T2.4: Exec, artifacts, snapshot, logs endpoints
 
@@ -170,7 +170,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 **Acceptance criteria:**
 - [x] `POST /v1/sandboxes/{id}/exec` accepts command, streams stdout/stderr, returns exit code/duration/truncated/timedOut
-- [x] `POST /v1/sandboxes/{id}/artifacts/export` exports artifacts
+- [ ] `POST /v1/sandboxes/{id}/output` delivers artifacts or patches through the output channel *(2026-07-15: AC updated per PROP-009)*
 - [x] `POST /v1/sandboxes/{id}/snapshot` creates snapshot
 - [x] `POST /v1/sandboxes/{id}/rollback` restores snapshot
 - [x] `GET /v1/sandboxes/{id}/logs` returns command history
@@ -181,7 +181,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 **Files:** `pkg/api/sandbox_exec.go`, `pkg/api/artifacts_export.go`, `pkg/api/sandbox_snapshot.go`, `pkg/api/sandbox_rollback.go`, `pkg/api/sandbox_logs.go`
 **Size:** M
-**Depends on:** F7 (Command Execution), F9 (Artifact Export), F13 (Snapshot & Rollback), F10 (Logs & History)
+**Depends on:** F7 (Command Execution), F9 (Output Delivery), F13 (Snapshot & Rollback), F10 (Logs & History)
 
 ## Verification Plan
 

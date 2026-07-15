@@ -8,11 +8,11 @@
 
 | Feature ID | Name | Description | Milestone |
 |------------|------|-------------|-----------|
-| F25 | GUI Workspace Authorization | Explicit project-folder selection, allowed folder management, and safe bind/copy workspace setup for GUI-launched sessions | M7 |
+| F25 | GUI Workspace Authorization | Explicit project-folder selection, allowed folder management, and safe bind/copy workspace setup for GUI-launched sandboxes | M7 |
 
 ## Expanded Specification
 
-The GUI must make host workspace access explicit. Before a GUI-launched local session can use a project folder, the user selects a folder, sees the selected path, and chooses or accepts the workspace mode. The default is `copy`.
+The GUI must make host workspace access explicit. Before a GUI-launched local sandbox can use a project folder, the user selects a folder, sees the selected path, and chooses or accepts the workspace mode. The default is `copy`.
 
 Allowed folders are GUI preferences that help the user manage repeated folder choices. They are not security enforcement. The daemon remains authoritative for filesystem policy, mount decisions, and rejection of unsafe requests.
 
@@ -21,7 +21,7 @@ Allowed folders are GUI preferences that help the user manage repeated folder ch
 Mapped from `SPEC.md` § Acceptance Criteria:
 
 - [x] AC-28.1: User must explicitly select a project folder before GUI-launched local workspace access
-- [x] AC-28.2: Selected project folder is displayed before session creation
+- [x] AC-28.2: Selected project folder is displayed before sandbox creation
 - [x] AC-28.3: Default workspace mode is `copy`
 - [x] AC-28.4: `bind` mode requires explicit opt-in
 - [x] AC-28.5: Allowed folders can be listed and removed from GUI settings
@@ -39,7 +39,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 - The GUI must not mount `$HOME` by default.
 - The GUI must not mount SSH keys, cloud config, Kubernetes config, or Docker socket by default.
-- `bind` mode must be opt-in and visible before session creation.
+- `bind` mode must be opt-in and visible before sandbox creation.
 - Daemon policy overrides GUI preferences.
 
 ## Dependencies
@@ -52,7 +52,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Implementation Approach
 
-Implement workspace authorization as a GUI flow backed by local preferences and daemon policy. Store allowed folders as user-level GUI preferences. Pass selected workspace settings to daemon session creation; do not perform direct host mounts from UI code.
+Implement workspace authorization as a GUI flow backed by local preferences and daemon policy. Store allowed folders as user-level GUI preferences. Pass selected workspace settings to daemon sandbox creation; do not perform direct host mounts from UI code.
 
 **ADR references:** ADR-004 (GUI Workbench Architecture and Trust Boundaries).
 **ADR gaps:** None.
@@ -65,13 +65,13 @@ Implement workspace authorization as a GUI flow backed by local preferences and 
 
 **Acceptance criteria:**
 - [x] Folder authorization requires explicit user action
-- [x] Selected path is visible before session creation
+- [x] Selected path is visible before sandbox creation
 - [x] Default workspace mode is `copy`
 - [x] `bind` requires explicit opt-in
 
 **Verification:**
 - [x] `npm run build` passes in `apps/gui`
-- [x] Manual smoke verifies folder review before session creation
+- [x] Manual smoke verifies folder review before sandbox creation
 - [x] GUI omits workspace payload when no project folder is selected
 
 **Files:** `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`
@@ -94,9 +94,9 @@ Implement workspace authorization as a GUI flow backed by local preferences and 
 **Size:** M
 **Depends on:** T25.1
 
-### T25.3: Policy-safe session creation ✅
+### T25.3: Policy-safe sandbox creation ✅
 
-**Description:** Ensure GUI-launched session creation preserves daemon filesystem policy.
+**Description:** Ensure GUI-launched sandbox creation preserves daemon filesystem policy.
 
 **Acceptance criteria:**
 - [x] GUI passes workspace mode to daemon create request
@@ -107,9 +107,9 @@ Implement workspace authorization as a GUI flow backed by local preferences and 
 - [x] API tests verify workspace source/mode persistence
 - [x] API tests verify omitted workspace does not persist a host source
 - [x] Integration test against daemon policy rejection
-- [x] Security smoke for default create-session payload
+- [x] Security smoke for default create-sandbox payload
 
-**Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`, `pkg/api/sandbox_create.go`, `pkg/api/sandbox_get.go`, `pkg/api/sandbox_list.go`, `pkg/session/meta.go`, `pkg/session/store.go`, `tests/api/sandbox_test.go`
+**Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`, `pkg/api/sandbox_create.go`, `pkg/api/sandbox_get.go`, `pkg/api/sandbox_list.go`, `pkg/sandbox/meta.go`, `pkg/sandbox/store.go`, `tests/api/sandbox_test.go`
 **Size:** M
 **Depends on:** T25.2
 

@@ -48,7 +48,7 @@ Per PROP-008 / ADR-005 (`SPEC.md` §14.7.5):
 - Compat is a thin `Driver` over a shared `pkg/runtime/oci` engine (`PodmanEngine`, `DockerEngine`, later containerd); Docker/Podman CLI construction is no longer duplicated per backend.
 - Mount policy: `/workspace`, `/artifacts`, `/cache` are `rw,nosuid,nodev` (exec allowed — `./gradlew`, `node_modules/.bin/*`, `.venv/bin/python` must work); `noexec` applies to `/tmp` and secret mounts only.
 - Containers are not created with `--rm`; explicit destroy plus daemon startup reconciliation and orphan garbage collection replace auto-remove.
-- The stable session ID and the runtime container ID are distinct fields; `spec.ID` is never overwritten after creation.
+- The stable sandbox ID and the runtime container ID are distinct fields; `spec.ID` is never overwritten after creation.
 - Resource limits (memory, swap, CPUs, PIDs, ulimits) come from the shared `ResourceLimits` model and are passed at creation.
 - Containers run as an explicit unprivileged user (Podman `--userns=keep-id --user uid:gid`; Docker explicit `--user` mapping).
 - The project's versioned seccomp profile is passed explicitly via `--security-opt seccomp=` on both engines.
@@ -78,7 +78,7 @@ Each criterion must be:
 | `deploy/security/seccomp-profile.json` | Seccomp profile (shared with fast backend) |
 | F2: Daemon API | Compat backend dispatch |
 | F5: Template System | Templates define OCI images |
-| F8: Session Lifecycle | Container lifecycle management |
+| F8: Sandbox Lifecycle | Container lifecycle management |
 
 ## Security Considerations
 
@@ -97,7 +97,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Dependency | Type | Status |
 |-----------|------|--------|
 | F5: Template System | Internal feature | Templates define OCI images |
-| F8: Session Lifecycle | Internal feature | Container lifecycle |
+| F8: Sandbox Lifecycle | Internal feature | Container lifecycle |
 
 ## Implementation Approach
 
@@ -140,12 +140,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Container created from template OCI image via `oci.Engine`
 - [x] Runtime CLI creation fails instead of hanging indefinitely when the OCI runtime stalls
 - [x] Docker/Podman argument construction exists in exactly one place per operation (`oci/cli.go`)
-- [x] Session ID never overwritten with runtime container ID (`Container.RuntimeObjectID` carries the container ID)
+- [x] Sandbox ID never overwritten with runtime container ID (`Container.RuntimeObjectID` carries the container ID)
 
 **Verification:**
 - [x] `go build ./pkg/runtime/...` (darwin + GOOS=linux)
 - [x] Unit test: stalled runtime CLI creation times out (`tests/runtime/oci/engine_test.go`)
-- [x] Unit test: session ID preserved after creation (`tests/runtime/compat/identity_test.go`)
+- [x] Unit test: sandbox ID preserved after creation (`tests/runtime/compat/identity_test.go`)
 - [x] Existing compat integration tests pass unchanged
 
 **Files:** `pkg/runtime/oci/engine.go`, `pkg/runtime/oci/cli.go`, `pkg/runtime/compat/create.go`, `pkg/runtime/compat/exec.go`, `pkg/runtime/compat/lifecycle.go`
@@ -176,8 +176,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Acceptance criteria:**
 - [x] No `--rm`; container survives daemon crash for post-mortem inspection
-- [x] Daemon startup reconciles session store against `Inspect` results
-- [x] Orphaned containers (no session) are garbage-collected
+- [x] Daemon startup reconciles sandbox store against `Inspect` results
+- [x] Orphaned containers (no sandbox) are garbage-collected
 
 **Verification:**
 - [ ] Integration test: daemon restart reconciles existing containers

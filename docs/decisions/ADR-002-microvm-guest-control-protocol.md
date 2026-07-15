@@ -26,7 +26,7 @@ The final exec response includes `exit_code`, `duration_ms`, `timed_out`, and `t
 
 Readiness is explicit: `pi-init` starts `pi-agentd`; `pi-agentd` sends a `ready` event; only then may the host mark the sandbox warm.
 
-*(Updated 2026-07-15 per PROP-009: stream frames use `sandbox_id`; deliverable transfer methods are output-channel operations rather than separate artifact export methods.)*
+*(Updated 2026-07-15 per PROP-009: stream frames use `sandbox_id`; deliverable transfer methods are output-channel operations rather than separate output delivery methods.)*
 
 ## Consequences
 

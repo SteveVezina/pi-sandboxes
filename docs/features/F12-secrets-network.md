@@ -1,25 +1,25 @@
 # F11: Secrets & Network Model
 
 > Source: `SPEC.md` §6 Features F11
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
 
 | Feature ID | Name | Description | Milestone |
 |------------|------|-------------|-----------|
-| F11 | Secrets & Network Model | Configurable network modes (none/restricted/open), domain allowlist, secret broker for Git credentials | M2 |
+| F11 | Secrets & Network Model | Configurable network modes (none/restricted/open), domain allowlist, and credential handling through the egress proxy | M2 |
 
 ## Expanded Specification
 
-The network and secrets model provides configurable network isolation and secure credential handling for sandbox sessions.
+The network and secrets model provides configurable network isolation and secure credential handling for sandboxes.
 
 ### Network Modes
 
 | Mode | Description |
 |------|-------------|
 | `none` | No outbound network. |
-| `restricted` | Domain allowlist through egress proxy. Default. |
+| `restricted` | Domain allowlist through the daemon-owned egress proxy. Default. |
 | `open` | Full outbound access. User must opt in. |
 
 Default deny targets:
@@ -34,14 +34,15 @@ Domain-aware egress is preferred over IP-based filtering because package registr
 ### Secrets Model
 
 - Environment variables: deny-by-default
-- SSH agent: opt-in only
-- Git credentials: brokered (not dumped into environment)
-- Long-term: per-secret `exposeTo` policy (e.g., github-token → git only, never to shell)
+- SSH agent: opt-in through the egress proxy only
+- Git credentials: injected by the egress proxy into approved outbound requests (not dumped into environment)
+- Per-secret `exposeTo` policy (e.g., github-token → git only, never to shell)
+- No plaintext secrets are stored on host disk under `~/.pi-box`
 
 Initial Git support:
 1. Public HTTPS clone
-2. User-approved SSH agent forwarding for Git only
-3. User-approved token credential helper scoped to Git operations
+2. User-approved SSH agent use through the egress proxy for Git only
+3. User-approved token injection scoped to Git operations through the egress proxy
 
 ## Acceptance Criteria
 
@@ -51,7 +52,9 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-11.2: `restricted` mode enforces domain allowlist
 - [x] AC-11.3: `open` mode allows full outbound access
 - [x] AC-11.4: Default deny: metadata endpoint (169.254.169.254), host localhost, private LANs
-- [x] AC-11.5: SSH credentials brokered (not dumped into environment)
+- [ ] AC-11.5: Git credentials brokered through the egress proxy (not dumped into environment) *(2026-07-15: AC updated per PROP-009)*
+- [ ] AC-32.1: Outbound requests from a sandbox route through the daemon-owned egress proxy in restricted mode *(2026-07-15: added per PROP-009)*
+- [ ] AC-32.2: Injected credentials are not readable from inside the sandbox *(2026-07-15: added per PROP-009)*
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -63,7 +66,7 @@ Each criterion must be:
 | Component | Impact |
 |-----------|--------|
 | `pkg/network/` | Network policy management |
-| `pkg/secrets/` | Secret broker |
+| `pkg/secrets/` | Egress-proxy credential rules |
 | F3: Fast Backend | Network namespace policy |
 | F4: Compat Backend | Container network policy |
 | F17: Policy Enforcement | Network/secrets are part of policy |
@@ -72,8 +75,9 @@ Each criterion must be:
 
 - Domain allowlist enforced at network layer (not application layer)
 - Default deny all outbound (except allowed domains)
-- SSH credentials never appear in sandbox environment
+- SSH and token credentials never appear in sandbox environment
 - Secret exposure scoped per-secret with `exposeTo` policy
+- No plaintext secrets under `~/.pi-box`
 - Metadata endpoint (169.254.169.254) explicitly blocked
 
 Reference `SPEC.md` §8 (Security Model) for full security constraints.
@@ -119,19 +123,20 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Size:** M
 **Depends on:** F17 (Policy Enforcement — policy foundation)
 
-### T12.2: Secret broker
+### T12.2: Egress-proxy credential injection ⚠️
 
-**Description:** Implement secret broker for Git credentials. SSH agent forwarding scoped to Git, token credential helper.
+**Description:** Implement egress-proxy credential injection for Git credentials. SSH agent and token use are scoped to approved outbound requests, and credentials are never readable from inside the sandbox. *(2026-07-15: AC updated per PROP-009.)*
 
 **Acceptance criteria:**
-- [x] SSH credentials forwarded only to Git processes (not shell)
-- [x] Token credential helper scoped to Git operations
-- [x] Secrets never appear in sandbox environment variables
-- [x] Secret exposure scoped per-secret with `exposeTo` policy
+- [ ] SSH credentials are usable only through approved Git egress
+- [ ] Token injection is scoped to approved Git operations
+- [ ] Secrets never appear in sandbox environment variables or filesystem
+- [ ] Secret exposure scoped per-secret with `exposeTo` policy
+- [ ] Plaintext secrets are not stored under `~/.pi-box`
 
 **Verification:**
 - [x] `go build ./pkg/secrets/...`
-- [x] Integration test: SSH credentials not visible in sandbox environment
+- [ ] Integration test: injected credentials not visible in sandbox environment or filesystem
 - [x] Integration test: Git clone works with brokered credentials
 
 **Files:** `pkg/secrets/broker.go`, `pkg/secrets/ssh.go`, `pkg/secrets/token.go`
@@ -143,7 +148,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] `go build ./pkg/network/...` and `go build ./pkg/secrets/...` succeed
 - [x] Network modes work correctly (none/restricted/open)
 - [x] Default deny targets blocked
-- [x] SSH credentials brokered (not in environment)
+- [ ] Git credentials injected by egress proxy and not readable in sandbox
 - [x] Git operations work with brokered credentials
 
 ## Spec Gaps
@@ -162,7 +167,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Out of Scope
 
-- Per-exec network override (future — currently per-session)
+- Per-exec network override (future — currently per-sandbox)
 - VPN support (explicitly out of scope per SPEC.md §25)
 - Packet capture (explicitly out of scope per SPEC.md §25)
 - Advanced debuggers/profilers (explicitly out of scope per SPEC.md §25)

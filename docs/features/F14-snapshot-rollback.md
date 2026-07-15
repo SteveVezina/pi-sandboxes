@@ -19,11 +19,11 @@ Initial implementation uses filesystem-level snapshots:
 - **Reflink copy** — When filesystem supports it (btrfs, xfs)
 - **tar/zstd fallback** — When reflink not available
 
-Snapshot metadata stored under `~/.pi-box/sandboxes/<id>/snapshots/<name>/meta.json`.
+Snapshot metadata is stored in a daemon-owned content-addressed store under `~/.pi-box/snapshots/`. Snapshots are warm-start and rollback inputs only; they are not an export channel.
 
 Operations:
 1. **Create** — Create a named snapshot of the current workspace state
-2. **List** — List all snapshots for a session
+2. **List** — List all snapshots for a sandbox
 3. **Rollback** — Restore workspace to a named snapshot
 4. **Delete** — Remove a snapshot
 
@@ -49,7 +49,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-13.1: `pi-box box snapshot <id> <name>` creates a named snapshot
 - [x] AC-13.2: `pi-box box rollback <id> <name>` restores to snapshot
 - [x] AC-13.3: Snapshot creation uses overlay upperdir or reflink
-- [x] AC-13.4: Snapshot metadata stored under `~/.pi-box/sandboxes/<id>/snapshots/`
+- [ ] AC-13.4: Snapshot metadata stored in a daemon-owned content-addressed store under `~/.pi-box/snapshots/` *(2026-07-15: AC updated per PROP-009)*
+- [ ] AC-13.5: Snapshots are warm-start and rollback inputs only, not an export channel *(2026-07-15: added per PROP-009)*
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -61,8 +62,8 @@ Each criterion must be:
 | Component | Impact |
 |-----------|--------|
 | `pkg/snapshot/` | Snapshot management |
-| `~/.pi-box/sandboxes/<id>/snapshots/` | Snapshot storage |
-| F8: Session Lifecycle | Snapshot lifecycle management |
+| `~/.pi-box/snapshots/` | Daemon-owned content-addressed snapshot storage |
+| F8: Sandbox Lifecycle | Snapshot lifecycle management |
 | F3: Fast Backend | Overlay upperdir snapshot |
 | F4: Compat Backend | Container snapshot (future) |
 
@@ -79,7 +80,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| F8: Session Lifecycle | Internal feature | Available |
+| F8: Sandbox Lifecycle | Internal feature | Available |
 | F3: Fast Backend | Internal feature | Overlay upperdir snapshot |
 
 ## Implementation Approach
@@ -94,16 +95,17 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Tasks
 
-### T14.1: Snapshot creation
+### T14.1: Snapshot creation ⚠️
 
-**Description:** Implement snapshot creation using overlay upperdir copy or reflink.
+**Description:** Implement snapshot creation using overlay upperdir copy or reflink into daemon-owned content-addressed storage. *(2026-07-15: storage/export semantics updated per PROP-009.)*
 
 **Acceptance criteria:**
 - [x] `pi-box box snapshot demo before-refactor` creates named snapshot
 - [x] Snapshot uses overlay upperdir copy (fast mode)
 - [x] Snapshot uses reflink if filesystem supports it (btrfs, xfs)
 - [x] Snapshot falls back to tar/zstd if reflink unavailable
-- [x] Snapshot metadata stored under `~/.pi-box/sandboxes/<id>/snapshots/<name>/meta.json`
+- [ ] Snapshot metadata stored under daemon-owned `~/.pi-box/snapshots/`
+- [ ] Snapshot cannot be used as a deliverable export path
 - [x] Snapshot size validated before creation (prevent disk exhaustion)
 
 **Verification:**
@@ -113,7 +115,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/snapshot/create.go`, `pkg/snapshot/metadata.go`
 **Size:** M
-**Depends on:** F8 (Session Lifecycle)
+**Depends on:** F8 (Sandbox Lifecycle)
 
 ### T14.2: Snapshot listing and rollback
 
@@ -138,7 +140,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 ## Verification Plan
 
 - [x] `go build ./pkg/snapshot/...` succeeds
-- [x] Snapshot creation works with overlay/reflink/tar fallback
+- [ ] Snapshot creation works with overlay/reflink/tar fallback into daemon-owned storage
 - [x] Snapshot listing shows all snapshots
 - [x] Rollback restores correct state
 - [x] Delete removes snapshot
@@ -164,5 +166,5 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - MicroVM template snapshots (Milestone 5)
 - Snapshot compression (future)
 - Snapshot diff/comparison (future)
-- Snapshot sharing between sessions (future)
+- Snapshot sharing between sandboxes (future)
 - Automatic snapshot before risky operations (future)

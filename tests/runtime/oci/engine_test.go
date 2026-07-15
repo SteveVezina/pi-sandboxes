@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 	"github.com/pi-sandbox/pi/pkg/runtime/oci"
 )
 
@@ -50,6 +51,129 @@ func TestCLIEngine_Create_ReturnsContainerID(t *testing.T) {
 		if !strings.Contains(recorded, want) {
 			t.Errorf("create args missing hardened default %q; got: %s", want, recorded)
 		}
+	}
+}
+
+func TestCLIEngine_Create_WorkspaceExecAllowed(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	binary, argsFile := fakeCLI(t, "echo abc\n")
+	eng := oci.NewDockerEngine(binary)
+
+	_, err := eng.Create(context.Background(), &oci.ContainerSpec{
+		Name:      "pi-sandbox-exec",
+		Image:     "debian:bookworm-slim",
+		Workspace: "/tmp/ws",
+		Artifacts: "/tmp/art",
+		Caches:    map[string]string{"pnpm": "/tmp/cache-pnpm"},
+	})
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	args, _ := os.ReadFile(argsFile)
+	recorded := string(args)
+
+	// Workspace-class mounts must allow exec (./gradlew, node_modules/.bin,
+	// .venv/bin) — noexec only on /tmp and secret mounts (SPEC §14.7.5).
+	for _, mount := range []string{"/tmp/ws:/workspace:", "/tmp/art:/artifacts:", "/tmp/cache-pnpm:/cache/pnpm:"} {
+		idx := strings.Index(recorded, mount)
+		if idx < 0 {
+			t.Fatalf("mount %q missing in args: %s", mount, recorded)
+		}
+		opts := recorded[idx : idx+len(mount)+24]
+		if strings.Contains(opts, "noexec") {
+			t.Errorf("workspace-class mount %q must not be noexec, got %q", mount, opts)
+		}
+	}
+	if !strings.Contains(recorded, "/tmp:rw,nosuid,noexec") {
+		t.Errorf("/tmp tmpfs must stay noexec, got: %s", recorded)
+	}
+	if strings.Contains(recorded, "/home/agent:rw,nosuid,noexec") {
+		t.Errorf("/home/agent must allow exec (user-installed tools), got: %s", recorded)
+	}
+}
+
+func TestCLIEngine_Create_AppliesResourceLimits(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	binary, argsFile := fakeCLI(t, "echo abc\n")
+	eng := oci.NewDockerEngine(binary)
+
+	_, err := eng.Create(context.Background(), &oci.ContainerSpec{
+		Name:  "pi-sandbox-limits",
+		Image: "debian:bookworm-slim",
+		Limits: pruntime.ResourceLimits{
+			MemoryBytes: 2 << 30,
+			CPUs:        2,
+			PIDs:        256,
+			OpenFiles:   1024,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	args, _ := os.ReadFile(argsFile)
+	recorded := string(args)
+	for _, want := range []string{"--memory 2147483648", "--cpus 2", "--pids-limit 256", "--ulimit nofile=1024:1024"} {
+		if !strings.Contains(recorded, want) {
+			t.Errorf("create args missing resource limit %q; got: %s", want, recorded)
+		}
+	}
+}
+
+func TestDockerEngine_RunsAsUnprivilegedUser(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	binary, argsFile := fakeCLI(t, "echo abc\n")
+	eng := oci.NewDockerEngine(binary)
+
+	if _, err := eng.Create(context.Background(), &oci.ContainerSpec{Name: "n", Image: "i"}); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+	args, _ := os.ReadFile(argsFile)
+	if !strings.Contains(string(args), "--user 1000:1000") {
+		t.Errorf("docker containers must run as explicit unprivileged user, got: %s", args)
+	}
+}
+
+func TestPodmanEngine_KeepsUserID(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	binary, argsFile := fakeCLI(t, "echo abc\n")
+	eng := oci.NewPodmanEngine(binary)
+
+	if _, err := eng.Create(context.Background(), &oci.ContainerSpec{Name: "n", Image: "i"}); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+	args, _ := os.ReadFile(argsFile)
+	recorded := string(args)
+	if !strings.Contains(recorded, "--userns=keep-id") || !strings.Contains(recorded, "--user ") {
+		t.Errorf("podman containers must map to the invoking user, got: %s", recorded)
+	}
+}
+
+func TestDockerEngine_PassesVersionedSeccompProfile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	binary, argsFile := fakeCLI(t, "echo abc\n")
+	eng := oci.NewDockerEngine(binary)
+
+	if _, err := eng.Create(context.Background(), &oci.ContainerSpec{Name: "n", Image: "i"}); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+	args, _ := os.ReadFile(argsFile)
+	recorded := string(args)
+
+	marker := "seccomp="
+	idx := strings.Index(recorded, marker)
+	if idx < 0 {
+		t.Fatalf("expected explicit seccomp profile in args, got: %s", recorded)
+	}
+	path := strings.Fields(recorded[idx+len(marker):])[0]
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("seccomp profile not written: %v", err)
+	}
+	if !strings.Contains(string(data), "defaultAction") {
+		t.Errorf("seccomp profile malformed: %s", data)
 	}
 }
 

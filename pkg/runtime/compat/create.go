@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 	"github.com/pi-sandbox/pi/pkg/runtime/oci"
 )
 
@@ -25,6 +26,17 @@ type ContainerSpec struct {
 	Privileged  bool
 	Template    string
 	Mode        string
+	Limits      pruntime.ResourceLimits
+}
+
+// defaultLimits are the SPEC.md §20/§22 sandbox defaults: 2 CPUs, 2 GiB
+// memory, 256 processes.
+func defaultLimits() pruntime.ResourceLimits {
+	return pruntime.ResourceLimits{
+		MemoryBytes: 2 << 30,
+		CPUs:        2,
+		PIDs:        256,
+	}
 }
 
 // Container represents a running OCI container.
@@ -85,6 +97,9 @@ func CreateContainer(spec *ContainerSpec) (*Container, error) {
 		spec.NetworkMode = "bridge"
 	}
 	spec.Privileged = false
+	if spec.Limits == (pruntime.ResourceLimits{}) {
+		spec.Limits = defaultLimits()
+	}
 
 	// Validate mounts — never mount docker socket
 	if spec.Workspace == "/var/run/docker.sock" {
@@ -98,6 +113,7 @@ func CreateContainer(spec *ContainerSpec) (*Container, error) {
 		Artifacts:   spec.Artifacts,
 		Caches:      spec.Caches,
 		NetworkMode: spec.NetworkMode,
+		Limits:      spec.Limits,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create container: %w", err)

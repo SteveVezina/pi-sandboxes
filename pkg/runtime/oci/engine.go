@@ -7,6 +7,8 @@ import (
 	"context"
 	"io"
 	"time"
+
+	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 )
 
 // DefaultCommandTimeout bounds runtime CLI calls so a stalled OCI runtime
@@ -23,6 +25,7 @@ type ContainerSpec struct {
 	Artifacts   string
 	Caches      map[string]string
 	NetworkMode string
+	Limits      pruntime.ResourceLimits
 }
 
 // ExecResult holds the result of a container exec.

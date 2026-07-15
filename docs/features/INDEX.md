@@ -21,7 +21,7 @@ Dashboard of all features for this project.
 | [F1](F01-cli-entry-point.md) | CLI Entry Point | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | — |
 | [F2](F02-daemon-api.md) | Daemon API | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F1 |
 | [F3](F03-fast-backend.md) | Fast Backend | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F8 |
-| [F4](F15-compat-backend.md) | Compat Backend | 🟢 Reviewed | 🟡 3/5 tasks (T15.2b/c remaining) | M1 | F8, F5 |
+| [F4](F15-compat-backend.md) | Compat Backend | 🟢 Reviewed | 🟡 4/5 tasks (T15.2c remaining) | M1 | F8, F5 |
 | [F5](F07-template-system.md) | Template System | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F3, F4 |
 | [F6](F06-workspace-file-ops.md) | Workspace & File Operations | 🟢 Reviewed | ✅ Implemented | M1 | F8 |
 | [F7](F05-command-execution.md) | Command Execution | 🟢 Reviewed | ✅ Implemented | M1 | F3, F8 |

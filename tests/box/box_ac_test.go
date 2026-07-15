@@ -19,7 +19,7 @@ func buildPIBinary(t *testing.T) string {
 	if runtime.GOOS == "windows" {
 		out += ".exe"
 	}
-	cmd := exec.Command("go", "build", "-o", out, "./cmd/pi")
+	cmd := exec.Command("go", "build", "-o", out, "./cmd/pi-box")
 	cmd.Dir = root
 	if b, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("build pi-box: %v\n%s", err, b)
@@ -41,8 +41,8 @@ func findRepoRoot(t *testing.T) string {
 }
 
 // TestBoxDestroyAll_CleansAllSandboxes verifies AC-8.4:
-// `pi box destroy --all` iterates over active sessions and destroys them all.
-// This exercises the callAPIList → destroy-all path in cmd/pi/box/box.go.
+// `pi-box box destroy --all` iterates over active sessions and destroys them all.
+// This exercises the callAPIList → destroy-all path in cmd/pi-box/box/box.go.
 func TestBoxDestroyAll_CleansAllSandboxes(t *testing.T) {
 	bin := buildPIBinary(t)
 
@@ -124,7 +124,7 @@ contexts:
 	}
 }
 
-// TestBoxList_JSONFlag verifies AC-1.5: pi box list --json produces valid JSON.
+// TestBoxList_JSONFlag verifies AC-1.5: pi-box box list --json produces valid JSON.
 func TestBoxList_JSONFlag(t *testing.T) {
 	bin := buildPIBinary(t)
 
@@ -165,7 +165,7 @@ contexts:
 	}
 }
 
-// TestBoxCreate_JSONFlag verifies AC-1.5: pi box create --json produces valid JSON.
+// TestBoxCreate_JSONFlag verifies AC-1.5: pi-box box create --json produces valid JSON.
 func TestBoxCreate_JSONFlag(t *testing.T) {
 	bin := buildPIBinary(t)
 

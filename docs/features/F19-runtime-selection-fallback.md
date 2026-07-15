@@ -20,7 +20,7 @@ Fallback cannot weaken policy silently. If fallback is allowed, the user-visible
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-22.1: `pi system doctor` reports available runtime backends
+- [x] AC-22.1: `pi-box system doctor` reports available runtime backends
 - [x] AC-22.2: Backend selection honors explicit `--mode` requests
 - [x] AC-22.3: Auto-selection prefers an available compatible backend based on trust/config
 - [x] AC-22.4: Secure-mode startup failure can fall back to compat mode when policy permits
@@ -33,7 +33,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | `pkg/runtime/` | Runtime registry/detection |
 | `pkg/system/` | Doctor backend availability |
 | `pkg/logs/` | Fallback decisions recorded |
-| `cmd/pi/box` | Explicit and auto runtime mode flags |
+| `cmd/pi-box/box` | Explicit and auto runtime mode flags |
 
 ## Security Considerations
 
@@ -62,11 +62,11 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 **Acceptance criteria:**
 - [x] Detect fast, compat, secure, and future microVM backend availability
-- [x] `pi system doctor` reports backend status
+- [x] `pi-box system doctor` reports backend status
 
 **Verification:**
 - [x] Unit tests for runtime detection
-- [x] `pi system doctor` includes runtime backend table
+- [x] `pi-box system doctor` includes runtime backend table
 
 **Files:** `pkg/runtime/detect/detect.go`, `pkg/system/doctor.go`
 **Size:** M

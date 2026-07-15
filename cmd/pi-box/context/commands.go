@@ -1,4 +1,4 @@
-// Package context implements the `pi context` CLI command group (F22).
+// Package context implements the `pi-box context` CLI command group (F22).
 package context
 
 import (
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pi-sandbox/pi/cmd/pi/cli"
+	"github.com/pi-sandbox/pi/cmd/pi-box/cli"
 	pictx "github.com/pi-sandbox/pi/pkg/context"
 	"github.com/spf13/cobra"
 )

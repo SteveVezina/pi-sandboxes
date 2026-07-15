@@ -11,9 +11,9 @@ import (
 
 // CloneResult holds the result of a git clone operation.
 type CloneResult struct {
-	RepoURL   string
-	LocalPath string
-	TimedOut  bool
+	RepoURL    string
+	LocalPath  string
+	TimedOut   bool
 	DurationMs int64
 }
 

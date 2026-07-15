@@ -84,7 +84,7 @@ The first implementation should not automatically migrate or delete legacy `~/.p
 
 - Create `~/.pi-box` when needed.
 - Leave `~/.pi` untouched.
-- Report the new Pi Box home in `pi system status`, `pi system doctor`, API system info, and GUI diagnostics.
+- Report the new Pi Box home in `pi-box system status`, `pi-box system doctor`, API system info, and GUI diagnostics.
 - Prefer the new default in SDK clients and context creation.
 
 A later migration command may be specified separately if preserving old sandbox state becomes necessary.
@@ -145,7 +145,7 @@ Affected criteria include, but may not be limited to:
 
 When this PROP is accepted:
 
-1. Update `SPEC.md` to replace the Pi sandbox runtime default home with `~/.pi-box`.
+1. Update `SPEC.md` to replace the Pi sandbox runtime default home from `~/.pi` to `~/.pi-box`.
 2. Update affected feature specs, especially F01, F02, F03, F04, F07, F09, F10, F11, F13, F14, F15, F17, F22, F25, and F27 where they mention local state paths.
 3. Update ADR-003 if it still names `~/.pi/contexts.yaml` as the default context store.
 4. Update code defaults in `pkg/system`, `pkg/context`, `pkg/cache`, `pkg/snapshot`, `pkg/template`, `pkg/secrets`, `pkg/policy`, runtime backends, CLI defaults, SDK defaults, Dockerfile, Makefile, and README/getting-started examples.

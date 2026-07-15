@@ -7,9 +7,9 @@ import (
 
 // Policy defines network access rules for a sandbox session.
 type Policy struct {
-	Mode       Mode       `json:"mode"`
-	Allowlist  DomainList `json:"allowlist"`
-	DenyList   DomainList `json:"denylist"`
+	Mode      Mode       `json:"mode"`
+	Allowlist DomainList `json:"allowlist"`
+	DenyList  DomainList `json:"denylist"`
 }
 
 // DefaultPolicy returns the default network policy.

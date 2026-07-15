@@ -12,18 +12,18 @@ import (
 
 // CgroupConfig holds cgroup v2 resource limits.
 type CgroupConfig struct {
-	CPUPeriod    int64 // CPU period in microseconds (default: 100000)
-	CPUQuota     int64 // CPU quota in microseconds (default: unlimited)
-	MemoryLimit  int64 // Memory limit in bytes (0 = unlimited)
-	MaxPIDs      int   // Max processes (default: 256)
-	IOReadBPS    int64 // Read bandwidth limit (0 = unlimited)
-	IOWriteBPS   int64 // Write bandwidth limit (0 = unlimited)
+	CPUPeriod   int64 // CPU period in microseconds (default: 100000)
+	CPUQuota    int64 // CPU quota in microseconds (default: unlimited)
+	MemoryLimit int64 // Memory limit in bytes (0 = unlimited)
+	MaxPIDs     int   // Max processes (default: 256)
+	IOReadBPS   int64 // Read bandwidth limit (0 = unlimited)
+	IOWriteBPS  int64 // Write bandwidth limit (0 = unlimited)
 }
 
 // DefaultCgroupConfig returns default cgroup limits.
 func DefaultCgroupConfig() *CgroupConfig {
 	return &CgroupConfig{
-		CPUPeriod: 100000,
+		CPUPeriod:   100000,
 		MemoryLimit: 0, // unlimited by default
 		MaxPIDs:     256,
 	}

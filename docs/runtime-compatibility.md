@@ -97,13 +97,13 @@ fmt.Printf("Using %s backend (mode: %s, security: %d/10)\n",
 
 ```bash
 # Run all benchmarks
-pi bench all
+pi-box bench all
 
 # Run specific benchmark
-pi bench warm-exec
+pi-box bench warm-exec
 
 # Compare backends
-pi bench compare --backends=gvisor,fast,compat
+pi-box bench compare --backends=gvisor,fast,compat
 ```
 
 ## Platform Support
@@ -150,7 +150,7 @@ pi bench compare --backends=gvisor,fast,compat
 
 1. Check available runtimes:
    ```bash
-   pi system status
+   pi-box system status
    ```
 
 2. Install a backend:
@@ -168,7 +168,7 @@ pi bench compare --backends=gvisor,fast,compat
 
 1. Check which backend is in use:
    ```bash
-   pi system status
+   pi-box system status
    ```
 
 2. If using Compat, consider upgrading to Fast or gVisor.

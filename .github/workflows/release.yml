@@ -1,0 +1,307 @@
+name: Release
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  GO_VERSION: "1.25.x"
+  NODE_VERSION: "22"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Verify modules
+        run: go mod verify
+
+      - name: Check formatting
+        run: |
+          test -z "$(gofmt -l .)"
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+      - name: Build
+        run: make build
+
+      - name: Test
+        run: make test
+
+      - name: Upload local binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-linux-amd64
+          path: |
+            bin/pi-box
+            bin/pi-sandboxd
+            bin/pi-agentd
+            bin/pi-init
+            bin/pi-vmm-manager
+          if-no-files-found: error
+
+  gui:
+    name: GUI Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/gui/package-lock.json
+
+      - name: Install GUI dependencies
+        working-directory: apps/gui
+        run: npm ci
+
+      - name: Build GUI
+        working-directory: apps/gui
+        run: npm run build
+
+  gui-desktop:
+    name: GUI Desktop Smoke (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - ubuntu-22.04
+          - macos-14
+          - windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux Tauri dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/gui/package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/gui/src-tauri -> target
+
+      - name: Install GUI dependencies
+        working-directory: apps/gui
+        run: npm ci
+
+      - name: Build desktop shell
+        working-directory: apps/gui
+        run: npm run tauri -- build --no-bundle
+
+  release-artifacts:
+    name: Release Artifacts (${{ matrix.name }})
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    needs:
+      - verify
+      - gui
+      - gui-desktop
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-amd64
+            os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            archive: tar.gz
+          - name: linux-arm64
+            os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            archive: tar.gz
+          - name: darwin-amd64
+            os: macos-13
+            goos: darwin
+            goarch: amd64
+            archive: tar.gz
+          - name: darwin-arm64
+            os: macos-14
+            goos: darwin
+            goarch: arm64
+            archive: tar.gz
+          - name: windows-amd64
+            os: windows-latest
+            goos: windows
+            goarch: amd64
+            archive: zip
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build binaries
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME:-dev}"
+          build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          ldflags="-s -w -X main.version=${version} -X main.buildDate=${build_date}"
+          mkdir -p "dist/pi-sandbox-${version}-${{ matrix.name }}"
+          suffix=""
+          if [ "${GOOS}" = "windows" ]; then
+            suffix=".exe"
+          fi
+          go build -trimpath -ldflags "${ldflags}" -o "dist/pi-sandbox-${version}-${{ matrix.name }}/pi-box${suffix}" ./cmd/pi/main.go
+          go build -trimpath -ldflags "${ldflags}" -o "dist/pi-sandbox-${version}-${{ matrix.name }}/pi-sandboxd${suffix}" ./cmd/pi-sandboxd/main.go
+          go build -trimpath -ldflags "${ldflags}" -o "dist/pi-sandbox-${version}-${{ matrix.name }}/pi-agentd${suffix}" ./cmd/pi-agentd/main.go
+          go build -trimpath -ldflags "${ldflags}" -o "dist/pi-sandbox-${version}-${{ matrix.name }}/pi-init${suffix}" ./cmd/pi-init/main.go
+          go build -trimpath -ldflags "${ldflags}" -o "dist/pi-sandbox-${version}-${{ matrix.name }}/pi-vmm-manager${suffix}" ./cmd/pi-vmm-manager/main.go
+
+      - name: Package archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME:-dev}"
+          cd dist
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            7z a "pi-sandbox-${version}-${{ matrix.name }}.zip" "pi-sandbox-${version}-${{ matrix.name }}"
+          else
+            tar -czf "pi-sandbox-${version}-${{ matrix.name }}.tar.gz" "pi-sandbox-${version}-${{ matrix.name }}"
+          fi
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          if command -v shasum >/dev/null 2>&1; then
+            shasum -a 256 pi-sandbox-*-${{ matrix.name }}.* > "pi-sandbox-${GITHUB_REF_NAME:-dev}-${{ matrix.name }}.sha256"
+          else
+            sha256sum pi-sandbox-*-${{ matrix.name }}.* > "pi-sandbox-${GITHUB_REF_NAME:-dev}-${{ matrix.name }}.sha256"
+          fi
+
+      - name: Upload release archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.name }}
+          path: |
+            dist/pi-sandbox-*-${{ matrix.name }}.*
+          if-no-files-found: error
+
+  container:
+    name: Container Image
+    if: github.event_name != 'pull_request'
+    needs:
+      - verify
+      - gui
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+
+  publish-release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - release-artifacts
+      - container
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

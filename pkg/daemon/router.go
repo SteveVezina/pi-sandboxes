@@ -1,11 +1,14 @@
 package daemon
 
 import (
+	"io"
 	"net/http"
 	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/pi-sandbox/pi/pkg/api"
+	pictx "github.com/pi-sandbox/pi/pkg/context"
+	"github.com/pi-sandbox/pi/pkg/remote"
 	"github.com/pi-sandbox/pi/pkg/session"
 )
 
@@ -13,6 +16,7 @@ import (
 func NewRouter(store *session.Store) *mux.Router {
 	router := mux.NewRouter()
 	router.Use(guiCORSMiddleware)
+	router.Use(activeContextProxyMiddleware)
 	router.PathPrefix("/").Methods(http.MethodOptions).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
@@ -74,9 +78,87 @@ func NewRouter(store *session.Store) *mux.Router {
 
 	// Context selection for GUI and integrations
 	router.HandleFunc("/v1/contexts", api.ContextsList()).Methods("GET")
+	router.HandleFunc("/v1/contexts", api.ContextCreate()).Methods("POST")
+	router.HandleFunc("/v1/contexts/{name}", api.ContextGet()).Methods("GET")
+	router.HandleFunc("/v1/contexts/{name}", api.ContextUpdate()).Methods("PUT")
+	router.HandleFunc("/v1/contexts/{name}", api.ContextDelete()).Methods("DELETE")
 	router.HandleFunc("/v1/contexts/use", api.ContextUse()).Methods("POST")
 
 	return router
+}
+
+func activeContextProxyMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !shouldProxyActiveContext(r) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		store, err := pictx.NewStore(pictx.DefaultPath())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		active, err := store.Active()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		if active.Name == pictx.LocalContextName || active.Transport == pictx.TransportUnix {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		client, err := remote.NewClient(active)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		resp, err := client.Do(r.Method, r.URL.RequestURI(), r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		copyProxyHeaders(w.Header(), resp.Header)
+		w.WriteHeader(resp.StatusCode)
+		_, _ = io.Copy(w, resp.Body)
+	})
+}
+
+func shouldProxyActiveContext(r *http.Request) bool {
+	if r.Method == http.MethodOptions || r.Header.Get("X-Pi-Context-Proxy") != "" {
+		return false
+	}
+	path := r.URL.Path
+	if path == "/health" || strings.HasPrefix(path, "/v1/contexts") {
+		return false
+	}
+	return strings.HasPrefix(path, "/v1/sandboxes") ||
+		strings.HasPrefix(path, "/v1/system/") ||
+		path == "/v1/support-bundle"
+}
+
+func copyProxyHeaders(dst, src http.Header) {
+	for key, values := range src {
+		if isHopByHopHeader(key) {
+			continue
+		}
+		for _, value := range values {
+			dst.Add(key, value)
+		}
+	}
+}
+
+func isHopByHopHeader(key string) bool {
+	switch strings.ToLower(key) {
+	case "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
+		"te", "trailer", "transfer-encoding", "upgrade":
+		return true
+	default:
+		return false
+	}
 }
 
 func guiCORSMiddleware(next http.Handler) http.Handler {
@@ -85,7 +167,7 @@ func guiCORSMiddleware(next http.Handler) http.Handler {
 		if isAllowedGUIOrigin(origin) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
-			w.Header().Set("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Accept,Authorization")
 		}
 

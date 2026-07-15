@@ -130,9 +130,9 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 **Verification:**
 - [x] Integration test: artifact export through guest control plane (`tests/runtime/microvm/artifacts_test.go`)
-- [x] `pi bench run --mode microvm` recognized (`tests/bench/microvm_mode_test.go`)
+- [x] `pi-box bench run --mode microvm` recognized (`tests/bench/microvm_mode_test.go`)
 
-**Files:** `pkg/runtime/microvm/export.go`, `pkg/bench/modes.go`, `cmd/pi/bench/commands.go`, `tests/runtime/microvm/artifacts_test.go`, `tests/bench/microvm_mode_test.go`
+**Files:** `pkg/runtime/microvm/export.go`, `pkg/bench/modes.go`, `cmd/pi-box/bench/commands.go`, `tests/runtime/microvm/artifacts_test.go`, `tests/bench/microvm_mode_test.go`
 **Size:** M
 **Depends on:** T20.3, F21
 

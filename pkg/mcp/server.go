@@ -32,7 +32,7 @@ type MCPError struct {
 
 // Server implements the MCP server for the sandbox API.
 type Server struct {
-	mu     sync.Mutex
+	mu       sync.Mutex
 	sessions map[string]*Session
 }
 
@@ -157,7 +157,7 @@ func (s *Server) handleToolsList(id json.RawMessage) (*MCPResponse, error) {
 			"name":        "sandbox_list",
 			"description": "List all sandbox sessions",
 			"inputSchema": map[string]interface{}{
-				"type": "object",
+				"type":       "object",
 				"properties": map[string]interface{}{},
 			},
 		},
@@ -205,12 +205,12 @@ func (s *Server) handleSandboxExec(params json.RawMessage, id json.RawMessage) (
 	return &MCPResponse{
 		JSONRPC: "2.0",
 		Result: map[string]interface{}{
-			"exit_code":    0,
-			"stdout":       "",
-			"stderr":       "",
-			"duration_ms":  0,
-			"timed_out":    false,
-			"truncated":    false,
+			"exit_code":   0,
+			"stdout":      "",
+			"stderr":      "",
+			"duration_ms": 0,
+			"timed_out":   false,
+			"truncated":   false,
 		},
 		ID: id,
 	}, nil

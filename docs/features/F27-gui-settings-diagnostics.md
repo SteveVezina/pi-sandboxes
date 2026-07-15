@@ -1,7 +1,7 @@
 # F27: GUI Settings and Diagnostics
 
 > Source: `SPEC.md` §6 Features F27
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Implemented
 > Category: Client / Operations
 
 ## Definition (from block spec)
@@ -23,7 +23,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-30.1: GUI can view and change active context
 - [x] AC-30.2: GUI can set default template, runtime mode, and network mode preferences
 - [x] AC-30.3: GUI displays runtime/backend availability from daemon diagnostics
-- [x] AC-30.4: GUI exposes `pi system doctor` equivalent results
+- [x] AC-30.4: GUI exposes `pi-box system doctor` equivalent results
 - [x] AC-30.5: GUI can export a support bundle containing daemon diagnostics, GUI logs, version metadata, and redacted configuration
 - [x] AC-30.6: Daemon policy overrides conflicting GUI preferences
 
@@ -39,7 +39,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | `GET /v1/support-bundle` | Redacted GUI support bundle payload |
 | `GET /v1/contexts` | GUI-readable active context and configured contexts |
 | `POST /v1/contexts/use` | GUI active context switch |
-| `pi system doctor` behavior | Baseline for doctor-equivalent diagnostics |
+| `pi-box system doctor` behavior | Baseline for doctor-equivalent diagnostics |
 
 ## Security Considerations
 
@@ -61,7 +61,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Implementation Approach
 
-Implement settings as GUI preference management plus read-only daemon diagnostics. Doctor-equivalent output may use daemon API diagnostics directly or shell out to `pi system doctor` only where no structured API exists yet. Support bundle generation collects GUI logs, daemon diagnostics, version metadata, and redacted configuration.
+Implement settings as GUI preference management plus read-only daemon diagnostics. Doctor-equivalent output may use daemon API diagnostics directly or shell out to `pi-box system doctor` only where no structured API exists yet. Support bundle generation collects GUI logs, daemon diagnostics, version metadata, and redacted configuration.
 
 **ADR references:** ADR-003 (Remote Context and Auth Model), ADR-004 (GUI Workbench Architecture and Trust Boundaries).
 **ADR gaps:** None.

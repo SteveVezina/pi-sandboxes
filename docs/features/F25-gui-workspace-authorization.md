@@ -1,7 +1,7 @@
 # F25: GUI Workspace Authorization
 
 > Source: `SPEC.md` §6 Features F25
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Implemented
 > Category: Client / Security
 
 ## Definition (from block spec)

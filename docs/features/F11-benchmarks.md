@@ -50,19 +50,22 @@ idle_memory_per_sandbox=72MiB
 
 CLI command:
 ```bash
-pi bench run
-pi bench run --mode fast
-pi bench run --mode compat
+pi-box bench run
+pi-box bench run --mode fast
+pi-box bench run --mode compat
 ```
+
+Continuous verification runs in GitHub Actions. Every pull request and push runs source formatting checks, Go linting, Go builds, Go tests, and the GUI web build. Tagged releases additionally produce signed-by-checksum binary archives for supported platforms, upload them as workflow artifacts, attach them to the GitHub Release, and publish the daemon container image to GitHub Container Registry.
 
 ## Acceptance Criteria
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-14.1: `pi bench run` executes full benchmark suite
+- [x] AC-14.1: `pi-box bench run` executes full benchmark suite
 - [x] AC-14.2: All 13 required benchmarks execute
 - [x] AC-14.3: Output includes p50/p95 latency and memory per sandbox
 - [x] AC-14.4: Per-mode comparison (fast vs compat)
+- [x] AC-14.5: GitHub Actions runs lint, build, test, GUI build, and release artifact publication workflows
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -74,7 +77,8 @@ Each criterion must be:
 | Component | Impact |
 |-----------|--------|
 | `pkg/bench/` | Benchmark framework |
-| `cmd/pi/bench/` | CLI bench commands |
+| `cmd/pi-box/bench/` | CLI bench commands |
+| `.github/workflows/release.yml` | Continuous verification and release artifact publication |
 | F3: Fast Backend | Benchmark target |
 | F4: Compat Backend | Benchmark target |
 | F13: Snapshot & Rollback | Benchmark target (M2) |
@@ -128,20 +132,20 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ### T11.2: Benchmark CLI
 
-**Description:** Implement `pi bench run` CLI command with `--mode` and `--json` flags.
+**Description:** Implement `pi-box bench run` CLI command with `--mode` and `--json` flags.
 
 **Acceptance criteria:**
-- [x] `pi bench run` executes all benchmarks
-- [x] `pi bench run --mode fast` runs only fast mode
-- [x] `pi bench run --mode compat` runs only compat mode
+- [x] `pi-box bench run` executes all benchmarks
+- [x] `pi-box bench run --mode fast` runs only fast mode
+- [x] `pi-box bench run --mode compat` runs only compat mode
 - [x] `--json` flag produces JSON output
 - [x] Progress reported during long benchmarks
 
 **Verification:**
-- [x] `go build ./cmd/pi/...`
+- [x] `go build ./cmd/pi-box/...`
 - [x] Integration test: bench command works
 
-**Files:** `cmd/pi/bench/run.go`
+**Files:** `cmd/pi-box/bench/run.go`
 **Size:** S
 **Depends on:** T11.1 (benchmark framework)
 
@@ -173,6 +177,26 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Size:** L → split across multiple commits
 **Depends on:** T11.1 (benchmark framework)
 
+### T11.4: GitHub Actions release pipeline
+
+**Description:** Add a GitHub Actions workflow that validates pull requests and publishes release artifacts.
+
+**Acceptance criteria:**
+- [x] Pull requests and pushes run Go formatting checks, `go vet`, `golangci-lint`, build, and tests
+- [x] Pull requests and pushes run the GUI web build
+- [x] Tagged releases build archives for Linux, macOS, and Windows
+- [x] Release archives include `pi-box`, `pi-sandboxd`, `pi-agentd`, `pi-init`, and `pi-vmm-manager`
+- [x] Tagged releases publish checksums and attach archives to the GitHub Release
+- [x] Default-branch and tagged builds publish the daemon image to GitHub Container Registry
+
+**Verification:**
+- [x] GitHub workflow syntax checked locally
+- [ ] Workflow executed by GitHub Actions
+
+**Files:** `.github/workflows/release.yml`, `Dockerfile`, `Makefile`
+**Size:** M
+**Depends on:** T11.1 (benchmark framework), existing Makefile build targets
+
 ## Verification Plan
 
 - [x] `go build ./pkg/bench/...` succeeds
@@ -181,6 +205,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Per-mode comparison works (fast vs compat)
 - [x] Benchmark targets met: warm exec p50 < 10ms (fast), artifact export < 500ms
 - [x] 8 tool-dependent benchmarks correctly return 0 (not fake sleep) when tools absent
+- [x] GitHub Actions workflow validates lint/build/test and publishes release artifacts on tags
 
 ## Spec Gaps
 
@@ -200,5 +225,4 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 - Benchmark result storage/history (future)
 - Benchmark comparison across versions (future)
-- Benchmark CI integration (future)
 - Benchmark alerting (future)

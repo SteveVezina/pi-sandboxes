@@ -7,7 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/template"
+	"gopkg.in/yaml.v3"
 )
 
 // CreateRequest is the request body for sandbox creation.
@@ -64,11 +67,75 @@ func CreateSandbox(store *session.Store) http.HandlerFunc {
 			return
 		}
 
+		// For compat mode, resolve the template image and create the container
+		if req.Mode == "compat" {
+			if err := createCompatContainer(store, id, req.Template); err != nil {
+				// Clean up the sandbox if container creation fails
+				store.Delete(id)
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("container creation failed: %v", err)})
+				return
+			}
+		}
+
 		// Update state to warm
 		store.UpdateState(id, session.StateWarm)
 
 		writeJSON(w, http.StatusCreated, map[string]string{"id": id})
 	}
+}
+
+// createCompatContainer resolves the template image and creates a Docker container.
+func createCompatContainer(store *session.Store, sandboxID, templateName string) error {
+	// Load the template
+	tmplStore := template.NewStore(filepath.Join(os.Getenv("HOME"), ".pi-box", "templates"))
+	t, err := tmplStore.Get(templateName)
+	if err != nil {
+		// Use default templates if template file doesn't exist
+		defaults := template.DefaultTemplates()
+		yamlData, ok := defaults[templateName]
+		if !ok {
+			return fmt.Errorf("template %s not found", templateName)
+		}
+		var defaultTemplate template.Template
+		if err := yaml.Unmarshal([]byte(yamlData), &defaultTemplate); err != nil {
+			return fmt.Errorf("parse default template %s: %w", templateName, err)
+		}
+		t = &defaultTemplate
+	}
+
+	// Resolve the image
+	image := template.ResolveTemplateImage(t)
+
+	// Create the container
+	spec := &compat.ContainerSpec{
+		ID:        sandboxID,
+		Image:     image,
+		Workspace: "/workspace",
+		Artifacts: "/artifacts",
+		Caches: map[string]string{
+			"npm":      "/cache/npm",
+			"pnpm":     "/cache/pnpm",
+			"uv":       "/cache/uv",
+			"pip":      "/cache/pip",
+			"go-mod":   "/cache/go/mod",
+			"go-build": "/cache/go/build",
+			"cargo":    "/cache/cargo",
+		},
+	}
+
+	container, err := compat.CreateContainer(spec)
+	if err != nil {
+		return fmt.Errorf("create container: %w", err)
+	}
+
+	// Verify the container is running
+	state := container.State()
+	if state != "running" {
+		container.Destroy()
+		return fmt.Errorf("container not running after creation: %s", state)
+	}
+
+	return nil
 }
 
 func validateWorkspaceSource(mode, source string) error {

@@ -51,8 +51,8 @@ func ArtifactsSandbox(store *session.Store) http.HandlerFunc {
 		case "POST":
 			// Check for export action
 			var req struct {
-				Action    string `json:"action"`
-				Output    string `json:"output"`
+				Action      string `json:"action"`
+				Output      string `json:"output"`
 				Destination string `json:"destination"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -82,8 +82,8 @@ func ArtifactsSandbox(store *session.Store) http.HandlerFunc {
 					return
 				}
 				writeJSON(w, http.StatusOK, map[string]interface{}{
-					"id":        id,
-					"action":    "pull",
+					"id":          id,
+					"action":      "pull",
 					"destination": dest,
 				})
 
@@ -115,8 +115,8 @@ func ArtifactsSandbox(store *session.Store) http.HandlerFunc {
 					return
 				}
 				writeJSON(w, http.StatusOK, map[string]interface{}{
-					"id":        id,
-					"action":    "export",
+					"id":          id,
+					"action":      "export",
 					"destination": dest,
 				})
 

@@ -182,6 +182,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 |-----|-------------------|--------------------|
 | OCI runtime priority not specified | §7.2 Compat mode | Add: "Prefer containerd > Podman > runc > Docker" |
 
+### Resolved gaps
+
+| Gap | Block Spec Section | Resolution |
+|-----|-------------------|------------|
+| Template `base` field not mapped to OCI image name | §18 Templates, §20 Daemon API | PROP-007 — added `ResolveImage()` and `ResolveTemplateImage()` functions, image resolution in sandbox creation flow, state verification before WARM transition |
+
 ### ADR gaps (needs architectural decision)
 
 | Question | Affects Features | Proposed ADR |

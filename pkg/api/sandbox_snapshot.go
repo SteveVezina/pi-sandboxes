@@ -69,8 +69,8 @@ func SnapshotSandbox(store *session.Store) http.HandlerFunc {
 				return
 			}
 			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"id":       id,
-				"action":   "list",
+				"id":        id,
+				"action":    "list",
 				"snapshots": list,
 			})
 

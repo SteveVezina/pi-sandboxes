@@ -315,7 +315,7 @@ type CgroupConfig struct {
 // DefaultCgroupConfig returns default cgroup limits.
 func DefaultCgroupConfig() *CgroupConfig {
 	return &CgroupConfig{
-		CPUPeriod: 100000,
+		CPUPeriod:   100000,
 		MemoryLimit: 512 * 1024 * 1024, // 512MB
 		MaxPIDs:     128,
 	}

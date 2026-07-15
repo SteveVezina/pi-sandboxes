@@ -10,28 +10,28 @@ import (
 
 // Entry represents a single command execution log entry.
 type Entry struct {
-	Sequence    int       `json:"sequence"`
-	Timestamp   time.Time `json:"timestamp"`
-	Command     string    `json:"command"`
-	ExitCode    int       `json:"exitCode"`
-	DurationMs  int64     `json:"durationMs"`
-	TimedOut    bool      `json:"timedOut"`
-	Truncated   bool      `json:"truncated"`
-	StdoutPath  string    `json:"stdoutPath"`
-	StderrPath  string    `json:"stderrPath"`
+	Sequence   int       `json:"sequence"`
+	Timestamp  time.Time `json:"timestamp"`
+	Command    string    `json:"command"`
+	ExitCode   int       `json:"exitCode"`
+	DurationMs int64     `json:"durationMs"`
+	TimedOut   bool      `json:"timedOut"`
+	Truncated  bool      `json:"truncated"`
+	StdoutPath string    `json:"stdoutPath"`
+	StderrPath string    `json:"stderrPath"`
 }
 
 // Manager handles log storage for a sandbox session.
 type Manager struct {
-	logsDir    string
-	sequence   int
+	logsDir  string
+	sequence int
 }
 
 // NewManager creates a log manager for the given sandbox ID.
 func NewManager(sandboxID string) *Manager {
 	logsDir := filepath.Join(os.TempDir(), "pi-sandbox-logs", sandboxID)
 	return &Manager{
-		logsDir: logsDir,
+		logsDir:  logsDir,
 		sequence: 0,
 	}
 }

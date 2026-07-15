@@ -48,10 +48,10 @@ func DiffSandbox(store *session.Store) http.HandlerFunc {
 		}
 
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"id":         id,
-			"name":       meta.Name,
-			"diff":       diff.Diff,
-			"timed_out":  diff.TimedOut,
+			"id":          id,
+			"name":        meta.Name,
+			"diff":        diff.Diff,
+			"timed_out":   diff.TimedOut,
 			"duration_ms": diff.DurationMs,
 		})
 	}

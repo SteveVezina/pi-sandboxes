@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/pi-sandbox/pi/cmd/pi/box"
-	_ "github.com/pi-sandbox/pi/cmd/pi/bench"
-	"github.com/pi-sandbox/pi/cmd/pi/cli"
-	_ "github.com/pi-sandbox/pi/cmd/pi/system"
-	_ "github.com/pi-sandbox/pi/cmd/pi/template"
+	_ "github.com/pi-sandbox/pi/cmd/pi-box/bench"
+	_ "github.com/pi-sandbox/pi/cmd/pi-box/box"
+	"github.com/pi-sandbox/pi/cmd/pi-box/cli"
+	_ "github.com/pi-sandbox/pi/cmd/pi-box/system"
+	_ "github.com/pi-sandbox/pi/cmd/pi-box/template"
 )
 
 func TestRootHelp(t *testing.T) {

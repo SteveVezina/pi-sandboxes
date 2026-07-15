@@ -8,7 +8,7 @@
 
 | Feature ID | Name | Description | Milestone |
 |------------|------|-------------|-----------|
-| F22 | Remote Daemon Contexts | CLI context management for local and remote daemons, including `pi context create/use/list/inspect/delete` and context-aware `pi box` commands | M6 |
+| F22 | Remote Daemon Contexts | CLI context management for local and remote daemons, including `pi-box context create/use/list/inspect/delete` and context-aware `pi-box box` commands | M6 |
 
 ## Expanded Specification
 
@@ -20,10 +20,10 @@ Per ADR-003, context state is stored in `~/.pi-box/contexts.yaml`. Each context 
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-25.1: `pi context create workstation ssh://gpu-box.local` creates a remote context
-- [x] AC-25.2: `pi context use workstation` switches the active context
-- [x] AC-25.3: `pi context list` shows local and remote contexts
-- [x] AC-25.4: `pi box create` uses the active context
+- [x] AC-25.1: `pi-box context create workstation ssh://gpu-box.local` creates a remote context
+- [x] AC-25.2: `pi-box context use workstation` switches the active context
+- [x] AC-25.3: `pi-box context list` shows local and remote contexts
+- [x] AC-25.4: `pi-box box create` uses the active context
 - [x] AC-25.5: Commands can override the active context explicitly
 - [x] AC-25.6: Contexts persist in `~/.pi-box/contexts.yaml`
 - [x] AC-25.7: Context schema supports `target`, `transport`, and `auth.type`
@@ -33,15 +33,23 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Component | Impact |
 |-----------|--------|
-| `cmd/pi/context/` | Context CLI group |
-| `cmd/pi/cli` | Global context override flag |
+| `cmd/pi-box/context/` | Context CLI group |
+| `cmd/pi-box/cli` | Global context override flag |
 | `pkg/context/` | Context store |
-| `cmd/pi/box` | Context-aware daemon client |
+| `cmd/pi-box/box` | Context-aware daemon client |
+| `GET /v1/contexts` | GUI/API context list and active context |
+| `POST /v1/contexts` | GUI/API context create |
+| `GET /v1/contexts/{name}` | GUI/API context inspect |
+| `PUT /v1/contexts/{name}` | GUI/API context update |
+| `DELETE /v1/contexts/{name}` | GUI/API context delete |
+| `POST /v1/contexts/use` | GUI/API active context switch |
 | `docs/decisions/ADR-003-remote-context-and-auth-model.md` | Context/auth model decision |
 
 ## Security Considerations
 
 - Contexts must not store raw credentials in plaintext.
+- GUI/API context CRUD accepts bearer token environment variable names, not raw bearer token values.
+- SSH contexts may reference ssh-agent metadata such as user/host, but must not persist private key material.
 - Active context changes must be explicit and inspectable.
 - Remote context configuration must not leak into sandbox workspaces.
 
@@ -75,14 +83,14 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] Unit tests for context store (`tests/context/store_test.go`)
 - [x] CLI integration tests for context commands (`tests/context/cli_test.go`)
 
-**Files:** `cmd/pi/context/commands.go`, `pkg/context/store.go`, `tests/context/store_test.go`, `tests/context/cli_test.go`
+**Files:** `cmd/pi-box/context/commands.go`, `pkg/context/store.go`, `tests/context/store_test.go`, `tests/context/cli_test.go`
 **Size:** M
 **Depends on:** F2
 
 ### T22.2: Context-aware command routing ✅
 
 **Acceptance criteria:**
-- [x] `pi box` commands use active context
+- [x] `pi-box box` commands use active context
 - [x] Per-command context override works
 - [x] Local context remains the default
 - [x] `--context <name>` overrides active context
@@ -91,16 +99,36 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] Integration test: active context routes API calls (`tests/context/resolve_test.go`)
 - [x] Integration test: explicit override wins (`tests/context/cli_test.go`)
 
-**Files:** `cmd/pi/cli/root.go`, `cmd/pi/box/box.go`
+**Files:** `cmd/pi-box/cli/root.go`, `cmd/pi-box/box/box.go`
 **Size:** M
 **Depends on:** T22.1, F23
+
+### T22.3: GUI/API context CRUD ✅
+
+**Acceptance criteria:**
+- [x] `POST /v1/contexts` creates a context with `name`, `target`, `transport`, `auth_type`, and optional `token_env`, `ssh_user`, `ssh_host`
+- [x] `GET /v1/contexts/{name}` returns inspectable context metadata without raw credentials
+- [x] `PUT /v1/contexts/{name}` updates editable context metadata while preserving reserved `local`
+- [x] `DELETE /v1/contexts/{name}` deletes non-local contexts and resets active context to `local` if needed
+- [x] GUI Contexts view can create, edit, activate, and delete contexts
+- [x] GUI/API rejects raw bearer tokens and private key material; bearer auth uses `token_env`
+
+**Verification:**
+- [x] API tests cover context create, inspect, update, delete, reserved local protection, and active reset
+- [x] `npm run build` passes in `apps/gui`
+- [x] `go test ./tests/api -run Contexts` passes
+
+**Files:** `pkg/api/contexts.go`, `pkg/daemon/router.go`, `pkg/context/store.go`, `tests/api/contexts_test.go`, `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`
+**Size:** M
+**Depends on:** T22.1, F24
 
 ## Verification Plan
 
 - [x] Context commands work
-- [x] `pi box` uses active context
+- [x] `pi-box box` uses active context
 - [x] Override behavior is deterministic
 - [x] Context schema validation works
+- [x] GUI/API context CRUD routes are covered by API tests
 
 ## Spec Gaps
 

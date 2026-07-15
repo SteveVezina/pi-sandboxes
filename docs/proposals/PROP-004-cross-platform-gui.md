@@ -58,7 +58,7 @@ The GUI must be implemented as a client of the existing daemon and context contr
 - The GUI uses F22/F23 remote contexts for remote daemon operation.
 - The GUI must not run sandbox workloads in the renderer/UI process.
 - The GUI must not introduce a second sandbox lifecycle implementation.
-- The GUI may shell out to the `pi` CLI only for diagnostics or compatibility gaps; normal operations should use the daemon API or SDK.
+- The GUI may shell out to the `pi-box` CLI only for diagnostics or compatibility gaps; normal operations should use the daemon API or SDK.
 - The GUI should share TypeScript SDK types where practical to avoid drift.
 - The GUI stores user preferences separately from sandbox workspaces.
 
@@ -156,7 +156,7 @@ Add acceptance criteria after AC-26.
 - [ ] GUI can view and change active context
 - [ ] GUI can set default template, runtime mode, and network mode preferences
 - [ ] GUI displays runtime/backend availability from daemon diagnostics
-- [ ] GUI exposes `pi system doctor` equivalent results
+- [ ] GUI exposes `pi-box system doctor` equivalent results
 - [ ] GUI can export a support bundle containing daemon diagnostics, GUI logs, version metadata, and redacted configuration
 - [ ] Daemon policy overrides conflicting GUI preferences
 

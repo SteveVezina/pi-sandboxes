@@ -29,10 +29,10 @@ func buildSpecTestBin(t *testing.T) string {
 	if runtime.GOOS == "windows" {
 		out += ".exe"
 	}
-	cmd := exec.Command("go", "build", "-o", out, "./cmd/pi")
+	cmd := exec.Command("go", "build", "-o", out, "./cmd/pi-box")
 	cmd.Dir = root
 	if b, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("build pi: %v\n%s", err, b)
+		t.Fatalf("build pi-box: %v\n%s", err, b)
 	}
 	return out
 }
@@ -185,21 +185,21 @@ func TestSDKCreateCloneExecDiffMethods(t *testing.T) {
 	}
 }
 
-// TestDestroyAllFlagDocumented verifies AC-8.4: pi box destroy --help
+// TestDestroyAllFlagDocumented verifies AC-8.4: pi-box box destroy --help
 // documents the --all flag.
 func TestDestroyAllFlagDocumented(t *testing.T) {
 	bin := buildSpecTestBin(t)
 	out, _ := exec.Command(bin, "box", "destroy", "--help").CombinedOutput()
 	if !strings.Contains(string(out), "--all") {
-		t.Errorf("pi box destroy --help does not document --all (AC-8.4):\n%s", out)
+		t.Errorf("pi-box box destroy --help does not document --all (AC-8.4):\n%s", out)
 	}
 }
 
-// TestJSONFlagDocumented verifies AC-1.5: pi box --help mentions --json flag.
+// TestJSONFlagDocumented verifies AC-1.5: pi-box box --help mentions --json flag.
 func TestJSONFlagDocumented(t *testing.T) {
 	bin := buildSpecTestBin(t)
 	out, _ := exec.Command(bin, "box", "--help").CombinedOutput()
 	if !strings.Contains(string(out), "--json") {
-		t.Errorf("pi box --help does not document --json flag (AC-1.5):\n%s", out)
+		t.Errorf("pi-box box --help does not document --json flag (AC-1.5):\n%s", out)
 	}
 }

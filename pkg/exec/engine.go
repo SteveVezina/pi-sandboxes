@@ -45,12 +45,12 @@ type Result struct {
 // StreamEvent is a single NDJSON event emitted by RunStream.
 // type is one of: "stdout", "stderr", "done".
 type StreamEvent struct {
-	Type       string  `json:"type"`
-	Data       string  `json:"data,omitempty"`
-	ExitCode   *int    `json:"exitCode,omitempty"`
-	DurationMs int64   `json:"durationMs,omitempty"`
-	Truncated  bool    `json:"truncated,omitempty"`
-	TimedOut   bool    `json:"timedOut,omitempty"`
+	Type       string `json:"type"`
+	Data       string `json:"data,omitempty"`
+	ExitCode   *int   `json:"exitCode,omitempty"`
+	DurationMs int64  `json:"durationMs,omitempty"`
+	Truncated  bool   `json:"truncated,omitempty"`
+	TimedOut   bool   `json:"timedOut,omitempty"`
 }
 
 // Engine executes commands with isolation, timeout, and output limits.

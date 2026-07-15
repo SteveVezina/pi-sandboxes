@@ -4,9 +4,9 @@ package network
 type Mode string
 
 const (
-	ModeNone     Mode = "none"
+	ModeNone       Mode = "none"
 	ModeRestricted Mode = "restricted"
-	ModeOpen     Mode = "open"
+	ModeOpen       Mode = "open"
 )
 
 // IsAllowed checks if a host/domain is allowed in the given mode.
@@ -30,10 +30,10 @@ func IsDefaultDeny(host string) bool {
 
 // DefaultDeny is the list of hosts that are always blocked.
 var DefaultDeny = DomainList{
-	"169.254.169.254",  // Cloud metadata
-	"169.254.20.1",     // AWS instance metadata
-	"100.169.90.56",    // AWS internal
-	"127.0.0.1",        // Host localhost
+	"169.254.169.254", // Cloud metadata
+	"169.254.20.1",    // AWS instance metadata
+	"100.169.90.56",   // AWS internal
+	"127.0.0.1",       // Host localhost
 	"localhost",
 	"0.0.0.0",
 }

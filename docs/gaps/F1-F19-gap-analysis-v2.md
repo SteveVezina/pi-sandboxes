@@ -37,8 +37,8 @@
 ### 1. F1: CLI Entry Point — ✅ RESOLVED
 - **Before:** All CLI commands were stubs (`os.Exit(1)`)
 - **After:** All commands wired through to daemon API via curl
-- **Files changed:** `cmd/pi/box/box.go` (rewritten)
-- **Remaining:** `pi box shell` is a stub (opens exec session but not truly interactive)
+- **Files changed:** `cmd/pi-box/box/box.go` (rewritten)
+- **Remaining:** `pi-box box shell` is a stub (opens exec session but not truly interactive)
 
 ### 2. F2: Daemon API — ✅ RESOLVED
 - **Before:** 5 of 13 required endpoints wired
@@ -55,7 +55,7 @@
 - **Files modified:** `pkg/daemon/router.go` (all routes registered)
 
 ### 3. F16: System Commands — ✅ RESOLVED (partial)
-- **Before:** `pi system doctor` only checked filesystem state
+- **Before:** `pi-box system doctor` only checked filesystem state
 - **After:** Doctor now reports available runtime backends via `detect.AvailableRuntimes()`
 - **File changed:** `pkg/system/doctor.go`
 
@@ -88,9 +88,9 @@
 **Impact:** SDKs work for short commands but don't support streaming output for long-running processes. This is a spec gap.
 
 ### F1: CLI — Minor
-- `pi box shell` — currently just calls exec with `/bin/sh` command. Not truly interactive.
-- `pi box destroy --all` — not implemented (prints error)
-- `pi template build/update/prune` — CLI commands registered but not wired to daemon API
+- `pi-box box shell` — currently just calls exec with `/bin/sh` command. Not truly interactive.
+- `pi-box box destroy --all` — not implemented (prints error)
+- `pi-box template build/update/prune` — CLI commands registered but not wired to daemon API
 
 ---
 

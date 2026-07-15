@@ -1,11 +1,11 @@
-FROM golang:1.24-bookworm AS builder
+FROM golang:1.25-bookworm AS builder
 
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN go build -ldflags="-s -w" -o /out/pi-sandboxd ./cmd/pi-sandboxd/main.go
-RUN go build -ldflags="-s -w" -o /out/pi-box ./cmd/pi/main.go
+RUN go build -ldflags="-s -w" -o /out/pi-box ./cmd/pi-box/main.go
 
 FROM debian:bookworm-slim
 

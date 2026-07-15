@@ -15,11 +15,11 @@ Core positioning:
 The first version should feel like:
 
 ```bash
-pi box create node-python
-pi box clone <repo>
-pi box exec -- pnpm test
-pi box diff
-pi box artifacts pull ./out
+pi-box box create node-python
+pi-box box clone <repo>
+pi-box box exec -- pnpm test
+pi-box box diff
+pi-box box artifacts pull ./out
 ```
 
 ## 2. Primary goals
@@ -122,13 +122,13 @@ repeat
 | F13 | Snapshot & Rollback | Filesystem-level snapshot creation and rollback (overlay/reflink) | M2 |
 | F14 | Benchmarks | Mandatory benchmark suite measuring warm exec, install, test, snapshot, export, and density | M1 |
 | F15 | SDKs | TypeScript and Python SDKs with streaming output support | M3 |
-| F16 | System Commands | `pi system status/doctor/prune/disk-usage` for local state inspection | M1 |
+| F16 | System Commands | `pi-box system status/doctor/prune/disk-usage` for local state inspection | M1 |
 | F17 | Policy Enforcement | Default security policy: no host home mount, no Docker socket, process limits, output limits | M2 |
 | F18 | Secure Backend | gVisor-backed runtime mode for unknown or untrusted repositories, including runsc integration, secure-mode lifecycle, compatibility notes, and benchmark comparison against fast/compat | M4 |
 | F19 | Runtime Selection & Fallback | Runtime detection and backend selection across fast, compat, secure, and future microVM modes, including fallback to compat mode when secure mode is unavailable or incompatible | M4 |
 | F20 | MicroVM Backend | Firecracker or Cloud Hypervisor backend with `pi-vmm-manager`, tiny guest rootfs, workspace disk, template snapshot restore, artifact export, and reseed-on-restore behavior | M5 |
 | F21 | MicroVM Guest Control Plane | Guest-side `pi-init` and `pi-agentd` over virtio-vsock for command execution, lifecycle coordination, file/artifact transfer, and sandbox readiness reporting | M5 |
-| F22 | Remote Daemon Contexts | CLI context management for local and remote daemons, including `pi context create/use/list/inspect/delete` and context-aware `pi box` commands | M6 |
+| F22 | Remote Daemon Contexts | CLI context management for local and remote daemons, including `pi-box context create/use/list/inspect/delete` and context-aware `pi-box box` commands | M6 |
 | F23 | Remote Daemon Transport & Auth | SSH/Tailscale/WireGuard-friendly remote daemon access with secure local-to-remote API authentication and remote workstation support | M6 |
 | F24 | Cross-Platform GUI Workbench | Desktop application for macOS, Windows, and Linux that connects to local or remote PI daemons, creates and manages sandbox sessions, and exposes common sandbox workflows without replacing the CLI | M7 |
 | F25 | GUI Workspace Authorization | Explicit project-folder selection, allowed folder management, and safe bind/copy workspace setup for GUI-launched sessions | M7 |
@@ -138,10 +138,10 @@ repeat
 ## 7. Acceptance Criteria
 
 ### AC-1: CLI Works (F1)
-- [ ] `pi box create --name demo --template node-python --mode fast` creates a sandbox
-- [ ] `pi box list` shows created sandboxes
-- [ ] `pi box inspect demo` shows sandbox details
-- [ ] `pi box destroy demo` cleans up sandbox
+- [ ] `pi-box box create --name demo --template node-python --mode fast` creates a sandbox
+- [ ] `pi-box box list` shows created sandboxes
+- [ ] `pi-box box inspect demo` shows sandbox details
+- [ ] `pi-box box destroy demo` cleans up sandbox
 
 ### AC-2: Daemon API Responds (F2)
 - [ ] `pi-sandboxd` listens on `~/.pi-box/sandboxd.sock`
@@ -167,19 +167,19 @@ repeat
 
 ### AC-5: Templates Are Usable (F5)
 - [ ] `base`, `node`, `python`, `go`, `rust`, `node-python`, `polyglot` templates defined
-- [ ] `pi template list` shows available templates
-- [ ] `pi template inspect <name>` shows template details
+- [ ] `pi-box template list` shows available templates
+- [ ] `pi-box template inspect <name>` shows template details
 - [ ] Templates configure correct toolchains and cache mounts
 
 ### AC-6: File Operations Work (F6)
-- [ ] `pi box clone <repo>` clones a repository into sandbox workspace
-- [ ] `pi box files read <id> <path>` reads a file from sandbox
-- [ ] `pi box files write <id> <path>` writes a file to sandbox
-- [ ] `pi box diff <id>` shows workspace diff
-- [ ] `pi box patch <id>` exports workspace as patch
+- [ ] `pi-box box clone <repo>` clones a repository into sandbox workspace
+- [ ] `pi-box box files read <id> <path>` reads a file from sandbox
+- [ ] `pi-box box files write <id> <path>` writes a file to sandbox
+- [ ] `pi-box box diff <id>` shows workspace diff
+- [ ] `pi-box box patch <id>` exports workspace as patch
 
 ### AC-7: Exec Streams Output (F7)
-- [ ] `pi box exec <id> -- <cmd>` runs command with streaming stdout/stderr
+- [ ] `pi-box box exec <id> -- <cmd>` runs command with streaming stdout/stderr
 - [ ] Exit code returned accurately
 - [ ] Timeout status reported when exceeded
 - [ ] Output truncated when exceeding maxOutput, with `truncated` flag
@@ -189,16 +189,16 @@ repeat
 - [ ] Sandbox created once and kept warm
 - [ ] Multiple exec calls reuse the same session
 - [ ] TTL expiration triggers cleanup
-- [ ] `pi box destroy --all` cleans all sandboxes
+- [ ] `pi-box box destroy --all` cleans all sandboxes
 
 ### AC-9: Artifacts Export (F9)
-- [ ] `pi box artifacts list <id>` lists available artifacts
-- [ ] `pi box artifacts pull <id> <dest>` pulls artifacts to host
-- [ ] `pi box artifacts pack <id> --output <file>` creates archive
+- [ ] `pi-box box artifacts list <id>` lists available artifacts
+- [ ] `pi-box box artifacts pull <id> <dest>` pulls artifacts to host
+- [ ] `pi-box box artifacts pack <id> --output <file>` creates archive
 
 ### AC-10: Logs Available (F10)
-- [ ] `pi box logs <id>` shows command logs
-- [ ] `pi box history <id>` shows command history
+- [ ] `pi-box box logs <id>` shows command logs
+- [ ] `pi-box box history <id>` shows command history
 - [ ] Each log entry includes: command, exit code, duration, timeout status, output truncation
 
 ### AC-11: Network Modes Work (F11)
@@ -210,16 +210,16 @@ repeat
 ### AC-12: Caches Are Scoped (F12)
 - [ ] `/cache/npm`, `/cache/pnpm`, `/cache/pip`, `/cache/uv`, `/cache/go-mod`, `/cache/go-build`, `/cache/cargo` mounted
 - [ ] Caches scoped by template/runtime/user
-- [ ] `pi system prune` can clean caches
+- [ ] `pi-box system prune` can clean caches
 
 ### AC-13: Snapshots Work (F13)
-- [ ] `pi box snapshot <id> <name>` creates a named snapshot
-- [ ] `pi box rollback <id> <name>` restores to snapshot
+- [ ] `pi-box box snapshot <id> <name>` creates a named snapshot
+- [ ] `pi-box box rollback <id> <name>` restores to snapshot
 - [ ] Snapshot creation uses overlay upperdir or reflink
 - [ ] Snapshot metadata stored under `~/.pi-box/sandboxes/<id>/snapshots/`
 
 ### AC-14: Benchmarks Run (F14)
-- [ ] `pi bench run` executes full benchmark suite
+- [ ] `pi-box bench run` executes full benchmark suite
 - [ ] All 13 required benchmarks execute: warm_exec_echo, warm_exec_shell, file_scan_rg, git_clone_small, pnpm_install_cached, uv_sync_cached, go_test_cached, cargo_test_cached, snapshot_create, snapshot_rollback, artifact_export_20mb, parallel_10, parallel_100
 - [ ] Output includes p50/p95 latency and memory per sandbox
 - [ ] Per-mode comparison (fast vs compat)
@@ -230,10 +230,10 @@ repeat
 - [ ] Both support streaming output
 
 ### AC-16: System Commands Work (F16)
-- [ ] `pi system status` shows daemon and sandbox status
-- [ ] `pi system doctor` validates configuration
-- [ ] `pi system prune` cleans old state
-- [ ] `pi system disk-usage` shows storage breakdown
+- [ ] `pi-box system status` shows daemon and sandbox status
+- [ ] `pi-box system doctor` validates configuration
+- [ ] `pi-box system prune` cleans old state
+- [ ] `pi-box system disk-usage` shows storage breakdown
 
 ### AC-17: Policy Enforced (F17)
 - [ ] Host home directory not mounted by default
@@ -246,13 +246,13 @@ repeat
 - [ ] Max processes 256 by default
 
 ### AC-18: End-to-End Agent Loop (F1, F2, F3, F5-F10)
-- [ ] `pi box create --name demo --template node-python --mode fast`
-- [ ] `pi box clone demo https://github.com/some/repo`
-- [ ] `pi box exec demo -- pnpm install`
-- [ ] `pi box exec demo -- pnpm test`
-- [ ] `pi box diff demo`
-- [ ] `pi box artifacts pull demo ./out`
-- [ ] `pi box destroy demo`
+- [ ] `pi-box box create --name demo --template node-python --mode fast`
+- [ ] `pi-box box clone demo https://github.com/some/repo`
+- [ ] `pi-box box exec demo -- pnpm install`
+- [ ] `pi-box box exec demo -- pnpm test`
+- [ ] `pi-box box diff demo`
+- [ ] `pi-box box artifacts pull demo ./out`
+- [ ] `pi-box box destroy demo`
 - [ ] All steps succeed without direct host filesystem access
 
 ### AC-19: Warm Exec Performance (F3, F4, F14)
@@ -269,14 +269,14 @@ repeat
 - [ ] Rust: `cargo fetch`, `cargo test`, `cargo build`
 
 ### AC-21: Secure Backend Works (F18)
-- [ ] `pi box create --mode secure <template>` creates a sandbox using gVisor/runsc when available
+- [ ] `pi-box box create --mode secure <template>` creates a sandbox using gVisor/runsc when available
 - [ ] Secure sandboxes execute commands through the same daemon API as fast/compat sandboxes
 - [ ] Secure mode does not mount the host home directory or Docker socket by default
 - [ ] Secure mode exposes compatibility errors with actionable guidance
 - [ ] Benchmarks compare fast vs compat vs secure modes
 
 ### AC-22: Runtime Selection and Fallback Works (F19)
-- [ ] `pi system doctor` reports available runtime backends
+- [ ] `pi-box system doctor` reports available runtime backends
 - [ ] Backend selection honors explicit `--mode` requests
 - [ ] Auto-selection prefers an available compatible backend based on trust/config
 - [ ] Secure-mode startup failure can fall back to compat mode when policy permits
@@ -307,10 +307,10 @@ repeat
 - [ ] Host marks sandbox warm only after the guest sends `ready`
 
 ### AC-25: Remote Daemon Contexts Work (F22)
-- [ ] `pi context create workstation ssh://gpu-box.local` creates a remote context
-- [ ] `pi context use workstation` switches the active context
-- [ ] `pi context list` shows local and remote contexts
-- [ ] `pi box create` uses the active context
+- [ ] `pi-box context create workstation ssh://gpu-box.local` creates a remote context
+- [ ] `pi-box context use workstation` switches the active context
+- [ ] `pi-box context list` shows local and remote contexts
+- [ ] `pi-box box create` uses the active context
 - [ ] Commands can override the active context explicitly
 - [ ] Contexts persist in `~/.pi-box/contexts.yaml`
 - [ ] Context schema supports `target`, `transport`, and `auth.type`
@@ -355,7 +355,7 @@ repeat
 - [ ] GUI can view and change active context
 - [ ] GUI can set default template, runtime mode, and network mode preferences
 - [ ] GUI displays runtime/backend availability from daemon diagnostics
-- [ ] GUI exposes `pi system doctor` equivalent results
+- [ ] GUI exposes `pi-box system doctor` equivalent results
 - [ ] GUI can export a support bundle containing daemon diagnostics, GUI logs, version metadata, and redacted configuration
 - [ ] Daemon policy overrides conflicting GUI preferences
 
@@ -454,22 +454,22 @@ repeat
 
 ### CLI Commands (all map to API calls)
 ```
-pi box create <name> [template] [flags]
-pi box list
-pi box inspect <name>
-pi box clone <name> <url>
-pi box exec <name> -- <cmd> [flags]
-pi box shell <name>
-pi box files list|read|write|pull|push <name> [args]
-pi box diff <name>
-pi box patch <name>
-pi box artifacts list|pull|pack <name> [flags]
-pi box snapshot <name> <action> [name]
-pi box logs <name>
-pi box destroy <name> [--all]
-pi system status|doctor|prune|disk-usage
-pi bench run [flags]
-pi template list|inspect|build|update|prune [flags]
+pi-box box create <name> [template] [flags]
+pi-box box list
+pi-box box inspect <name>
+pi-box box clone <name> <url>
+pi-box box exec <name> -- <cmd> [flags]
+pi-box box shell <name>
+pi-box box files list|read|write|pull|push <name> [args]
+pi-box box diff <name>
+pi-box box patch <name>
+pi-box box artifacts list|pull|pack <name> [flags]
+pi-box box snapshot <name> <action> [name]
+pi-box box logs <name>
+pi-box box destroy <name> [--all]
+pi-box system status|doctor|prune|disk-usage
+pi-box bench run [flags]
+pi-box template list|inspect|build|update|prune [flags]
 ```
 
 ## 10. Dependencies
@@ -731,10 +731,10 @@ Users must be able to inspect and clean local state.
 Required commands:
 
 ```bash
-pi system status
-pi system doctor
-pi system prune
-pi system disk-usage
+pi-box system status
+pi-box system doctor
+pi-box system prune
+pi-box system disk-usage
 ```
 
 ## 16. Workspace model
@@ -895,11 +895,11 @@ network:
 Template commands:
 
 ```bash
-pi template list
-pi template inspect node-python
-pi template build node-python
-pi template update node-python
-pi template prune
+pi-box template list
+pi-box template inspect node-python
+pi-box template build node-python
+pi-box template update node-python
+pi-box template prune
 ```
 
 ## 19. CLI requirements
@@ -909,25 +909,25 @@ The CLI binary should be named `pi-box`, with `box` as the sandbox subcommand.
 ### 12.1 Create sandbox
 
 ```bash
-pi box create --name app1 --template node-python
-pi box create node-python
-pi box create --mode fast node-python
-pi box create --mode compat rust
+pi-box box create --name app1 --template node-python
+pi-box box create node-python
+pi-box box create --mode fast node-python
+pi-box box create --mode compat rust
 ```
 
 ### 12.2 List and inspect
 
 ```bash
-pi box list
-pi box inspect app1
-pi box status app1
+pi-box box list
+pi-box box inspect app1
+pi-box box status app1
 ```
 
 ### 12.3 Clone repository
 
 ```bash
-pi box clone app1 https://github.com/acme/app
-pi box clone app1 git@github.com:acme/app.git
+pi-box box clone app1 https://github.com/acme/app
+pi-box box clone app1 git@github.com:acme/app.git
 ```
 
 SSH credentials must not be blindly mounted. Use a controlled Git credential helper or explicit user opt-in.
@@ -935,11 +935,11 @@ SSH credentials must not be blindly mounted. Use a controlled Git credential hel
 ### 12.4 Execute command
 
 ```bash
-pi box exec app1 -- pnpm install
-pi box exec app1 -- pnpm test
-pi box exec app1 -- python scripts/check.py
-pi box exec app1 -- go test ./...
-pi box exec app1 -- cargo test
+pi-box box exec app1 -- pnpm install
+pi-box box exec app1 -- pnpm test
+pi-box box exec app1 -- python scripts/check.py
+pi-box box exec app1 -- go test ./...
+pi-box box exec app1 -- cargo test
 ```
 
 Options:
@@ -957,7 +957,7 @@ Options:
 ### 12.5 Shell
 
 ```bash
-pi box shell app1
+pi-box box shell app1
 ```
 
 Shell is for humans, not the agent hot path.
@@ -965,51 +965,51 @@ Shell is for humans, not the agent hot path.
 ### 12.6 Files
 
 ```bash
-pi box files list app1 /workspace
-pi box files read app1 /workspace/package.json
-pi box files write app1 /workspace/src/index.ts < index.ts
-pi box files pull app1 /workspace/dist ./dist
-pi box files push app1 ./README.md /workspace/README.md
+pi-box box files list app1 /workspace
+pi-box box files read app1 /workspace/package.json
+pi-box box files write app1 /workspace/src/index.ts < index.ts
+pi-box box files pull app1 /workspace/dist ./dist
+pi-box box files push app1 ./README.md /workspace/README.md
 ```
 
 ### 12.7 Diff and patch
 
 ```bash
-pi box diff app1
-pi box patch app1 > changes.patch
-pi box apply-patch app1 changes.patch
+pi-box box diff app1
+pi-box box patch app1 > changes.patch
+pi-box box apply-patch app1 changes.patch
 ```
 
 ### 12.8 Artifacts
 
 ```bash
-pi box artifacts list app1
-pi box artifacts pull app1 ./artifacts
-pi box artifacts pack app1 --output artifacts.tar.zst
+pi-box box artifacts list app1
+pi-box box artifacts pull app1 ./artifacts
+pi-box box artifacts pack app1 --output artifacts.tar.zst
 ```
 
 ### 12.9 Snapshots
 
 ```bash
-pi box snapshot app1 before-refactor
-pi box snapshots app1
-pi box rollback app1 before-refactor
-pi box snapshot delete app1 before-refactor
+pi-box box snapshot app1 before-refactor
+pi-box box snapshots app1
+pi-box box rollback app1 before-refactor
+pi-box box snapshot delete app1 before-refactor
 ```
 
 ### 12.10 Run/serve apps
 
 ```bash
-pi box exec app1 -- pnpm dev --host 0.0.0.0
-pi box port-forward app1 3000:3000
-pi box logs app1
+pi-box box exec app1 -- pnpm dev --host 0.0.0.0
+pi-box box port-forward app1 3000:3000
+pi-box box logs app1
 ```
 
 ### 12.11 Destroy
 
 ```bash
-pi box destroy app1
-pi box destroy --all
+pi-box box destroy app1
+pi-box box destroy --all
 ```
 
 ## 20. Daemon API
@@ -1243,8 +1243,8 @@ Initial implementation can use filesystem-level snapshots:
 Commands:
 
 ```bash
-pi box snapshot app1 before-change
-pi box rollback app1 before-change
+pi-box box snapshot app1 before-change
+pi-box box rollback app1 before-change
 ```
 
 MicroVM mode later should support template snapshots.
@@ -1278,9 +1278,9 @@ Default artifact locations:
 Artifact commands:
 
 ```bash
-pi box artifacts list app1
-pi box artifacts pull app1 ./artifacts
-pi box artifacts pack app1 --output artifacts.tar.zst
+pi-box box artifacts list app1
+pi-box box artifacts pull app1 ./artifacts
+pi-box box artifacts pack app1 --output artifacts.tar.zst
 ```
 
 Artifact export should avoid copying the whole workspace unless requested.
@@ -1302,9 +1302,9 @@ Each sandbox should produce:
 CLI:
 
 ```bash
-pi box logs app1
-pi box history app1
-pi box metrics app1
+pi-box box logs app1
+pi-box box history app1
+pi-box box metrics app1
 ```
 
 Telemetry must be local-only by default.
@@ -1316,9 +1316,9 @@ Benchmark suite is mandatory.
 Command:
 
 ```bash
-pi bench run
-pi bench run --mode fast
-pi bench run --mode compat
+pi-box bench run
+pi-box bench run --mode fast
+pi-box bench run --mode compat
 ```
 
 Required benchmarks:
@@ -1482,13 +1482,13 @@ Deliver:
 Definition of done:
 
 ```bash
-pi box create --name demo --template node-python --mode fast
-pi box clone demo https://github.com/some/repo
-pi box exec demo -- pnpm install
-pi box exec demo -- pnpm test
-pi box diff demo
-pi box artifacts pull demo ./out
-pi box destroy demo
+pi-box box create --name demo --template node-python --mode fast
+pi-box box clone demo https://github.com/some/repo
+pi-box box exec demo -- pnpm install
+pi-box box exec demo -- pnpm test
+pi-box box diff demo
+pi-box box artifacts pull demo ./out
+pi-box box destroy demo
 ```
 
 ### Milestone 2: Hardening and cache performance
@@ -1503,7 +1503,7 @@ Deliver:
 - network modes: none/restricted/open
 - egress allowlist prototype
 - snapshot/rollback filesystem implementation
-- `pi system doctor`
+- `pi-box system doctor`
 - benchmark dashboard or JSON output
 
 ### Milestone 3: Agent integrations
@@ -1555,9 +1555,9 @@ Deliver:
 Example:
 
 ```bash
-pi context create workstation ssh://gpu-box.local
-pi context use workstation
-pi box create node-python
+pi-box context create workstation ssh://gpu-box.local
+pi-box context use workstation
+pi-box box create node-python
 ```
 
 Remote daemon context contract:
@@ -1768,7 +1768,7 @@ Command timed out after 60s.
 Sandbox: app1
 Command: pnpm test
 Last output saved to: ~/.pi-box/sandboxes/app1/logs/exec-42.log
-Try: pi box logs app1 --exec 42
+Try: pi-box box logs app1 --exec 42
 ```
 
 Runtime fallback errors must explain next steps:
@@ -1776,8 +1776,8 @@ Runtime fallback errors must explain next steps:
 ```text
 gVisor backend is not installed.
 Available modes: fast, compat
-Install docs: pi docs gvisor
-Try: pi box create --mode compat node-python
+Install docs: pi-box docs gvisor
+Try: pi-box box create --mode compat node-python
 ```
 
 ## 36. Documentation requirements

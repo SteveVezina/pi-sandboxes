@@ -3,7 +3,7 @@ package template
 import (
 	"path/filepath"
 
-	"github.com/pi-sandbox/pi/cmd/pi/cli"
+	"github.com/pi-sandbox/pi/cmd/pi-box/cli"
 	"github.com/pi-sandbox/pi/pkg/system"
 	"github.com/spf13/cobra"
 )

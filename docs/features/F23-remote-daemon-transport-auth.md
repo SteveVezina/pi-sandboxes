@@ -34,7 +34,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | Component | Impact |
 |-----------|--------|
 | `pkg/remote/` | Remote daemon transport/auth |
-| `cmd/pi/context/` | Contexts reference remote transport settings |
+| `cmd/pi-box/context/` | Contexts reference remote transport settings |
 | `sdk/typescript/` | Remote daemon connection support |
 | `sdk/python/` | Remote daemon connection support |
 | `docs/decisions/ADR-003-remote-context-and-auth-model.md` | Remote context/auth model decision |

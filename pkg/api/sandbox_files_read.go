@@ -49,10 +49,10 @@ func FilesReadSandbox(store *session.Store) http.HandlerFunc {
 		}
 
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"id":     id,
-			"path":   path,
+			"id":      id,
+			"path":    path,
 			"content": string(data),
-			"bytes":  len(data),
+			"bytes":   len(data),
 		})
 	}
 }

@@ -51,9 +51,9 @@ func FilesWriteSandbox(store *session.Store) http.HandlerFunc {
 		}
 
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"id":     id,
-			"path":   req.Path,
-			"bytes":  len(req.Content),
+			"id":    id,
+			"path":  req.Path,
+			"bytes": len(req.Content),
 		})
 	}
 }

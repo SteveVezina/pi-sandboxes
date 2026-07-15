@@ -7,11 +7,11 @@ import "fmt"
 
 // LandlockConfig holds landlock policy configuration.
 type LandlockConfig struct {
-	Enabled   bool
-	Paths     []string
-	Read      bool
-	Write     bool
-	Execute   bool
+	Enabled bool
+	Paths   []string
+	Read    bool
+	Write   bool
+	Execute bool
 }
 
 // DefaultLandlockConfig returns the default landlock configuration.

@@ -63,11 +63,11 @@ Templates are stored under `~/.pi-box/templates/`. The template manager handles:
 
 CLI commands:
 ```bash
-pi template list
-pi template inspect <name>
-pi template build <name>
-pi template update <name>
-pi template prune
+pi-box template list
+pi-box template inspect <name>
+pi-box template build <name>
+pi-box template update <name>
+pi-box template prune
 ```
 
 ## Acceptance Criteria
@@ -75,8 +75,8 @@ pi template prune
 Mapped from `SPEC.md` § Acceptance Criteria:
 
 - [x] AC-5.1: `base`, `node`, `python`, `go`, `rust`, `node-python`, `polyglot` templates defined
-- [x] AC-5.2: `pi template list` shows available templates
-- [x] AC-5.3: `pi template inspect <name>` shows template details
+- [x] AC-5.2: `pi-box template list` shows available templates
+- [x] AC-5.3: `pi-box template inspect <name>` shows template details
 - [x] AC-5.4: Templates configure correct toolchains and cache mounts
 
 Each criterion must be:
@@ -157,8 +157,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Verification:**
 - [x] `go build ./pkg/template/...`
-- [x] `pi template list` shows all 7 templates
-- [x] `pi template inspect node-python` shows correct details
+- [x] `pi-box template list` shows all 7 templates
+- [x] `pi-box template inspect node-python` shows correct details
 
 **Files:** `~/.pi-box/templates/base/template.yaml`, `~/.pi-box/templates/node/template.yaml`, `~/.pi-box/templates/python/template.yaml`, `~/.pi-box/templates/go/template.yaml`, `~/.pi-box/templates/rust/template.yaml`, `~/.pi-box/templates/node-python/template.yaml`, `~/.pi-box/templates/polyglot/template.yaml`
 **Size:** S
@@ -169,17 +169,17 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement `template list/inspect/build/update/prune` CLI commands.
 
 **Acceptance criteria:**
-- [x] `pi template list` shows available templates
-- [x] `pi template inspect <name>` shows template details
-- [x] `pi template build <name>` builds template image (stub for compat backend)
-- [x] `pi template prune` removes unused templates
+- [x] `pi-box template list` shows available templates
+- [x] `pi-box template inspect <name>` shows template details
+- [x] `pi-box template build <name>` builds template image (stub for compat backend)
+- [x] `pi-box template prune` removes unused templates
 - [x] `--json` flag produces valid JSON output
 
 **Verification:**
-- [x] `go build ./cmd/pi/...`
+- [x] `go build ./cmd/pi-box/...`
 - [x] Integration test: template commands work
 
-**Files:** `cmd/pi/template/list.go`, `cmd/pi/template/inspect.go`, `cmd/pi/template/build.go`, `cmd/pi/template/update.go`, `cmd/pi/template/prune.go`
+**Files:** `cmd/pi-box/template/list.go`, `cmd/pi-box/template/inspect.go`, `cmd/pi-box/template/build.go`, `cmd/pi-box/template/update.go`, `cmd/pi-box/template/prune.go`
 **Size:** S
 **Depends on:** T7.2 (initial templates)
 
@@ -187,8 +187,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 - [x] `go build ./pkg/template/...` succeeds
 - [x] All 7 templates defined and loadable
-- [x] `pi template list` shows all templates
-- [x] `pi template inspect <name>` shows correct details
+- [x] `pi-box template list` shows all templates
+- [x] `pi-box template inspect <name>` shows correct details
 - [x] Template YAML parsing handles valid and invalid input
 
 ## Spec Gaps
@@ -198,6 +198,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
 | Template build process for compat backend not specified | §11 Templates | Add: "Template build creates OCI image from base + tools" |
+
+### Resolved gaps
+
+| Gap | Block Spec Section | Resolution |
+|-----|-------------------|------------|
+| Template `base` field not mapped to OCI image name | §18 Templates, §20 Daemon API | PROP-007 — added `Image` field to Template struct, `ResolveImage()` and `ResolveTemplateImage()` functions, image resolution in sandbox creation flow |
 
 ### ADR gaps (needs architectural decision)
 

@@ -109,8 +109,8 @@ func TestValidate(t *testing.T) {
 
 func TestIsNeverMounted(t *testing.T) {
 	tests := []struct {
-		path     string
-		never    bool
+		path  string
+		never bool
 	}{
 		{"/var/run/docker.sock", true},
 		{"/", true},
@@ -240,10 +240,10 @@ func TestLoadPolicy_InvalidYAML(t *testing.T) {
 	}
 }
 
-func ptrInt(v int) *int       { return &v }
-func ptrInt64(v int64) *int64 { return &v }
+func ptrInt(v int) *int          { return &v }
+func ptrInt64(v int64) *int64    { return &v }
 func ptrString(v string) *string { return &v }
-func ptrBool(v bool) *bool   { return &v }
+func ptrBool(v bool) *bool       { return &v }
 
 func randomID() string {
 	b := []byte("abcdefghijklmnopqrstuvwxyz012345")

@@ -108,11 +108,24 @@ export type ContextInfo = {
   target: string;
   transport: string;
   auth_type: string;
+  token_env?: string;
+  ssh_user?: string;
+  ssh_host?: string;
 };
 
 export type ContextsResponse = {
   active: string;
   contexts: ContextInfo[];
+};
+
+export type ContextInput = {
+  name: string;
+  target: string;
+  transport: string;
+  auth_type: string;
+  token_env?: string;
+  ssh_user?: string;
+  ssh_host?: string;
 };
 
 export type LogEntry = {
@@ -239,6 +252,22 @@ export class PiDaemonClient {
 
   async contexts(): Promise<ContextsResponse> {
     return this.request<ContextsResponse>("GET", "/v1/contexts");
+  }
+
+  async getContext(name: string): Promise<ContextInfo> {
+    return this.request<ContextInfo>("GET", `/v1/contexts/${encodeURIComponent(name)}`);
+  }
+
+  async createContext(input: ContextInput): Promise<ContextInfo> {
+    return this.request<ContextInfo>("POST", "/v1/contexts", input);
+  }
+
+  async updateContext(name: string, input: ContextInput): Promise<ContextInfo> {
+    return this.request<ContextInfo>("PUT", `/v1/contexts/${encodeURIComponent(name)}`, input);
+  }
+
+  async deleteContext(name: string): Promise<{ deleted: string; active: string }> {
+    return this.request<{ deleted: string; active: string }>("DELETE", `/v1/contexts/${encodeURIComponent(name)}`);
   }
 
   async useContext(name: string): Promise<{ active: string }> {

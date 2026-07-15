@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
+  Bell,
   Boxes,
   ChevronRight,
   CircleDot,
@@ -34,8 +35,15 @@ import {
   Download,
   X
 } from "lucide-react";
+import { listen } from "@tauri-apps/api/event";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification
+} from "@tauri-apps/plugin-notification";
 import {
   ConnectionState,
+  ContextInput,
   ContextInfo,
   DiffResult,
   DoctorResult,
@@ -61,6 +69,7 @@ const ALLOWED_FOLDERS_STORAGE_KEY = "pi.gui.allowedFolders.v1";
 const GUI_DEFAULTS_STORAGE_KEY = "pi.gui.defaults.v1";
 const TEMPLATES = ["base", "node", "python", "go", "rust", "node-python", "polyglot"];
 const MODES = ["fast", "compat", "secure", "microvm"];
+const DEFAULT_RUNTIME_MODE = "compat";
 const NETWORK_MODES = ["restricted", "none", "open"];
 
 const NAV_ITEMS = [
@@ -75,6 +84,8 @@ const NAV_ITEMS = [
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type TabId = "exec" | "history" | "logs" | "diff" | "patch" | "artifacts" | "snapshots";
+type NotificationPermissionState = "checking" | "granted" | "denied" | "default" | "unsupported";
+type WorkspaceMode = "copy" | "overlay" | "bind";
 
 interface GUIDefaults {
   activeContext: string;
@@ -88,6 +99,19 @@ interface SessionTabState {
   content?: unknown;
   loading: boolean;
   error: string | null;
+}
+
+interface CreateSandboxDraft {
+  name: string;
+  template: string;
+  mode: string;
+  network: string;
+  ttlSeconds: number;
+  workspaceSource: string;
+  workspaceMode: WorkspaceMode;
+  workspaceMaxSize: string;
+  repoUrl: string;
+  rememberDefaults: boolean;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -125,7 +149,7 @@ function loadGUIDefaults(): GUIDefaults {
   const fallback: GUIDefaults = {
     activeContext: "local",
     template: "node-python",
-    mode: "fast",
+    mode: DEFAULT_RUNTIME_MODE,
     network: "restricted"
   };
   try {
@@ -135,8 +159,44 @@ function loadGUIDefaults(): GUIDefaults {
   }
 }
 
+function availableRuntimeModes(runtimeInfo: RuntimeInfo | null): string[] {
+  if (!runtimeInfo?.available?.length) return MODES;
+  const available = new Set(runtimeInfo.available);
+  return MODES.filter((mode) => available.has(mode));
+}
+
+function bestRuntimeMode(runtimeInfo: RuntimeInfo | null, current?: string): string {
+  const modes = availableRuntimeModes(runtimeInfo);
+  if (current && modes.includes(current)) return current;
+  if (runtimeInfo?.best && modes.includes(runtimeInfo.best)) return runtimeInfo.best;
+  return modes[0] || DEFAULT_RUNTIME_MODE;
+}
+
 function redactGuiLogMessage(message: string): string {
   return message.replace(/\/Users\/[^/\s]+/g, "~");
+}
+
+function isTauriRuntime(): boolean {
+  return "__TAURI_INTERNALS__" in window;
+}
+
+async function readNotificationPermission(): Promise<NotificationPermissionState> {
+  if (!isTauriRuntime()) return "unsupported";
+  try {
+    return (await isPermissionGranted()) ? "granted" : "default";
+  } catch {
+    return "unsupported";
+  }
+}
+
+async function ensureNotificationPermission(): Promise<boolean> {
+  if (!isTauriRuntime()) return false;
+  try {
+    if (await isPermissionGranted()) return true;
+    return (await requestPermission()) === "granted";
+  } catch {
+    return false;
+  }
 }
 
 // ─── Onboarding / Login View ─────────────────────────────────────────────────
@@ -402,8 +462,7 @@ function DashboardView({
   sessions,
   systemStatus,
   runtimeInfo,
-  onSelectSession,
-  onCreateSession
+  onSelectSession
 }: {
   connection: ConnectionState;
   health: string;
@@ -411,7 +470,6 @@ function DashboardView({
   systemStatus: SystemStatus | null;
   runtimeInfo: RuntimeInfo | null;
   onSelectSession: (id: string) => void;
-  onCreateSession: () => void;
 }) {
   const activeSessions = sessions.filter((s) => s.state === "WARM" || s.state === "EXECUTING");
   const availableBackends = runtimeInfo?.available.length ?? 0;
@@ -422,36 +480,35 @@ function DashboardView({
   }).slice(0, 5);
 
   return (
-    <div className="content-grid">
+    <div className="content-grid dashboard-grid">
       <section className="hero-panel">
         <div>
-          <span className="eyebrow">Live daemon workbench</span>
-          <h2>What should this sandbox work on?</h2>
+          <span className="eyebrow">Dashboard</span>
+          <h2>Sandbox control</h2>
           <p>
-            Create a warm isolated session, run commands, inspect diffs, and export artifacts
-            through the real daemon API.
+            {activeSessions.length} active session{activeSessions.length === 1 ? "" : "s"} · {sessions.length} total · best runtime {runtimeInfo?.best || "unknown"}
           </p>
         </div>
-        <button className="primary-action large" onClick={onCreateSession} disabled={connection !== "connected"}>
-          <Plus size={21} />
-          Create session
-        </button>
       </section>
 
       <section className="status-rail" aria-label="Daemon summary">
         <div>
+          <KeyRound size={17} />
           <span>Connection</span>
           <strong>{connectionLabel(connection)}</strong>
         </div>
         <div>
+          <Gauge size={17} />
           <span>Runtime</span>
           <strong>{runtimeInfo?.best || "unknown"}</strong>
         </div>
         <div>
+          <Database size={17} />
           <span>Backends</span>
           <strong>{availableBackends}</strong>
         </div>
         <div>
+          <MonitorPlay size={17} />
           <span>Sessions</span>
           <strong>{systemStatus?.active_sandboxes ?? activeSessions.length}</strong>
         </div>
@@ -459,8 +516,8 @@ function DashboardView({
 
       <section className="onboarding-panel">
         <div className="section-heading">
-          <h3>Start workbench</h3>
-          <span>Connection</span>
+          <h3>Daemon pulse</h3>
+          <span>{health}</span>
         </div>
         <div className="metric-row">
           <HardDrive size={18} />
@@ -482,14 +539,18 @@ function DashboardView({
       <section className="sessions-panel dashboard-sessions-panel">
         <div className="section-heading">
           <h3>Active sessions</h3>
-          <span>{sessions.length} total</span>
+          <span>{activeSessions.length} active · {sessions.length} total</span>
         </div>
         <div className="session-list">
-          {sessions.length === 0 ? (
-            <div className="empty-state">No sessions returned by the daemon.</div>
-          ) : sessions.map((session) => (
+          {activeSessions.length === 0 ? (
+            <div className="empty-state dashboard-empty">
+              <MonitorPlay size={22} />
+              <strong>No live sessions</strong>
+              <span>Create a sandbox to start a warm workbench session.</span>
+            </div>
+          ) : activeSessions.map((session) => (
             <button
-              className={session.state === "WARM" || session.state === "EXECUTING" ? "session-row active" : "session-row"}
+              className="session-row active"
               key={session.id}
               onClick={() => onSelectSession(session.id)}
             >
@@ -551,6 +612,7 @@ function DashboardView({
         <section className="recent-sessions-panel">
           <div className="section-heading">
             <h3>Recent sessions</h3>
+            <span>Last activity</span>
           </div>
           <div className="session-list">
             {recentSessions.map((session) => (
@@ -1176,6 +1238,271 @@ function SessionDetailView({
   );
 }
 
+function CreateSandboxDialog({
+  open,
+  defaults,
+  allowedFolders,
+  connection,
+  runtimeInfo,
+  isBusy,
+  error,
+  onAuthorizeFolder,
+  onRemoveAllowedFolder,
+  onCancel,
+  onCreate
+}: {
+  open: boolean;
+  defaults: GUIDefaults;
+  allowedFolders: string[];
+  connection: ConnectionState;
+  runtimeInfo: RuntimeInfo | null;
+  isBusy: boolean;
+  error: string;
+  onAuthorizeFolder: (folder: string) => void;
+  onRemoveAllowedFolder: (folder: string) => void;
+  onCancel: () => void;
+  onCreate: (draft: CreateSandboxDraft) => void;
+}) {
+  const runtimeModes = availableRuntimeModes(runtimeInfo);
+  const defaultMode = bestRuntimeMode(runtimeInfo, defaults.mode);
+  const runtimeModeKey = `${runtimeInfo?.best || ""}:${runtimeInfo?.available.join("|") || ""}`;
+  const [draft, setDraft] = useState<CreateSandboxDraft>({
+    name: "gui-session",
+    template: defaults.template,
+    mode: defaultMode,
+    network: defaults.network,
+    ttlSeconds: defaultMode === "microvm" ? 3600 : 7200,
+    workspaceSource: "",
+    workspaceMode: "copy",
+    workspaceMaxSize: "5Gi",
+    repoUrl: "",
+    rememberDefaults: true
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    const mode = bestRuntimeMode(runtimeInfo, defaults.mode);
+    setDraft((current) => ({
+      ...current,
+      template: defaults.template,
+      mode,
+      network: defaults.network,
+      ttlSeconds: mode === "microvm" ? 3600 : 7200
+    }));
+  }, [open, defaults.template, defaults.mode, defaults.network, runtimeModeKey]);
+
+  if (!open) return null;
+
+  const workspaceSource = draft.workspaceSource.trim();
+  const folderIsAllowed = workspaceSource ? allowedFolders.includes(workspaceSource) : true;
+  const canCreate = connection === "connected" && !isBusy && folderIsAllowed && draft.name.trim().length > 0;
+  const runtimeBackends = runtimeInfo?.backends || [];
+
+  function updateDraft(next: Partial<CreateSandboxDraft>) {
+    setDraft((current) => ({ ...current, ...next }));
+  }
+
+  return (
+    <div className="create-dialog-backdrop" role="presentation" onMouseDown={onCancel}>
+      <section
+        className="create-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-dialog-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="create-dialog-header">
+          <div>
+            <span className="eyebrow">POST /v1/sandboxes</span>
+            <h2 id="create-dialog-title">New sandbox</h2>
+            <p>Select every launch parameter before the daemon creates the session.</p>
+          </div>
+          <button className="icon-button" onClick={onCancel} aria-label="Close create sandbox dialog">
+            <X size={18} />
+          </button>
+        </div>
+
+        {error && <div className="create-dialog-error">{error}</div>}
+
+        <div className="create-dialog-body">
+          <section className="create-step create-step-identity">
+            <div className="create-step-heading">
+              <span>01</span>
+              <h3>Identity</h3>
+            </div>
+            <label>
+              Name
+              <input
+                value={draft.name}
+                onChange={(event) => updateDraft({ name: event.target.value })}
+                placeholder="gui-session"
+              />
+            </label>
+          </section>
+
+          <section className="create-step">
+            <div className="create-step-heading">
+              <span>02</span>
+              <h3>Runtime</h3>
+            </div>
+            <div className="create-field-grid">
+              <label>
+                Template
+                <select
+                  value={draft.template}
+                  onChange={(event) => updateDraft({ template: event.target.value })}
+                >
+                  {TEMPLATES.map((template) => (
+                    <option key={template} value={template}>{template}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Mode
+                <select
+                  value={draft.mode}
+                  onChange={(event) => updateDraft({
+                    mode: event.target.value,
+                    ttlSeconds: event.target.value === "microvm" ? 3600 : draft.ttlSeconds
+                  })}
+                >
+                  {runtimeModes.map((mode) => {
+                    const backend = runtimeBackends.find((rt) => rt.name === mode);
+                    const label = backend ? `${mode}${backend.name === runtimeInfo?.best ? " (best)" : ""}` : mode;
+                    return <option key={mode} value={mode}>{label}</option>;
+                  })}
+                </select>
+              </label>
+              <label>
+                Exec network default
+                <select
+                  value={draft.network}
+                  onChange={(event) => updateDraft({ network: event.target.value })}
+                >
+                  {NETWORK_MODES.map((mode) => (
+                    <option key={mode} value={mode}>{mode}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                TTL seconds
+                <input
+                  type="number"
+                  min={300}
+                  step={300}
+                  value={draft.ttlSeconds}
+                  onChange={(event) => updateDraft({ ttlSeconds: Number(event.target.value) || 0 })}
+                />
+              </label>
+            </div>
+          </section>
+
+          <section className="create-step">
+            <div className="create-step-heading">
+              <span>03</span>
+              <h3>Workspace</h3>
+            </div>
+            <label>
+              Project folder
+              <div className="create-folder-row">
+                <input
+                  value={draft.workspaceSource}
+                  onChange={(event) => updateDraft({ workspaceSource: event.target.value })}
+                  placeholder="/path/to/project"
+                />
+                <button onClick={() => onAuthorizeFolder(workspaceSource)} disabled={!workspaceSource}>
+                  <Folder size={15} />
+                  Authorize
+                </button>
+              </div>
+            </label>
+            <div className="create-mode-grid" aria-label="Workspace mode">
+              {(["copy", "overlay", "bind"] as const).map((mode) => (
+                <button
+                  className={draft.workspaceMode === mode ? "mode-option active" : "mode-option"}
+                  key={mode}
+                  onClick={() => updateDraft({ workspaceMode: mode })}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+            <div className="create-field-grid create-field-grid-narrow">
+              <label>
+                Workspace max size
+                <input
+                  value={draft.workspaceMaxSize}
+                  onChange={(event) => updateDraft({ workspaceMaxSize: event.target.value })}
+                  placeholder="5Gi"
+                />
+              </label>
+              <label>
+                Clone repository after create
+                <input
+                  value={draft.repoUrl}
+                  onChange={(event) => updateDraft({ repoUrl: event.target.value })}
+                  placeholder="https://github.com/owner/repo.git"
+                />
+              </label>
+            </div>
+            <div className={workspaceSource ? (folderIsAllowed ? "workspace-access-state allowed" : "workspace-access-state pending") : "workspace-access-state neutral"}>
+              {workspaceSource
+                ? folderIsAllowed
+                  ? "This folder is authorized for GUI-launched workspace access."
+                  : "Authorize this folder before creating a sandbox with host workspace access."
+                : "No host folder selected. The create request will omit workspace access."}
+            </div>
+            {allowedFolders.length > 0 && (
+              <div className="create-allowed-folders">
+                {allowedFolders.map((folder) => (
+                  <button
+                    key={folder}
+                    onClick={() => updateDraft({ workspaceSource: folder })}
+                    title={folder}
+                  >
+                    <Folder size={13} />
+                    <span>{folder}</span>
+                    <X
+                      size={13}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onRemoveAllowedFolder(folder);
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        <div className="create-review-strip">
+          <label className="remember-defaults">
+            <input
+              type="checkbox"
+              checked={draft.rememberDefaults}
+              onChange={(event) => updateDraft({ rememberDefaults: event.target.checked })}
+            />
+            Remember template, runtime, and network
+          </label>
+          <div className="create-review-values">
+            <code>{draft.template}</code>
+            <code>{draft.mode}</code>
+            <code>{draft.network}</code>
+            <code>{draft.ttlSeconds}s</code>
+            <code>{workspaceSource ? draft.workspaceMode : "no workspace"}</code>
+          </div>
+          <button className="secondary-action" onClick={onCancel}>Cancel</button>
+          <button className="primary-action" onClick={() => onCreate(draft)} disabled={!canCreate}>
+            {isBusy ? <Loader2 className="spin" size={18} /> : <Play size={18} />}
+            Create sandbox
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // ─── Templates View ──────────────────────────────────────────────────────────
 
 function TemplatesView({ defaults }: { defaults: GUIDefaults }) {
@@ -1214,60 +1541,268 @@ function ContextsView({
   activeContext,
   onSelectContext,
   daemonUrl,
-  setDaemonUrl
+  client,
+  onRefresh
 }: {
   contexts: ContextInfo[];
   activeContext: string;
   onSelectContext: (name: string) => void;
   daemonUrl: string;
-  setDaemonUrl: (url: string) => void;
+  client: PiDaemonClient;
+  onRefresh: () => Promise<void>;
 }) {
+  const blankContext: ContextInput = {
+    name: "",
+    target: "https://daemon.example.test",
+    transport: "http",
+    auth_type: "bearer-token",
+    token_env: "",
+    ssh_user: "",
+    ssh_host: ""
+  };
+  const [selectedName, setSelectedName] = useState("");
+  const [draft, setDraft] = useState<ContextInput>(blankContext);
+  const [isSaving, setIsSaving] = useState(false);
+  const [contextError, setContextError] = useState<string | null>(null);
+  const [contextMessage, setContextMessage] = useState<string | null>(null);
+
+  const selectForEdit = (ctx: ContextInfo) => {
+    setSelectedName(ctx.name);
+    setDraft({
+      name: ctx.name,
+      target: ctx.target,
+      transport: ctx.transport,
+      auth_type: ctx.auth_type,
+      token_env: ctx.token_env || "",
+      ssh_user: ctx.ssh_user || "",
+      ssh_host: ctx.ssh_host || ""
+    });
+    setContextError(null);
+    setContextMessage(null);
+  };
+
+  const startNewContext = () => {
+    setSelectedName("");
+    setDraft(blankContext);
+    setContextError(null);
+    setContextMessage(null);
+  };
+
+  const updateTransport = (transport: string) => {
+    const authType = transport === "http" ? "bearer-token" : transport === "ssh" ? "ssh-agent" : "none";
+    setDraft((current) => ({
+      ...current,
+      transport,
+      auth_type: authType,
+      target:
+        transport === "unix"
+          ? "unix://~/.pi-box/sandboxd.sock"
+          : transport === "ssh"
+          ? "ssh://host.example.test"
+          : current.target.startsWith("unix://")
+          ? "https://daemon.example.test"
+          : current.target
+    }));
+  };
+
+  const saveContext = async () => {
+    setIsSaving(true);
+    setContextError(null);
+    setContextMessage(null);
+    try {
+      const input: ContextInput = {
+        ...draft,
+        name: draft.name.trim(),
+        target: draft.target.trim(),
+        token_env: draft.token_env?.trim(),
+        ssh_user: draft.ssh_user?.trim(),
+        ssh_host: draft.ssh_host?.trim()
+      };
+      if (selectedName) {
+        await client.updateContext(selectedName, input);
+        setContextMessage(`Updated context "${selectedName}".`);
+      } else {
+        await client.createContext(input);
+        setSelectedName(input.name);
+        setContextMessage(`Created context "${input.name}".`);
+      }
+      await onRefresh();
+    } catch (err) {
+      setContextError(err instanceof Error ? err.message : "Unable to save context");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deleteContext = async (name: string) => {
+    setIsSaving(true);
+    setContextError(null);
+    setContextMessage(null);
+    try {
+      await client.deleteContext(name);
+      setContextMessage(`Deleted context "${name}".`);
+      startNewContext();
+      await onRefresh();
+    } catch (err) {
+      setContextError(err instanceof Error ? err.message : "Unable to delete context");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="contexts-list">
-      {contexts.length === 0 ? (
-        <div className="empty-state">No contexts configured.</div>
-      ) : (
-        contexts.map((ctx) => (
-          <div
-            className={`context-card ${ctx.name === activeContext ? "active" : ""}`}
-            key={ctx.name}
-          >
-            <div className="context-info">
-              <Network size={20} />
+    <div className="contexts-workbench">
+      <section className="contexts-list-panel">
+        <div className="section-heading">
+          <h3>Daemon contexts</h3>
+          <button onClick={startNewContext}>
+            <Plus size={14} />
+            New context
+          </button>
+        </div>
+        <div className="contexts-list">
+          {contexts.length === 0 ? (
+            <div className="empty-state">No contexts configured.</div>
+          ) : (
+            contexts.map((ctx) => (
+              <div
+                className={`context-card ${ctx.name === activeContext ? "active" : ""} ${ctx.name === selectedName ? "selected" : ""}`}
+                key={ctx.name}
+              >
+                <button className="context-info-button" onClick={() => selectForEdit(ctx)}>
+                  <Network size={20} />
+                  <div>
+                    <strong>{ctx.name}</strong>
+                    <span>{ctx.target}</span>
+                    <span className="context-transport">{ctx.transport}</span>
+                    <span className="context-auth">
+                      auth: {ctx.auth_type}
+                      {ctx.token_env ? ` · token env: ${ctx.token_env}` : ""}
+                    </span>
+                  </div>
+                </button>
+                <div className="context-actions">
+                  {ctx.name === activeContext && (
+                    <span className="active-badge">Active</span>
+                  )}
+                  {ctx.name !== activeContext && (
+                    <button onClick={() => onSelectContext(ctx.name)}>Set active</button>
+                  )}
+                  {ctx.name !== "local" && (
+                    <button className="danger-inline" onClick={() => deleteContext(ctx.name)} disabled={isSaving}>
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          <div className="context-card direct">
+            <div className="context-info-static">
+              <HardDrive size={20} />
               <div>
-                <strong>{ctx.name}</strong>
-                <span>{ctx.target}</span>
-                <span className="context-transport">{ctx.transport}</span>
-                <span className="context-auth">auth: {ctx.auth_type}</span>
+                <strong>Direct local URL</strong>
+                <span>{daemonUrl}</span>
+                <span className="context-transport">http</span>
+                <span className="context-auth">renderer connection target</span>
               </div>
             </div>
-            <div className="context-actions">
-              {ctx.name === activeContext && (
-                <span className="active-badge">Active</span>
-              )}
-              {ctx.name !== activeContext && (
-                <button onClick={() => onSelectContext(ctx.name)}>Set active</button>
-              )}
-            </div>
-          </div>
-        ))
-      )}
-      <div className="context-card">
-        <div className="context-info">
-          <HardDrive size={20} />
-          <div>
-            <strong>Local daemon</strong>
-            <span>{daemonUrl}</span>
-            <span className="context-transport">http</span>
-            <span className="context-auth">no auth</span>
-          </div>
-        </div>
-        <div className="context-actions">
-          {daemonUrl === DEFAULT_DAEMON_URL && (
             <span className="active-badge">Direct</span>
-          )}
+          </div>
         </div>
-      </div>
+      </section>
+
+      <section className="context-editor-panel">
+        <div className="section-heading">
+          <h3>{selectedName ? `Edit ${selectedName}` : "Create context"}</h3>
+          <span>{selectedName ? "PUT /v1/contexts/{name}" : "POST /v1/contexts"}</span>
+        </div>
+        {contextError && <div className="error-msg">{contextError}</div>}
+        {contextMessage && <div className="success-msg">{contextMessage}</div>}
+        {selectedName === "local" ? (
+          <div className="empty-state compact-empty">
+            <ShieldCheck size={18} />
+            <span>The reserved local context is inspectable but cannot be edited or deleted.</span>
+          </div>
+        ) : (
+          <div className="context-form">
+            <label>
+              Name
+              <input
+                value={draft.name}
+                onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))}
+                placeholder="remote-dev"
+                disabled={Boolean(selectedName)}
+              />
+            </label>
+            <label>
+              Transport
+              <select value={draft.transport} onChange={(e) => updateTransport(e.target.value)}>
+                <option value="http">http</option>
+                <option value="ssh">ssh</option>
+                <option value="unix">unix</option>
+              </select>
+            </label>
+            <label className="context-form-wide">
+              Target
+              <input
+                value={draft.target}
+                onChange={(e) => setDraft((current) => ({ ...current, target: e.target.value }))}
+                placeholder="https://daemon.example.test"
+              />
+            </label>
+            <label>
+              Auth type
+              <select
+                value={draft.auth_type}
+                onChange={(e) => setDraft((current) => ({ ...current, auth_type: e.target.value }))}
+              >
+                <option value="bearer-token">bearer-token</option>
+                <option value="ssh-agent">ssh-agent</option>
+                <option value="none">none</option>
+              </select>
+            </label>
+            {draft.auth_type === "bearer-token" && (
+              <label>
+                Token env var
+                <input
+                  value={draft.token_env || ""}
+                  onChange={(e) => setDraft((current) => ({ ...current, token_env: e.target.value }))}
+                  placeholder="PI_REMOTE_TOKEN"
+                />
+              </label>
+            )}
+            {draft.auth_type === "ssh-agent" && (
+              <>
+                <label>
+                  SSH user
+                  <input
+                    value={draft.ssh_user || ""}
+                    onChange={(e) => setDraft((current) => ({ ...current, ssh_user: e.target.value }))}
+                    placeholder="svezina"
+                  />
+                </label>
+                <label>
+                  SSH host
+                  <input
+                    value={draft.ssh_host || ""}
+                    onChange={(e) => setDraft((current) => ({ ...current, ssh_host: e.target.value }))}
+                    placeholder="gpu-box.local"
+                  />
+                </label>
+              </>
+            )}
+            <div className="context-security-note context-form-wide">
+              <KeyRound size={16} />
+              <span>Raw bearer tokens and private keys are not stored. Use an environment variable for HTTP bearer auth or ssh-agent for SSH.</span>
+            </div>
+            <button className="primary-action context-form-wide" onClick={saveContext} disabled={isSaving}>
+              {isSaving ? <Loader2 className="spin" size={16} /> : <CheckCircle2 size={16} />}
+              {selectedName ? "Save context" : "Create context"}
+            </button>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -1279,34 +1814,92 @@ function PoliciesView({
   allowedFolders,
   doctorResult,
   systemStatus,
-  runtimeInfo
+  runtimeInfo,
+  connection,
+  activeContext,
+  sessions,
+  onOpenSettings,
+  onOpenSessions
 }: {
   defaults: GUIDefaults;
   allowedFolders: string[];
   doctorResult: DoctorResult | null;
   systemStatus: SystemStatus | null;
   runtimeInfo: RuntimeInfo | null;
+  connection: ConnectionState;
+  activeContext: string;
+  sessions: SandboxInfo[];
+  onOpenSettings: () => void;
+  onOpenSessions: () => void;
 }) {
-  const policyRows = [
+  const activeSessions = sessions.filter((s) => s.state === "WARM" || s.state === "EXECUTING");
+  const doctorErrors = doctorResult?.issues.filter((issue) => issue.level === "error").length ?? 0;
+  const doctorWarnings = doctorResult?.issues.filter((issue) => issue.level === "warning").length ?? 0;
+
+  const enforcementRows = [
     {
-      label: "Default network",
-      value: defaults.network,
-      detail: "Applied to GUI command execution requests"
+      control: "Network execution",
+      requested: defaults.network,
+      enforced: "daemon network policy",
+      source: "POST /v1/sandboxes/{id}/exec",
+      action: "Change default",
+      onAction: onOpenSettings
     },
     {
-      label: "Workspace default",
-      value: "copy",
-      detail: "Host folders are omitted until explicitly selected and authorized"
+      control: "Workspace access",
+      requested: allowedFolders.length === 0 ? "none authorized" : `${allowedFolders.length} folder(s)`,
+      enforced: "explicit GUI grant + daemon create",
+      source: "POST /v1/sandboxes",
+      action: "Manage grants",
+      onAction: onOpenSettings
     },
     {
-      label: "Secrets",
-      value: "not mounted",
-      detail: "SSH keys, cloud config, Kubernetes config, and Docker socket stay out by default"
+      control: "Secrets",
+      requested: "not requested",
+      enforced: "not mounted by default",
+      source: "runtime policy",
+      action: "Fixed guardrail"
     },
     {
-      label: "Support bundle",
-      value: systemStatus?.support_redacted ? "redacted" : "unknown",
-      detail: "Daemon support payload reports redaction status"
+      control: "Support bundle",
+      requested: "export on demand",
+      enforced: systemStatus?.support_redacted ? "redacted" : "redaction unknown",
+      source: "GET /v1/support-bundle",
+      action: "Export",
+      onAction: onOpenSettings
+    }
+  ];
+
+  const apiCoverage = [
+    {
+      group: "Session lifecycle",
+      wired: "create, list, inspect, destroy",
+      surface: "Dashboard, Sessions",
+      status: "wired"
+    },
+    {
+      group: "Session operations",
+      wired: "exec stream, clone, diff, patch, artifacts, snapshots, logs",
+      surface: "Session detail",
+      status: "wired"
+    },
+    {
+      group: "Daemon context",
+      wired: "list contexts, switch active context, proxy active remote",
+      surface: "Contexts, sidebar",
+      status: "wired"
+    },
+    {
+      group: "System diagnostics",
+      wired: "status, doctor, runtimes, support bundle",
+      surface: "Policies, Settings",
+      status: "wired"
+    },
+    {
+      group: "CLI-only gaps",
+      wired: "interactive shell, file read/write, template build/update, prune, disk usage",
+      surface: "not first-class GUI views yet",
+      status: "gap"
     }
   ];
 
@@ -1317,28 +1910,92 @@ function PoliciesView({
           <ShieldCheck size={26} />
         </div>
         <div>
-          <span className="eyebrow">Daemon-enforced guardrails</span>
-          <h2>Policy remains authoritative in the daemon.</h2>
+          <span className="eyebrow">Daemon policy map</span>
+          <h2>See what the GUI asks for and what the daemon enforces.</h2>
           <p>
-            GUI preferences shape requests, but daemon policy decides what is accepted for
-            workspaces, network access, diagnostics, and support export.
+            This view is mostly read-only by design. Change preferences in Settings or
+            session controls; the daemon remains the source of truth.
           </p>
+        </div>
+        <div className="policy-summary-actions">
+          <button onClick={onOpenSettings}>
+            <Settings size={15} />
+            Settings
+          </button>
+          <button onClick={onOpenSessions}>
+            <MonitorPlay size={15} />
+            Sessions
+          </button>
+        </div>
+      </section>
+
+      <section className="policy-strip" aria-label="Policy summary">
+        <div>
+          <span>Connection</span>
+          <strong>{connectionLabel(connection)}</strong>
+        </div>
+        <div>
+          <span>Context</span>
+          <strong>{activeContext}</strong>
+        </div>
+        <div>
+          <span>Runtime</span>
+          <strong>{runtimeInfo?.best || "unknown"}</strong>
+        </div>
+        <div>
+          <span>Doctor</span>
+          <strong>{doctorResult ? (doctorErrors > 0 ? `${doctorErrors} error(s)` : doctorWarnings > 0 ? `${doctorWarnings} warning(s)` : "passing") : "unknown"}</strong>
+        </div>
+        <div>
+          <span>Active</span>
+          <strong>{systemStatus?.active_sandboxes ?? activeSessions.length} sandbox(es)</strong>
+        </div>
+      </section>
+
+      <section className="policy-card policy-card-wide">
+        <div className="section-heading">
+          <h3>Effective enforcement</h3>
+          <span>{runtimeInfo?.best || "runtime unknown"}</span>
+        </div>
+        <div className="policy-table">
+          <div className="policy-table-head">
+            <span>Area</span>
+            <span>GUI request</span>
+            <span>Daemon enforcement</span>
+            <span>Source</span>
+            <span>Action</span>
+          </div>
+          {enforcementRows.map((row) => (
+            <div className="policy-table-row" key={row.control}>
+              <strong>{row.control}</strong>
+              <code>{row.requested}</code>
+              <span>{row.enforced}</span>
+              <code>{row.source}</code>
+              <div>
+                {row.onAction ? (
+                  <button onClick={row.onAction}>{row.action}</button>
+                ) : (
+                  <span className="muted-text">{row.action}</span>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
       <section className="policy-card">
         <div className="section-heading">
-          <h3>Effective request defaults</h3>
-          <span>{runtimeInfo?.best || "runtime unknown"}</span>
+          <h3>API and CLI coverage</h3>
+          <span>GUI wiring</span>
         </div>
-        <div className="policy-row-list">
-          {policyRows.map((row) => (
-            <div className="policy-row" key={row.label}>
+        <div className="coverage-list">
+          {apiCoverage.map((item) => (
+            <div className={`coverage-row ${item.status}`} key={item.group}>
               <div>
-                <strong>{row.label}</strong>
-                <span>{row.detail}</span>
+                <strong>{item.group}</strong>
+                <span>{item.wired}</span>
               </div>
-              <code>{row.value}</code>
+              <code>{item.surface}</code>
             </div>
           ))}
         </div>
@@ -1347,10 +2004,13 @@ function PoliciesView({
       <section className="policy-card">
         <div className="section-heading">
           <h3>Allowed folders</h3>
-          <span>GUI preference</span>
+          <span>{allowedFolders.length} GUI grant(s)</span>
         </div>
         {allowedFolders.length === 0 ? (
-          <div className="empty-state">No folders authorized for GUI-launched workspace access.</div>
+          <div className="empty-state compact-empty">
+            <Folder size={18} />
+            <span>No folders authorized for GUI-launched workspace access.</span>
+          </div>
         ) : (
           <div className="allowed-folders-settings">
             {allowedFolders.map((folder) => (
@@ -1363,33 +2023,31 @@ function PoliciesView({
         )}
       </section>
 
-      <section className="policy-card">
+      <section className="policy-card policy-card-wide">
         <div className="section-heading">
           <h3>Doctor policy signals</h3>
           <span>{doctorResult?.passed ? "Passing" : doctorResult ? "Needs attention" : "Unknown"}</span>
         </div>
         {!doctorResult ? (
           <div className="empty-state">Daemon diagnostics have not been loaded yet.</div>
-        ) : doctorResult.issues.length === 0 ? (
-          <div className="doctor-status passed">
-            <CheckCircle2 size={18} />
-            <span>No doctor issues reported.</span>
-          </div>
         ) : (
-          <div className="doctor-result">
+          <div className="doctor-signal-list">
+            {doctorResult.issues.length === 0 && (
+              <div className="doctor-status passed">
+                <CheckCircle2 size={18} />
+                <span>No doctor issues reported.</span>
+              </div>
+            )}
             {doctorResult.issues.map((issue, i) => (
-              <div className={`doctor-issue ${issue.level}`} key={i}>
-                <div className="doctor-issue-header">
-                  {issue.level === "error" ? (
-                    <XCircle size={14} className="issue-error" />
-                  ) : issue.level === "warning" ? (
-                    <AlertTriangle size={14} className="issue-warning" />
-                  ) : (
-                    <CircleDot size={14} className="issue-info" />
-                  )}
-                  <span>{issue.category}</span>
+              <div className={`doctor-signal ${issue.level}`} key={i}>
+                <div className="doctor-signal-severity">
+                  {issue.level === "error" ? <XCircle size={15} className="issue-error" /> : null}
+                  {issue.level === "warning" ? <AlertTriangle size={15} className="issue-warning" /> : null}
+                  {issue.level === "info" ? <CircleDot size={15} className="issue-info" /> : null}
+                  <strong>{issue.level}</strong>
                 </div>
-                <div className="doctor-issue-msg">{issue.message}</div>
+                <span>{issue.message}</span>
+                {issue.recommendation ? <small>{issue.recommendation}</small> : <small />}
               </div>
             ))}
           </div>
@@ -1423,6 +2081,7 @@ function SettingsView({
   isBusy: boolean;
 }) {
   const [showBundle, setShowBundle] = useState(false);
+  const runtimeModes = availableRuntimeModes(runtimeInfo);
 
   return (
     <div className="settings-grid-layout">
@@ -1447,8 +2106,8 @@ function SettingsView({
               value={defaults.mode}
               onChange={(e) => setDefaults({ mode: e.target.value })}
             >
-              {MODES.map((m) => (
-                <option key={m} value={m}>{m}</option>
+              {runtimeModes.map((m) => (
+                <option key={m} value={m}>{m}{m === runtimeInfo?.best ? " (best)" : ""}</option>
               ))}
             </select>
           </label>
@@ -1584,6 +2243,106 @@ function SettingsView({
   );
 }
 
+function Topbar({
+  activeView,
+  connection,
+  health,
+  daemonUrl,
+  isBusy,
+  notificationPermission,
+  notificationMenuOpen,
+  unreadNotifications,
+  onToggleNotificationMenu,
+  onCloseNotificationMenu,
+  onCreateSession,
+  onEnableNotifications,
+  onTestNotification,
+  onOpenSettings
+}: {
+  activeView: string;
+  connection: ConnectionState;
+  health: string;
+  daemonUrl: string;
+  isBusy: boolean;
+  notificationPermission: NotificationPermissionState;
+  notificationMenuOpen: boolean;
+  unreadNotifications: number;
+  onToggleNotificationMenu: () => void;
+  onCloseNotificationMenu: () => void;
+  onCreateSession: () => void;
+  onEnableNotifications: () => void;
+  onTestNotification: () => void;
+  onOpenSettings: () => void;
+}) {
+  const canCreate = connection === "connected" && !isBusy;
+  const notificationLabel =
+    notificationPermission === "granted"
+      ? "Notifications enabled"
+      : notificationPermission === "unsupported"
+      ? "Desktop only"
+      : notificationPermission === "denied"
+      ? "Permission denied"
+      : "Notifications off";
+
+  return (
+    <header className="topbar">
+      <div className="topbar-title">
+        <h1>{activeView.charAt(0).toUpperCase() + activeView.slice(1)}</h1>
+        <p>
+          {connectionLabel(connection)} · daemon {health} · {daemonUrl}
+        </p>
+      </div>
+      <div className="topbar-actions">
+        <div className="notification-control">
+          <button
+            className={`icon-button notification-button ${notificationMenuOpen ? "active" : ""}`}
+            onClick={onToggleNotificationMenu}
+            aria-label="Notifications menu"
+            aria-expanded={notificationMenuOpen}
+          >
+            <Bell size={18} />
+            {unreadNotifications > 0 && <span className="notification-dot" />}
+          </button>
+          {notificationMenuOpen && (
+            <div className="notification-menu" role="menu">
+              <div className="notification-menu-header">
+                <strong>PI Sandbox is running</strong>
+                <span>{notificationLabel}</span>
+              </div>
+              <button onClick={onOpenSettings} role="menuitem">
+                <Settings size={15} />
+                Settings
+              </button>
+              <button onClick={onEnableNotifications} role="menuitem">
+                <Bell size={15} />
+                Enable notifications
+              </button>
+              <button onClick={onTestNotification} role="menuitem">
+                <Play size={15} />
+                Send test notification
+              </button>
+              <button onClick={onCloseNotificationMenu} role="menuitem">
+                <X size={15} />
+                Close
+              </button>
+            </div>
+          )}
+        </div>
+        {(activeView === "dashboard" || activeView === "sessions") && (
+          <button
+            className="primary-action"
+            onClick={onCreateSession}
+            disabled={!canCreate}
+          >
+            {isBusy ? <Loader2 className="spin" size={18} /> : <Play size={18} />}
+            New sandbox
+          </button>
+        )}
+      </div>
+    </header>
+  );
+}
+
 // ─── App ─────────────────────────────────────────────────────────────────────
 
 function App() {
@@ -1595,11 +2354,7 @@ function App() {
   const [selectedId, setSelectedId] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [isBusy, setIsBusy] = useState(false);
-  const [newName, setNewName] = useState("gui-session");
   const [defaults, setDefaults] = useState(() => loadGUIDefaults());
-  const [newTemplate, setNewTemplate] = useState(defaults.template);
-  const [newMode, setNewMode] = useState(defaults.mode);
-  const [projectFolder, setProjectFolder] = useState("");
   const [allowedFolders, setAllowedFolders] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem(ALLOWED_FOLDERS_STORAGE_KEY) || "[]");
@@ -1607,7 +2362,7 @@ function App() {
       return [];
     }
   });
-  const [workspaceMode, setWorkspaceMode] = useState<"copy" | "overlay" | "bind">("copy");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [runtimeInfo, setRuntimeInfo] = useState<RuntimeInfo | null>(null);
@@ -1615,7 +2370,11 @@ function App() {
   const [activeContext, setActiveContext] = useState(defaults.activeContext);
   const [doctorResult, setDoctorResult] = useState<DoctorResult | null>(null);
   const [supportBundle, setSupportBundle] = useState<SupportBundle | null>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermissionState>("checking");
+  const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const guiLogsRef = useRef<GuiLogEntry[]>([]);
+  const lastConnectionRef = useRef<ConnectionState>("checking");
 
   // Track whether the user has dismissed the onboarding (skip or connect).
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
@@ -1623,8 +2382,23 @@ function App() {
 
   const client = useMemo(() => new PiDaemonClient(daemonUrl, daemonBearerToken), [daemonUrl, daemonBearerToken]);
   const selectedSession = sessions.find((s) => s.id === selectedId);
-  const projectFolderSource = projectFolder.trim();
-  const folderIsAllowed = projectFolderSource ? allowedFolders.includes(projectFolderSource) : true;
+
+  const notifySystem = useCallback(
+    async (title: string, body: string) => {
+      if (!(await ensureNotificationPermission())) {
+        setNotificationPermission(await readNotificationPermission());
+        return;
+      }
+      try {
+        sendNotification({ title, body });
+        setNotificationPermission("granted");
+        setUnreadNotifications((count) => count + 1);
+      } catch {
+        setNotificationPermission("unsupported");
+      }
+    },
+    []
+  );
 
   function recordGuiLog(level: GuiLogEntry["level"], message: string): GuiLogEntry[] {
     const entry: GuiLogEntry = {
@@ -1660,6 +2434,10 @@ function App() {
         setDefaults((current) => ({ ...current, activeContext: contextResponse.active }));
       }
       setConnection("connected");
+      if (lastConnectionRef.current === "disconnected") {
+        void notifySystem("PI Sandbox connected", `Daemon is reachable at ${daemonUrl}.`);
+      }
+      lastConnectionRef.current = "connected";
       setOnboardingDismissed(true);
       recordGuiLog("info", `Connected to daemon at ${daemonUrl}; sessions=${sandboxList.length}`);
       if (!selectedId && sandboxList.length > 0) {
@@ -1667,6 +2445,10 @@ function App() {
       }
     } catch (err) {
       setConnection("disconnected");
+      if (lastConnectionRef.current === "connected") {
+        void notifySystem("PI Sandbox disconnected", "The daemon connection dropped.");
+      }
+      lastConnectionRef.current = "disconnected";
       setHealth("offline");
       setSessions([]);
       const msg = err instanceof Error ? err.message : "Unable to connect to daemon";
@@ -1689,35 +2471,80 @@ function App() {
   }, [defaults]);
 
   useEffect(() => {
+    if (!runtimeInfo?.available?.length) return;
+    const correctedMode = bestRuntimeMode(runtimeInfo, defaults.mode);
+    if (correctedMode !== defaults.mode) {
+      setDefaults((current) => ({ ...current, mode: correctedMode }));
+      recordGuiLog("info", `Adjusted unavailable runtime default ${defaults.mode} -> ${correctedMode}`);
+    }
+  }, [runtimeInfo, defaults.mode]);
+
+  useEffect(() => {
+    void readNotificationPermission().then(setNotificationPermission);
+  }, []);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let unlisten: (() => void) | undefined;
+    void listen<string>("pi://navigate", (event) => {
+      if (event.payload) {
+        setActiveView(event.payload);
+        setNotificationMenuOpen(false);
+      }
+    }).then((stop) => {
+      unlisten = stop;
+    });
+    return () => {
+      unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
     void refresh();
     const timer = window.setInterval(() => void refresh(), 5000);
     return () => window.clearInterval(timer);
   }, [refresh]);
 
-  async function createSession() {
-    if (!folderIsAllowed && projectFolderSource) {
+  async function createSession(draft: CreateSandboxDraft) {
+    const workspaceSource = draft.workspaceSource.trim();
+    const folderIsAllowed = workspaceSource ? allowedFolders.includes(workspaceSource) : true;
+    if (!folderIsAllowed && workspaceSource) {
       setError("Authorize the project folder before creating a GUI-launched session.");
       return;
     }
     setIsBusy(true);
     setError("");
     try {
-      const workspace = projectFolderSource
+      const workspace = workspaceSource
         ? {
-            mode: workspaceMode,
-            source: projectFolderSource,
-            maxSize: "5Gi"
+            mode: draft.workspaceMode,
+            source: workspaceSource,
+            maxSize: draft.workspaceMaxSize.trim() || "5Gi"
           }
         : undefined;
       const created = await client.createSandbox({
-        name: newName.trim() || "gui-session",
-        template: newTemplate,
-        mode: newMode,
+        name: draft.name.trim() || "gui-session",
+        template: draft.template,
+        mode: draft.mode,
         workspace,
-        ttlSeconds: defaults.mode === "microvm" ? 3600 : 7200
+        ttlSeconds: draft.ttlSeconds
       });
+      if (draft.repoUrl.trim()) {
+        await client.cloneSandbox(created.id, draft.repoUrl.trim());
+      }
+      if (draft.rememberDefaults) {
+        setDefaults((current) => ({
+          ...current,
+          template: draft.template,
+          mode: draft.mode,
+          network: draft.network
+        }));
+      }
       setSelectedId(created.id);
-      recordGuiLog("info", `Created sandbox ${created.id} (${created.name || newName})`);
+      setActiveView("sessions");
+      setCreateDialogOpen(false);
+      recordGuiLog("info", `Created sandbox ${created.id} (${created.name || draft.name})`);
+      void notifySystem("Sandbox created", `${created.name || draft.name} is ready to inspect.`);
       await refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unable to create sandbox";
@@ -1728,8 +2555,8 @@ function App() {
     }
   }
 
-  function authorizeFolder() {
-    const folder = projectFolderSource;
+  function authorizeFolder(folderInput: string) {
+    const folder = folderInput.trim();
     if (!folder) {
       setError("Enter a project folder before authorizing it.");
       return;
@@ -1743,14 +2570,6 @@ function App() {
   }
 
   async function selectContext(name: string) {
-    const selectedContext = contexts.find((context) => context.name === name);
-    if (selectedContext?.transport === "http" && selectedContext.auth_type === "bearer-token") {
-      const msg = "HTTP remote contexts require bearer-token auth. Connect through Remote daemon and provide a token for this GUI session.";
-      setError(msg);
-      recordGuiLog("warning", `Blocked unauthenticated HTTP context switch for ${name}`);
-      return;
-    }
-
     setIsBusy(true);
     setError("");
     try {
@@ -1758,13 +2577,10 @@ function App() {
       const selected = contexts.find((context) => context.name === response.active);
       setActiveContext(response.active);
       setDefaults((current) => ({ ...current, activeContext: response.active }));
-      if (selected?.transport === "http" && selected.target.startsWith("http")) {
-        setDaemonUrl(selected.target);
-        setDaemonBearerToken("");
-      } else if (selected?.name === "local") {
+      if (selected?.name === "local") {
         setDaemonUrl(DEFAULT_DAEMON_URL);
-        setDaemonBearerToken("");
       }
+      setDaemonBearerToken("");
       recordGuiLog("info", `Switched active context to ${response.active}`);
       await refresh();
     } catch (err) {
@@ -1783,6 +2599,7 @@ function App() {
       const bundle = await client.supportBundle();
       const logs = recordGuiLog("info", "Support bundle exported from GUI");
       setSupportBundle({ ...bundle, gui_logs: logs });
+      void notifySystem("Support bundle exported", "Diagnostics were collected and redacted.");
       setError("");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unable to export support bundle";
@@ -1796,8 +2613,6 @@ function App() {
   function updateDefaults(next: Partial<GUIDefaults>) {
     setDefaults((current) => {
       const updated = { ...current, ...next };
-      setNewTemplate(updated.template || current.template);
-      setNewMode(updated.mode || current.mode);
       return updated;
     });
   }
@@ -1846,26 +2661,32 @@ function App() {
       />
 
       <section className="workspace">
-        <header className="topbar">
-          <div>
-            <h1>{activeView.charAt(0).toUpperCase() + activeView.slice(1)}</h1>
-            <p>
-              {connectionLabel(connection)} · daemon {health} · {daemonUrl}
-            </p>
-          </div>
-          <div className="topbar-actions">
-            {(activeView === "dashboard" || activeView === "sessions") && (
-              <button
-                className="primary-action"
-                onClick={() => void createSession()}
-                disabled={isBusy || connection !== "connected" || !folderIsAllowed}
-              >
-                {isBusy ? <Loader2 className="spin" size={20} /> : <Play size={20} />}
-                New sandbox
-              </button>
-            )}
-          </div>
-        </header>
+        <Topbar
+          activeView={activeView}
+          connection={connection}
+          health={health}
+          daemonUrl={daemonUrl}
+          isBusy={isBusy}
+          notificationPermission={notificationPermission}
+          notificationMenuOpen={notificationMenuOpen}
+          unreadNotifications={unreadNotifications}
+          onToggleNotificationMenu={() => {
+            setNotificationMenuOpen((open) => !open);
+            setUnreadNotifications(0);
+          }}
+          onCloseNotificationMenu={() => setNotificationMenuOpen(false)}
+          onCreateSession={() => setCreateDialogOpen(true)}
+          onEnableNotifications={() => {
+            void ensureNotificationPermission().then(async (granted) => {
+              setNotificationPermission(granted ? "granted" : await readNotificationPermission());
+            });
+          }}
+          onTestNotification={() => void notifySystem("PI Sandbox", "Desktop notifications are ready.")}
+          onOpenSettings={() => {
+            setActiveView("settings");
+            setNotificationMenuOpen(false);
+          }}
+        />
 
         {error && <div className="error-banner">{error}</div>}
 
@@ -1881,13 +2702,12 @@ function App() {
               setSelectedId(id);
               setActiveView("sessions");
             }}
-            onCreateSession={() => void createSession()}
           />
         )}
 
         {/* ── Sessions view ──────────────────────────────────────────────── */}
         {activeView === "sessions" && (
-          <div className="content-grid">
+          <div className="sessions-workbench">
             <section className="sessions-panel">
               <div className="section-heading">
                 <h3>Sessions</h3>
@@ -1956,10 +2776,24 @@ function App() {
             activeContext={activeContext}
             onSelectContext={selectContext}
             daemonUrl={daemonUrl}
-            setDaemonUrl={(url) => {
-              setDaemonUrl(url);
-              setDaemonBearerToken("");
-            }}
+            client={client}
+            onRefresh={refresh}
+          />
+        )}
+
+        {/* ── Policies view ──────────────────────────────────────────────── */}
+        {activeView === "policies" && (
+          <PoliciesView
+            defaults={defaults}
+            allowedFolders={allowedFolders}
+            doctorResult={doctorResult}
+            systemStatus={systemStatus}
+            runtimeInfo={runtimeInfo}
+            connection={connection}
+            activeContext={activeContext}
+            sessions={sessions}
+            onOpenSettings={() => setActiveView("settings")}
+            onOpenSessions={() => setActiveView("sessions")}
           />
         )}
 
@@ -1978,98 +2812,19 @@ function App() {
           />
         )}
 
-        {/* ── Create session panel (always visible on dashboard) ─────────── */}
-        {activeView === "dashboard" && (
-          <div className="dashboard-lower-grid">
-            <section className="authorization-panel">
-              <div className="section-heading">
-                <h3>Workspace authorization</h3>
-                <span>Default {workspaceMode} mode</span>
-              </div>
-              <label className="field-label" htmlFor="project-folder">Project folder</label>
-              <div className="folder-picker">
-                <div className="folder-value" id="project-folder">
-                  <Folder size={19} />
-                  <input
-                    value={projectFolder}
-                    onChange={(e) => setProjectFolder(e.target.value)}
-                    placeholder="/path/to/project"
-                  />
-                </div>
-                <button onClick={authorizeFolder}>Authorize</button>
-              </div>
-              <div className="mode-grid" aria-label="Workspace mode">
-                {(["copy", "overlay", "bind"] as const).map((mode) => (
-                  <button
-                    className={workspaceMode === mode ? "mode-option active" : "mode-option"}
-                    key={mode}
-                    onClick={() => setWorkspaceMode(mode)}
-                  >
-                    {mode}
-                  </button>
-                ))}
-              </div>
-              <div className="allowed-folders">
-                <div className={projectFolderSource ? (folderIsAllowed ? "workspace-access-state allowed" : "workspace-access-state pending") : "workspace-access-state neutral"}>
-                  {projectFolderSource
-                    ? folderIsAllowed
-                      ? "This folder is authorized for GUI-launched workspace access."
-                      : "This folder will not be sent to the daemon until it is authorized."
-                    : "No host folder selected. New sandboxes start without host workspace access."}
-                </div>
-                {allowedFolders.length === 0 ? (
-                  <span>No folders authorized.</span>
-                ) : (
-                  allowedFolders.map((folder) => (
-                    <div className="allowed-folder" key={folder}>
-                      <span>{folder}</span>
-                      <button onClick={() => removeAllowedFolder(folder)}>Remove</button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-
-            <section className="create-panel">
-              <div className="section-heading">
-                <h3>Create sandbox</h3>
-                <span>POST /v1/sandboxes</span>
-              </div>
-              <label className="field-label" htmlFor="sandbox-name">Name</label>
-              <input
-                id="sandbox-name"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-              />
-              <div className="split-fields">
-                <label>
-                  Template
-                  <select value={newTemplate} onChange={(e) => setNewTemplate(e.target.value)}>
-                    {TEMPLATES.map((template) => (
-                      <option key={template} value={template}>{template}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Mode
-                  <select value={newMode} onChange={(e) => setNewMode(e.target.value)}>
-                    {MODES.map((mode) => (
-                      <option key={mode} value={mode}>{mode}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <button
-                className="primary-action create-submit"
-                onClick={() => void createSession()}
-                disabled={isBusy || connection !== "connected" || !folderIsAllowed}
-              >
-                {isBusy ? <Loader2 className="spin" size={18} /> : <Plus size={18} />}
-                Create sandbox
-              </button>
-            </section>
-          </div>
-        )}
+        <CreateSandboxDialog
+          open={createDialogOpen}
+          defaults={defaults}
+          allowedFolders={allowedFolders}
+          connection={connection}
+          runtimeInfo={runtimeInfo}
+          isBusy={isBusy}
+          error={error}
+          onAuthorizeFolder={authorizeFolder}
+          onRemoveAllowedFolder={removeAllowedFolder}
+          onCancel={() => setCreateDialogOpen(false)}
+          onCreate={(draft) => void createSession(draft)}
+        />
       </section>
     </main>
   );

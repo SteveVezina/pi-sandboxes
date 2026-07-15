@@ -8,9 +8,9 @@ import (
 
 // MountPoint represents a cache mount inside the sandbox.
 type MountPoint struct {
-	HostPath   string `json:"hostPath"`
+	HostPath    string `json:"hostPath"`
 	SandboxPath string `json:"sandboxPath"`
-	ReadOnly   bool   `json:"readOnly"`
+	ReadOnly    bool   `json:"readOnly"`
 }
 
 // Manager manages cache mounts for sandbox sessions.

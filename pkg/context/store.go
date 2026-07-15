@@ -178,6 +178,34 @@ func (s *Store) Create(ctx Context) error {
 	return s.save()
 }
 
+// Update replaces an existing non-local context.
+func (s *Store) Update(name string, ctx Context) error {
+	if name == LocalContextName || ctx.Name == LocalContextName {
+		return fmt.Errorf("context name %q is reserved", LocalContextName)
+	}
+	if name == "" {
+		return fmt.Errorf("context name is required")
+	}
+	if ctx.Name == "" {
+		ctx.Name = name
+	}
+	if ctx.Name != name {
+		return fmt.Errorf("context name cannot be changed")
+	}
+	if err := Validate(ctx); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i, existing := range s.st.Contexts {
+		if existing.Name == name {
+			s.st.Contexts[i] = ctx
+			return s.save()
+		}
+	}
+	return fmt.Errorf("context %q not found", name)
+}
+
 // Get returns the named context, or the synthetic local context.
 func (s *Store) Get(name string) (Context, error) {
 	s.mu.Lock()

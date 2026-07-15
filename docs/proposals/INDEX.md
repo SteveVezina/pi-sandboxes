@@ -21,6 +21,8 @@ Track all PROP (spec amendment proposals) for this project.
 | [PROP-003](PROP-003-f20-f23-contracts.md) | Specify F20-F23 MicroVM and Remote Contracts | ✅ Applied to block spec | Unblocks F20-F23 implementation | 2026-06-26 |
 | [PROP-004](PROP-004-cross-platform-gui.md) | Add Cross-Platform GUI Workbench | ✅ Applied to block spec | Adds later M7 GUI features F24-F27 and AC-27 through AC-30 | 2026-06-26 |
 | [PROP-005](PROP-005-pi-box-home.md) | Move Pi Box Home Out of `~/.pi` | ✅ Applied to block spec | Moves sandbox runtime default state root to `~/.pi-box` to avoid Pi coding agent collisions | 2026-07-15 |
+| [PROP-006](PROP-006-local-template-library.md) | Add Local Template Library and Lifecycle | 🟡 Proposed | Adds later F28/AC-31 for rich template metadata, local fork/snapshot/import/export/history/diff/rollback/promote workflows, and GUI template management | 2026-07-15 |
+| [PROP-007](PROP-007-image-resolution.md) | Resolve Template `base` Field to OCI Image Name | ✅ Applied to block spec (2026-07-15) | Fixes compat mode sandbox creation — template `base: debian-slim` must resolve to `docker.io/library/debian:bookworm-slim` before container creation | 2026-07-15 |
 
 ## Rules
 

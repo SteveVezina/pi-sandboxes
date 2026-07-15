@@ -32,25 +32,25 @@ The workspace is managed by the backend (fast: mount namespace view; compat: con
 
 CLI commands:
 ```bash
-pi box clone <name> <url>
-pi box files list <name> <path>
-pi box files read <name> <path>
-pi box files write <name> <path> <content>
-pi box diff <name>
-pi box patch <name>
-pi box files pull <name> <src> <dest>
-pi box files push <name> <src> <dest>
+pi-box box clone <name> <url>
+pi-box box files list <name> <path>
+pi-box box files read <name> <path>
+pi-box box files write <name> <path> <content>
+pi-box box diff <name>
+pi-box box patch <name>
+pi-box box files pull <name> <src> <dest>
+pi-box box files push <name> <src> <dest>
 ```
 
 ## Acceptance Criteria
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-6.1: `pi box clone <repo>` clones a repository into sandbox workspace
-- [x] AC-6.2: `pi box files read <id> <path>` reads a file from sandbox
-- [x] AC-6.3: `pi box files write <id> <path>` writes a file to sandbox
-- [x] AC-6.4: `pi box diff <id>` shows workspace diff
-- [x] AC-6.5: `pi box patch <id>` exports workspace as patch
+- [x] AC-6.1: `pi-box box clone <repo>` clones a repository into sandbox workspace
+- [x] AC-6.2: `pi-box box files read <id> <path>` reads a file from sandbox
+- [x] AC-6.3: `pi-box box files write <id> <path>` writes a file to sandbox
+- [x] AC-6.4: `pi-box box diff <id>` shows workspace diff
+- [x] AC-6.5: `pi-box box patch <id>` exports workspace as patch
 - [x] AC-6.6: Clone supports HTTPS and SSH URLs
 - [x] AC-6.7: SSH credentials brokered (not blindly mounted)
 
@@ -102,8 +102,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement repository clone into sandbox workspace. Supports HTTPS and SSH URLs. SSH credentials brokered via credential helper.
 
 **Acceptance criteria:**
-- [x] `pi box clone demo https://github.com/acme/app` clones repo
-- [x] `pi box clone demo git@github.com:acme/app.git` clones via SSH
+- [x] `pi-box box clone demo https://github.com/acme/app` clones repo
+- [x] `pi-box box clone demo git@github.com:acme/app.git` clones via SSH
 - [x] HTTPS clone uses credentials from config or prompts user
 - [x] SSH clone uses brokered credentials (not mounted into sandbox)
 - [x] Clone URL validated (rejects file://, git:// by default)
@@ -143,8 +143,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement git diff and patch export from workspace.
 
 **Acceptance criteria:**
-- [x] `pi box diff <id>` returns unified diff of workspace changes
-- [x] `pi box patch <id>` returns git patch format
+- [x] `pi-box box diff <id>` returns unified diff of workspace changes
+- [x] `pi-box box patch <id>` returns git patch format
 - [x] Diff includes both staged and unstaged changes
 - [x] Patch can be applied with `git apply`
 - [x] Empty workspace returns empty diff/patch
@@ -163,8 +163,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement file pull (sandbox → host) and push (host → sandbox) operations.
 
 **Acceptance criteria:**
-- [x] `pi box files pull <id> <src> <dest>` copies files from sandbox to host
-- [x] `pi box files push <id> <src> <dest>` copies files from host to sandbox
+- [x] `pi-box box files pull <id> <src> <dest>` copies files from sandbox to host
+- [x] `pi-box box files push <id> <src> <dest>` copies files from host to sandbox
 - [x] Directories copied recursively
 - [x] Progress reported for large transfers
 

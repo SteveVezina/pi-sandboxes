@@ -77,6 +77,7 @@ func ShellSandboxForID(store *session.Store, id string) http.Handler {
 		<-done
 	})
 }
+
 // WebSocket and then provides an interactive shell inside the sandbox.
 //
 // Protocol (text frames):

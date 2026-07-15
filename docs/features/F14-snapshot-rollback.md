@@ -29,10 +29,10 @@ Operations:
 
 CLI commands:
 ```bash
-pi box snapshot <name> <action> [name]
-pi box snapshots <name>
-pi box rollback <name> <snapshot-name>
-pi box snapshot delete <name> <snapshot-name>
+pi-box box snapshot <name> <action> [name]
+pi-box box snapshots <name>
+pi-box box rollback <name> <snapshot-name>
+pi-box box snapshot delete <name> <snapshot-name>
 ```
 
 MicroVM mode (future) should support:
@@ -46,8 +46,8 @@ For now, the MVP uses filesystem-level snapshots.
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-13.1: `pi box snapshot <id> <name>` creates a named snapshot
-- [x] AC-13.2: `pi box rollback <id> <name>` restores to snapshot
+- [x] AC-13.1: `pi-box box snapshot <id> <name>` creates a named snapshot
+- [x] AC-13.2: `pi-box box rollback <id> <name>` restores to snapshot
 - [x] AC-13.3: Snapshot creation uses overlay upperdir or reflink
 - [x] AC-13.4: Snapshot metadata stored under `~/.pi-box/sandboxes/<id>/snapshots/`
 
@@ -99,7 +99,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement snapshot creation using overlay upperdir copy or reflink.
 
 **Acceptance criteria:**
-- [x] `pi box snapshot demo before-refactor` creates named snapshot
+- [x] `pi-box box snapshot demo before-refactor` creates named snapshot
 - [x] Snapshot uses overlay upperdir copy (fast mode)
 - [x] Snapshot uses reflink if filesystem supports it (btrfs, xfs)
 - [x] Snapshot falls back to tar/zstd if reflink unavailable
@@ -120,11 +120,11 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement snapshot listing and rollback.
 
 **Acceptance criteria:**
-- [x] `pi box snapshots demo` lists all snapshots with timestamps
-- [x] `pi box rollback demo before-refactor` restores workspace to snapshot
+- [x] `pi-box box snapshots demo` lists all snapshots with timestamps
+- [x] `pi-box box rollback demo before-refactor` restores workspace to snapshot
 - [x] Rollback overwrites workspace with snapshot contents
 - [x] Rollback asks for confirmation (destructive operation)
-- [x] `pi box snapshot delete demo before-refactor` removes snapshot
+- [x] `pi-box box snapshot delete demo before-refactor` removes snapshot
 
 **Verification:**
 - [x] `go build ./pkg/snapshot/...`

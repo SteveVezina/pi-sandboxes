@@ -69,10 +69,10 @@ type fastRuntime struct {
 	rootDir string
 }
 
-func (f *fastRuntime) Name() string        { return "fast" }
-func (f *fastRuntime) IsAvailable() bool   { return true }
-func (f *fastRuntime) IsGvisor() bool      { return false }
-func (f *fastRuntime) GetMode() string     { return "fast" }
+func (f *fastRuntime) Name() string          { return "fast" }
+func (f *fastRuntime) IsAvailable() bool     { return true }
+func (f *fastRuntime) IsGvisor() bool        { return false }
+func (f *fastRuntime) GetMode() string       { return "fast" }
 func (f *fastRuntime) GetSecurityLevel() int { return 5 }
 
 // compatRuntime is a minimal wrapper for the compat backend.
@@ -80,10 +80,10 @@ type compatRuntime struct {
 	detected *compat.DetectedRuntime
 }
 
-func (c *compatRuntime) Name() string        { return string(c.detected.Name) }
-func (c *compatRuntime) IsAvailable() bool   { return true }
-func (c *compatRuntime) IsGvisor() bool      { return false }
-func (c *compatRuntime) GetMode() string     { return "compat" }
+func (c *compatRuntime) Name() string          { return string(c.detected.Name) }
+func (c *compatRuntime) IsAvailable() bool     { return true }
+func (c *compatRuntime) IsGvisor() bool        { return false }
+func (c *compatRuntime) GetMode() string       { return "compat" }
 func (c *compatRuntime) GetSecurityLevel() int { return 3 }
 
 // RuntimeInfo holds detailed information about a single runtime backend.
@@ -109,10 +109,10 @@ func AvailableRuntimes(rootDir string) []string {
 func AllRuntimes(rootDir string) []RuntimeInfo {
 	var result []RuntimeInfo
 	runtimeDescriptions := map[string]string{
-		"gvisor": "gVisor sandboxed runtime — strong isolation, may have syscall compatibility issues",
-		"fast":   "Native Linux namespaces/cgroups — fastest path, Linux-only",
-		"compat": "OCI container runtime (runc/podman) — best compatibility",
-		"microvm":"Firecracker/Cloud Hypervisor microVM — highest isolation",
+		"gvisor":  "gVisor sandboxed runtime — strong isolation, may have syscall compatibility issues",
+		"fast":    "Native Linux namespaces/cgroups — fastest path, Linux-only",
+		"compat":  "OCI container runtime (runc/podman) — best compatibility",
+		"microvm": "Firecracker/Cloud Hypervisor microVM — highest isolation",
 	}
 	for _, name := range priority {
 		rt, err := tryRuntime(name, rootDir)

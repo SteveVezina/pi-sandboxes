@@ -53,9 +53,9 @@ func SystemRuntimes() http.HandlerFunc {
 		available := detect.AvailableRuntimes("")
 		runtimes := detect.AllRuntimes("")
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"available":  available,
-			"best":       detect.BestMode(""),
-			"backends":   runtimes,
+			"available": available,
+			"best":      detect.BestMode(""),
+			"backends":  runtimes,
 		})
 	}
 }

@@ -58,7 +58,7 @@ func TestDaemonBuild(t *testing.T) {
 // TestCLIBuild verifies the CLI binary compiles.
 func TestCLIBuild(t *testing.T) {
 	proj := projectDir()
-	cmd := exec.Command("go", "build", "-o", "/dev/null", "./cmd/pi/main.go")
+	cmd := exec.Command("go", "build", "-o", "/dev/null", "./cmd/pi-box/main.go")
 	cmd.Dir = proj
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("CLI build failed: %v\n%s", err, string(out))

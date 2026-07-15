@@ -61,44 +61,44 @@ The architecture is shaped by these invariants:
 
 ## 3. Component Details
 
-### 3.1 CLI (`cmd/pi/`)
+### 3.1 CLI (`cmd/pi-box/`)
 
 The command-line interface is the primary entry point for users and agents.
 
 ```
-cmd/pi/
+cmd/pi-box/
 ├── main.go              # Cobra root command
 ├── box/                 # Sandbox lifecycle subcommands
-│   ├── create.go        # pi box create
-│   ├── clone.go         # pi box clone
-│   ├── exec.go          # pi box exec
-│   ├── diff.go          # pi box diff
-│   ├── patch.go         # pi box patch
-│   ├── artifacts.go     # pi box artifacts (list/pull/pack)
-│   ├── logs.go          # pi box logs
-│   ├── history.go       # pi box history
-│   ├── snapshot.go      # pi box snapshot/rollback
-│   └── destroy.go       # pi box destroy
+│   ├── create.go        # pi-box box create
+│   ├── clone.go         # pi-box box clone
+│   ├── exec.go          # pi-box box exec
+│   ├── diff.go          # pi-box box diff
+│   ├── patch.go         # pi-box box patch
+│   ├── artifacts.go     # pi-box box artifacts (list/pull/pack)
+│   ├── logs.go          # pi-box box logs
+│   ├── history.go       # pi-box box history
+│   ├── snapshot.go      # pi-box box snapshot/rollback
+│   └── destroy.go       # pi-box box destroy
 ├── system/              # System management subcommands
-│   ├── status.go        # pi system status
-│   ├── doctor.go        # pi system doctor
-│   ├── prune.go         # pi system prune
-│   └── disk-usage.go    # pi system disk-usage
+│   ├── status.go        # pi-box system status
+│   ├── doctor.go        # pi-box system doctor
+│   ├── prune.go         # pi-box system prune
+│   └── disk-usage.go    # pi-box system disk-usage
 ├── context/             # Remote context management
-│   ├── create.go        # pi context create
-│   ├── use.go           # pi context use
-│   ├── list.go          # pi context list
-│   ├── inspect.go       # pi context inspect
-│   └── delete.go        # pi context delete
+│   ├── create.go        # pi-box context create
+│   ├── use.go           # pi-box context use
+│   ├── list.go          # pi-box context list
+│   ├── inspect.go       # pi-box context inspect
+│   └── delete.go        # pi-box context delete
 ├── bench/               # Benchmark runner
-│   └── run.go           # pi bench run
+│   └── run.go           # pi-box bench run
 ├── cache/               # Cache management
-│   └── list.go          # pi cache list
+│   └── list.go          # pi-box cache list
 └── shell/               # Interactive shell
-    └── shell.go         # pi shell
+    └── shell.go         # pi-box shell
 ```
 
-**Key design:** The CLI talks to the daemon via HTTP over a Unix socket (`~/.pi/sandboxd.sock`). All business logic lives in the daemon; the CLI is a thin client.
+**Key design:** The CLI talks to the daemon via HTTP over a Unix socket (`~/.pi-box/sandboxd.sock`). All business logic lives in the daemon; the CLI is a thin client.
 
 ### 3.2 Daemon (`cmd/pi-sandboxd/`)
 
@@ -111,8 +111,8 @@ cmd/pi-sandboxd/
 ```
 
 **Startup flow:**
-1. Create `~/.pi/sandboxes/` and `~/.pi/templates/` directories
-2. Load templates from `~/.pi/templates/`
+1. Create `~/.pi-box/sandboxes/` and `~/.pi-box/templates/` directories
+2. Load templates from `~/.pi-box/templates/`
 3. Start HTTP server on Unix socket
 4. Listen for API requests
 
@@ -246,7 +246,7 @@ pkg/snapshot/
 └── types.go             # Snapshot, SnapshotMeta types
 ```
 
-**Storage:** `~/.pi/sandboxes/<id>/snapshots/`
+**Storage:** `~/.pi-box/sandboxes/<id>/snapshots/`
 
 ### 3.10 Cache Manager (`pkg/cache/`)
 
@@ -396,7 +396,7 @@ Snapshot Manager
     │ Backend-specific snapshot
     │ (overlay upperdir / reflink / VM snapshot)
     ▼
-Snapshot stored at ~/.pi/sandboxes/{id}/snapshots/{name}/
+Snapshot stored at ~/.pi-box/sandboxes/{id}/snapshots/{name}/
 ```
 
 ## 5. API Surface
@@ -487,7 +487,7 @@ Snapshot stored at ~/.pi/sandboxes/{id}/snapshots/{name}/
 ## 8. Persistence Layout
 
 ```
-~/.pi/
+~/.pi-box/
 ├── sandboxd.sock          # Daemon socket
 ├── sandboxes/
 │   └── {session-id}/

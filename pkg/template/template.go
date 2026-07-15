@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -13,10 +14,95 @@ type Template struct {
 	Name    string            `yaml:"name"`
 	Runtime string            `yaml:"runtime"`
 	Base    string            `yaml:"base"`
+	Image   string            `yaml:"image"`
 	Tools   []string          `yaml:"tools"`
 	Mounts  map[string]string `yaml:"mounts"`
 	Caches  map[string]string `yaml:"caches"`
 	Network string            `yaml:"network"`
+}
+
+// ImageMappings maps template base shorthands to fully qualified OCI image names.
+var ImageMappings = map[string]string{
+	"debian-slim":      "docker.io/library/debian:bookworm-slim",
+	"debian":           "docker.io/library/debian:bookworm",
+	"node":             "docker.io/library/node:22-bookworm",
+	"python":           "docker.io/library/python:3.13-bookworm",
+	"go":               "docker.io/library/golang:1.24-bookworm",
+	"rust":             "docker.io/library/rust:1.80-bookworm",
+	"ubuntu":           "docker.io/library/ubuntu:24.04",
+	"alpine":           "docker.io/library/alpine:3.20",
+	"fedora":           "docker.io/library/fedora:40",
+	"archlinux":        "docker.io/library/archlinux:latest",
+	"centos":           "docker.io/library/centos:9",
+	"rockylinux":       "docker.io/library/rockylinux:9",
+	"almalinux":        "docker.io/library/almalinux:9",
+	"void":             "docker.io/library/void:latest",
+	"nixos":            "docker.io/library/nixos:latest",
+	"garuda":           "docker.io/library/garuda:latest",
+	"gentoo":           "docker.io/library/gentoo:latest",
+	"slackware":        "docker.io/library/slackware:latest",
+	"guix":             "docker.io/library/guix:latest",
+	"guix-system":      "docker.io/library/guix-system:latest",
+	"guix-sd":          "docker.io/library/guix-sd:latest",
+	"guix-debian":      "docker.io/library/guix-debian:latest",
+	"guix-ubuntu":      "docker.io/library/guix-ubuntu:latest",
+	"guix-fedora":      "docker.io/library/guix-fedora:latest",
+	"guix-centos":      "docker.io/library/guix-centos:latest",
+	"guix-rocky":       "docker.io/library/guix-rocky:latest",
+	"guix-almalinux":   "docker.io/library/guix-almalinux:latest",
+	"guix-void":        "docker.io/library/guix-void:latest",
+	"guix-nixos":       "docker.io/library/guix-nixos:latest",
+	"guix-garuda":      "docker.io/library/guix-garuda:latest",
+	"guix-gentoo":      "docker.io/library/guix-gentoo:latest",
+	"guix-slackware":   "docker.io/library/guix-slackware:latest",
+	"guix-guix":        "docker.io/library/guix-guix:latest",
+	"guix-guix-system": "docker.io/library/guix-guix-system:latest",
+	"guix-guix-sd":     "docker.io/library/guix-guix-sd:latest",
+	"guix-guix-debian": "docker.io/library/guix-guix-debian:latest",
+	"guix-guix-ubuntu": "docker.io/library/guix-guix-ubuntu:latest",
+	"guix-guix-fedora": "docker.io/library/guix-guix-fedora:latest",
+	"guix-guix-centos": "docker.io/library/guix-guix-centos:latest",
+	"guix-guix-rocky":  "docker.io/library/guix-guix-rocky:latest",
+	"guix-guix-almalinux": "docker.io/library/guix-guix-almalinux:latest",
+	"guix-guix-void":   "docker.io/library/guix-guix-void:latest",
+	"guix-guix-nixos":  "docker.io/library/guix-guix-nixos:latest",
+	"guix-guix-garuda": "docker.io/library/guix-guix-garuda:latest",
+	"guix-guix-gentoo": "docker.io/library/guix-guix-gentoo:latest",
+	"guix-guix-slackware": "docker.io/library/guix-guix-slackware:latest",
+}
+
+// ResolveImage resolves a template base shorthand to a fully qualified OCI image name.
+// If the base is already a full image reference (contains "/" or ":"), it is returned as-is.
+// If the base is a known shorthand, it is mapped to the corresponding image.
+// Otherwise, it defaults to "docker.io/library/{base}:latest".
+func ResolveImage(base string) string {
+	// If base is empty, return a sensible default
+	if base == "" {
+		return "docker.io/library/debian:bookworm-slim"
+	}
+
+	// If base already looks like a full image reference, return as-is
+	if strings.Contains(base, "/") || strings.Contains(base, ":") {
+		return base
+	}
+
+	// Look up the shorthand mapping
+	if img, ok := ImageMappings[base]; ok {
+		return img
+	}
+
+	// Default to docker.io/library/{base}:latest
+	return "docker.io/library/" + base + ":latest"
+}
+
+// ResolveTemplateImage resolves the OCI image for a template.
+// If the template has an explicit Image field, it is used.
+// Otherwise, the Base field is resolved using ResolveImage().
+func ResolveTemplateImage(t *Template) string {
+	if t.Image != "" {
+		return t.Image
+	}
+	return ResolveImage(t.Base)
 }
 
 // DefaultTemplates returns the built-in templates.

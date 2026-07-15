@@ -56,7 +56,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-8.1: Sandbox created once and kept warm
 - [x] AC-8.2: Multiple exec calls reuse the same session
 - [x] AC-8.3: TTL expiration triggers cleanup
-- [x] AC-8.4: `pi box destroy --all` cleans all sandboxes
+- [x] AC-8.4: `pi-box box destroy --all` cleans all sandboxes
 - [x] AC-8.5: Session state persisted in `~/.pi-box/sandboxes/<id>/meta.json`
 - [x] AC-8.6: Orphaned sessions cleaned up on daemon restart
 
@@ -189,8 +189,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Unit tests for state machine transitions
 - [x] Integration test: TTL expiration triggers destroy
 - [x] Integration test: orphan cleanup on restart
-- [x] `pi box destroy --all` cleans all sandboxes
-- [x] AC-8.4: `pi box destroy --all` via cobra `--all` flag (`tests/box/box_ac_test.go::TestBoxDestroyAll_CleansAllSandboxes`)
+- [x] `pi-box box destroy --all` cleans all sandboxes
+- [x] AC-8.4: `pi-box box destroy --all` via cobra `--all` flag (`tests/box/box_ac_test.go::TestBoxDestroyAll_CleansAllSandboxes`)
 
 ## Spec Gaps
 
@@ -198,6 +198,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
+
+### Resolved gaps
+
+| Gap | Block Spec Section | Resolution |
+|-----|-------------------|------------|
+| Sandbox marked WARM before runtime resource exists | §7 Session state machine | PROP-007 — added state verification: container must be running before transitioning to WARM state |
 | TTL expiration frequency not specified | §8 Session Lifecycle | Add: "Background checker runs every 60s" |
 
 ### ADR gaps (needs architectural decision)

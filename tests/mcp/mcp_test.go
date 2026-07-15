@@ -191,7 +191,6 @@ func TestHandleUnknownMethod(t *testing.T) {
 func TestHTTPHandler(t *testing.T) {
 	server := mcp.NewServer()
 
-
 	// Create a test HTTP request
 	req := bytes.NewReader([]byte(`{
 		"jsonrpc": "2.0",

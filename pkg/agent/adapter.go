@@ -19,9 +19,9 @@ type ToolCall struct {
 
 // ToolResult represents the result of a tool call.
 type ToolResult struct {
-	Success bool                 `json:"success"`
+	Success bool                   `json:"success"`
 	Data    map[string]interface{} `json:"data,omitempty"`
-	Error   string               `json:"error,omitempty"`
+	Error   string                 `json:"error,omitempty"`
 }
 
 // FormatResult returns a human-readable string representation of a ToolResult.
@@ -115,7 +115,9 @@ func (a *Adapter) execCreate(args map[string]interface{}) (*ToolResult, error) {
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}
 
-	var result struct{ ID string `json:"id"` }
+	var result struct {
+		ID string `json:"id"`
+	}
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}
@@ -208,7 +210,9 @@ func (a *Adapter) execClone(args map[string]interface{}) (*ToolResult, error) {
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}
 
-	var result struct{ ID string `json:"id"` }
+	var result struct {
+		ID string `json:"id"`
+	}
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}
@@ -225,7 +229,9 @@ func (a *Adapter) execDiff(args map[string]interface{}) (*ToolResult, error) {
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}
 
-	var result struct{ Diff string `json:"diff"` }
+	var result struct {
+		Diff string `json:"diff"`
+	}
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}
@@ -242,7 +248,9 @@ func (a *Adapter) execPatch(args map[string]interface{}) (*ToolResult, error) {
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}
 
-	var result struct{ Patch string `json:"patch"` }
+	var result struct {
+		Patch string `json:"patch"`
+	}
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}
@@ -290,7 +298,9 @@ func (a *Adapter) execArtifactsList(args map[string]interface{}) (*ToolResult, e
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}
 
-	var result struct{ Files []string `json:"files"` }
+	var result struct {
+		Files []string `json:"files"`
+	}
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}

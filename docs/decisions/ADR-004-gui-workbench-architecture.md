@@ -36,7 +36,7 @@ The primary risk is accidentally creating a second sandbox lifecycle in the desk
 
 Use Option A.
 
-The GUI workbench is a thin client over `pi-sandboxd` and the existing F22/F23 context model. It may use the TypeScript SDK or daemon API directly for normal operations. It may shell out to `pi` only for diagnostics or compatibility gaps.
+The GUI workbench is a thin client over `pi-sandboxd` and the existing F22/F23 context model. It may use the TypeScript SDK or daemon API directly for normal operations. It may shell out to `pi-box` only for diagnostics or compatibility gaps.
 
 The preferred first implementation stack is Tauri or another small cross-platform desktop shell with a TypeScript frontend. Rust or native host code is limited to OS integration such as file picking, tray/menu behavior, local process supervision, and support bundle collection.
 

@@ -49,16 +49,16 @@
 - Snapshot subcommands (`create`, `list`, `rollback`, `delete`) are stubs
 
 **SPEC requirement (Section 12):**
-- `pi box create` — stub
-- `pi box list` — stub
-- `pi box inspect` — stub
-- `pi box clone` — stub
-- `pi box exec` — stub (but API handler exists)
-- `pi box files list/read/write` — stub
-- `pi box artifacts list/pull/pack` — stub
-- `pi box snapshot create/list/rollback/delete` — stub
-- `pi box diff` — stub
-- `pi box logs` — stub
+- `pi-box box create` — stub
+- `pi-box box list` — stub
+- `pi-box box inspect` — stub
+- `pi-box box clone` — stub
+- `pi-box box exec` — stub (but API handler exists)
+- `pi-box box files list/read/write` — stub
+- `pi-box box artifacts list/pull/pack` — stub
+- `pi-box box snapshot create/list/rollback/delete` — stub
+- `pi-box box diff` — stub
+- `pi-box box logs` — stub
 
 **Impact:** The CLI is a skeleton. The daemon API has real handlers for CRUD + exec, but the CLI doesn't wire through to them.
 
@@ -134,9 +134,9 @@
 
 ### F22-F23: Remote Daemon — Not Started (Other agent's scope)
 
-- ❌ `pi context` CLI commands
+- ❌ `pi-box context` CLI commands
 - ❌ Remote transport (SSH/Tailscale/WireGuard)
-- ❌ Context persistence (`~/.pi/contexts.yaml`)
+- ❌ Context persistence (`~/.pi-box/contexts.yaml`)
 
 ---
 

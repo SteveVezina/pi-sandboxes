@@ -12,11 +12,11 @@ import (
 
 // NamespaceConfig holds the namespace configuration for a sandbox process.
 type NamespaceConfig struct {
-	UserNS   bool // Enable user namespace
-	MountNS  bool // Enable mount namespace
-	PIDNS    bool // Enable PID namespace
-	HostUID  int  // Host UID to map to (default: 1000)
-	HostGID  int  // Host GID to map to (default: 1000)
+	UserNS  bool // Enable user namespace
+	MountNS bool // Enable mount namespace
+	PIDNS   bool // Enable PID namespace
+	HostUID int  // Host UID to map to (default: 1000)
+	HostGID int  // Host GID to map to (default: 1000)
 }
 
 // DefaultNamespaceConfig returns the default namespace configuration.

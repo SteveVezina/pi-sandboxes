@@ -12,13 +12,13 @@
 
 ## Expanded Specification
 
-The `pi` binary is the user-facing entry point for all sandbox operations. It uses a cobra-based CLI structure with a `box` subcommand namespace. The CLI is thin — it parses flags, validates input, and delegates to `pi-sandboxd` via the local Unix socket API.
+The `pi-box` binary is the user-facing entry point for all sandbox operations. It uses a cobra-based CLI structure with a `box` subcommand namespace. The CLI is thin — it parses flags, validates input, and delegates to `pi-sandboxd` via the local Unix socket API.
 
 The CLI supports the following subcommand groups:
-- `pi box` — sandbox lifecycle (create, list, inspect, clone, exec, shell, files, diff, patch, artifacts, snapshot, logs, destroy)
-- `pi system` — daemon and state management (status, doctor, prune, disk-usage)
-- `pi bench` — benchmark suite (run)
-- `pi template` — template management (list, inspect, build, update, prune)
+- `pi-box box` — sandbox lifecycle (create, list, inspect, clone, exec, shell, files, diff, patch, artifacts, snapshot, logs, destroy)
+- `pi-box system` — daemon and state management (status, doctor, prune, disk-usage)
+- `pi-box bench` — benchmark suite (run)
+- `pi-box template` — template management (list, inspect, build, update, prune)
 
 Each subcommand maps to one or more API calls. The CLI handles:
 - Flag parsing with sensible defaults from `~/.pi-box/config.yaml`
@@ -32,17 +32,17 @@ The CLI must not implement business logic — all operations go through the daem
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-1.1: `pi box create --name demo --template node-python --mode fast` creates a sandbox via daemon API
-- [x] AC-1.2: `pi box list` lists all sandboxes by querying the daemon
-- [x] AC-1.3: `pi box inspect demo` displays sandbox details from daemon
-- [x] AC-1.4: `pi box destroy demo` sends destroy request to daemon
+- [x] AC-1.1: `pi-box box create --name demo --template node-python --mode fast` creates a sandbox via daemon API
+- [x] AC-1.2: `pi-box box list` lists all sandboxes by querying the daemon
+- [x] AC-1.3: `pi-box box inspect demo` displays sandbox details from daemon
+- [x] AC-1.4: `pi-box box destroy demo` sends destroy request to daemon
 - [x] AC-1.5: `--json` flag produces valid JSON output for all box commands
-- [x] AC-1.6: `pi system status` shows daemon connection status and sandbox summary
-- [x] AC-1.7: `pi system doctor` validates configuration and reports issues
-- [x] AC-1.8: `pi system prune` removes old sandbox state
-- [x] AC-1.9: `pi system disk-usage` shows storage breakdown by category
-- [x] AC-1.10: `pi bench run` invokes benchmark suite
-- [x] AC-1.11: `pi template list/inspect/build/update/prune` commands work
+- [x] AC-1.6: `pi-box system status` shows daemon connection status and sandbox summary
+- [x] AC-1.7: `pi-box system doctor` validates configuration and reports issues
+- [x] AC-1.8: `pi-box system prune` removes old sandbox state
+- [x] AC-1.9: `pi-box system disk-usage` shows storage breakdown by category
+- [x] AC-1.10: `pi-box bench run` invokes benchmark suite
+- [x] AC-1.11: `pi-box template list/inspect/build/update/prune` commands work
 - [x] AC-1.12: Error messages are actionable (not just "failed")
 
 Each criterion must be:
@@ -54,7 +54,7 @@ Each criterion must be:
 
 | Component | Impact |
 |-----------|--------|
-| `cmd/pi/` | New Go module with cobra CLI |
+| `cmd/pi-box/` | New Go module with cobra CLI |
 | `~/.pi-box/config.yaml` | Default config file parsed by CLI |
 | `pi-sandboxd` | CLI delegates to daemon; no direct backend calls |
 | `--json` flag | Present on all box commands for machine consumption |
@@ -64,8 +64,8 @@ Reference `SPEC.md` §9 (Interface Contract) for API shapes the CLI consumes.
 ## Security Considerations
 
 - CLI reads config from `~/.pi-box/config.yaml` — no elevated privileges
-- `pi system doctor` may inspect filesystem permissions
-- `pi system prune` modifies `~/.pi-box/` state — requires explicit confirmation
+- `pi-box system doctor` may inspect filesystem permissions
+- `pi-box system prune` modifies `~/.pi-box/` state — requires explicit confirmation
 - No secrets passed as CLI arguments (use flags with stdin for sensitive input)
 - Git credentials handled by daemon, never exposed to CLI process
 
@@ -82,7 +82,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 | Category | Meaning |
 |----------|---------|
-| **Service-layer** | Go CLI in `cmd/pi/` using cobra |
+| **Service-layer** | Go CLI in `cmd/pi-box/` using cobra |
 | **Configuration** | Reads `~/.pi-box/config.yaml` for defaults |
 
 **ADR references:** None yet.
@@ -98,20 +98,20 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 ### T1.1: CLI binary skeleton with cobra
 
-**Description:** Create the `cmd/pi/` Go module with cobra-based CLI structure. Root command with `box`, `system`, `bench`, `template` subcommand groups. No functionality yet — just the command tree.
+**Description:** Create the `cmd/pi-box/` Go module with cobra-based CLI structure. Root command with `box`, `system`, `bench`, `template` subcommand groups. No functionality yet — just the command tree.
 
 **Acceptance criteria:**
-- [x] `pi --help` shows root command with subcommand groups
-- [x] `pi box --help` shows all box subcommands
-- [x] `pi system --help` shows all system subcommands
-- [x] `pi bench --help` shows bench subcommands
-- [x] `pi template --help` shows template subcommands
+- [x] `pi-box --help` shows root command with subcommand groups
+- [x] `pi-box box --help` shows all box subcommands
+- [x] `pi-box system --help` shows all system subcommands
+- [x] `pi-box bench --help` shows bench subcommands
+- [x] `pi-box template --help` shows template subcommands
 
 **Verification:**
-- [x] `go build ./cmd/pi/...`
-- [x] `./bin/pi --help`
+- [x] `go build ./cmd/pi-box/...`
+- [x] `./bin/pi-box --help`
 
-**Files:** `cmd/pi/main.go`, `cmd/pi/root.go`, `cmd/pi/box/`, `cmd/pi/system/`, `cmd/pi/bench/`, `cmd/pi/template/`
+**Files:** `cmd/pi-box/main.go`, `cmd/pi-box/root.go`, `cmd/pi-box/box/`, `cmd/pi-box/system/`, `cmd/pi-box/bench/`, `cmd/pi-box/template/`
 **Size:** S
 **Depends on:** None
 
@@ -125,11 +125,11 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 - [x] `--json` flag produces `{"error": "stub", "command": "..."}` for stub commands
 
 **Verification:**
-- [x] `go build ./cmd/pi/...`
-- [x] `./bin/pi box create --help` works
-- [x] `./bin/pi box create mybox` shows connection error (no daemon running)
+- [x] `go build ./cmd/pi-box/...`
+- [x] `./bin/pi-box box create --help` works
+- [x] `./bin/pi-box box create mybox` shows connection error (no daemon running)
 
-**Files:** `cmd/pi/box/create.go`, `cmd/pi/box/list.go`, `cmd/pi/box/inspect.go`, `cmd/pi/box/destroy.go`, `cmd/pi/box/clone.go`, `cmd/pi/box/exec.go`, `cmd/pi/box/shell.go`, `cmd/pi/box/files.go`, `cmd/pi/box/diff.go`, `cmd/pi/box/artifacts.go`, `cmd/pi/box/snapshot.go`, `cmd/pi/box/logs.go`
+**Files:** `cmd/pi-box/box/create.go`, `cmd/pi-box/box/list.go`, `cmd/pi-box/box/inspect.go`, `cmd/pi-box/box/destroy.go`, `cmd/pi-box/box/clone.go`, `cmd/pi-box/box/exec.go`, `cmd/pi-box/box/shell.go`, `cmd/pi-box/box/files.go`, `cmd/pi-box/box/diff.go`, `cmd/pi-box/box/artifacts.go`, `cmd/pi-box/box/snapshot.go`, `cmd/pi-box/box/logs.go`
 **Size:** M
 **Depends on:** None
 
@@ -138,16 +138,16 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 **Description:** Implement `system status/doctor/prune/disk-usage` subcommands. These query the daemon for local state information.
 
 **Acceptance criteria:**
-- [x] `pi system status` shows daemon connection status
-- [x] `pi system doctor` validates config file and reports issues
-- [x] `pi system prune` asks for confirmation before removing state
-- [x] `pi system disk-usage` shows breakdown by category
+- [x] `pi-box system status` shows daemon connection status
+- [x] `pi-box system doctor` validates config file and reports issues
+- [x] `pi-box system prune` asks for confirmation before removing state
+- [x] `pi-box system disk-usage` shows breakdown by category
 
 **Verification:**
-- [x] `go build ./cmd/pi/...`
-- [x] `./bin/pi system status` works with and without daemon
+- [x] `go build ./cmd/pi-box/...`
+- [x] `./bin/pi-box system status` works with and without daemon
 
-**Files:** `cmd/pi/system/status.go`, `cmd/pi/system/doctor.go`, `cmd/pi/system/prune.go`, `cmd/pi/system/disk-usage.go`
+**Files:** `cmd/pi-box/system/status.go`, `cmd/pi-box/system/doctor.go`, `cmd/pi-box/system/prune.go`, `cmd/pi-box/system/disk-usage.go`
 **Size:** S
 **Depends on:** F2 (daemon must be running for full functionality)
 
@@ -156,12 +156,12 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 **Description:** Implement `~/.pi-box/config.yaml` parsing with defaults for runtime mode, network mode, exec timeout, max output, cache settings.
 
 **Acceptance criteria:**
-- [x] Default config created on first `pi system doctor` run
+- [x] Default config created on first `pi-box system doctor` run
 - [x] Config values override CLI flags with lower precedence
 - [x] Invalid config produces actionable error
 
 **Verification:**
-- [x] `go build ./cmd/pi/...`
+- [x] `go build ./cmd/pi-box/...`
 - [x] Unit tests for config parsing
 
 **Files:** `pkg/cli/config/config.go`, `~/.pi-box/config.yaml` (created by doctor)
@@ -170,8 +170,8 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 ## Verification Plan
 
-- [x] `go build ./cmd/pi/...` succeeds
-- [x] `./bin/pi --help` shows all subcommand groups
+- [x] `go build ./cmd/pi-box/...` succeeds
+- [x] `./bin/pi-box --help` shows all subcommand groups
 - [x] All box commands connect to daemon (or show connection error)
 - [x] `--json` flag produces valid JSON
 - [x] Error messages are actionable per SPEC.md §28

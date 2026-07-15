@@ -296,7 +296,7 @@ make mock-down        # Stop mock services
 
 | Binary | Path | Purpose |
 |--------|------|---------|
-| `pi-box` | `cmd/pi/main.go` | CLI entry point |
+| `pi-box` | `cmd/pi-box/main.go` | CLI entry point |
 | `pi-sandboxd` | `cmd/pi-sandboxd/main.go` | Sandbox daemon |
 | `pi-agentd` | `cmd/pi-agentd/` | Agent-side daemon (MicroVM guest) |
 | `pi-init` | `cmd/pi-init/` | MicroVM guest init |

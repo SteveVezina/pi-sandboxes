@@ -85,13 +85,13 @@ Guest readiness is explicit: `pi-init` starts `pi-agentd`, `pi-agentd` sends a `
 
 ### Remote context configuration
 
-Context state is stored in `~/.pi/contexts.yaml`.
+Context state is stored in `~/.pi-box/contexts.yaml`.
 
 ```yaml
 active: local
 contexts:
   local:
-    target: unix://~/.pi/sandboxd.sock
+    target: unix://~/.pi-box/sandboxd.sock
     transport: unix
     auth:
       type: none
@@ -145,7 +145,7 @@ Amend the existing AC-23 through AC-26 sections with the contract details above.
 - [ ] Host marks sandbox warm only after the guest sends `ready`
 
 ### AC-25 additions
-- [ ] Contexts persist in `~/.pi/contexts.yaml`
+- [ ] Contexts persist in `~/.pi-box/contexts.yaml`
 - [ ] Context schema supports `target`, `transport`, and `auth.type`
 - [ ] `--context <name>` overrides the active context
 

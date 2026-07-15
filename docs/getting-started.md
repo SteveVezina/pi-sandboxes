@@ -19,7 +19,7 @@ git clone https://github.com/pi-sandbox/pi-sandbox.git
 cd pi-sandbox
 
 # Build CLI and daemon
-go build -o bin/pi ./cmd/pi/
+go build -o bin/pi-box ./cmd/pi-box/
 go build -o bin/pi-sandboxd ./cmd/pi-sandboxd/
 ```
 
@@ -30,16 +30,16 @@ go build -o bin/pi-sandboxd ./cmd/pi-sandboxd/
 bin/pi-sandboxd &
 
 # Verify it's running
-bin/pi system status
+bin/pi-box system status
 ```
 
-The daemon listens on `~/.pi/sandboxd.sock` by default.
+The daemon listens on `~/.pi-box/sandboxd.sock` by default.
 
 ### Step 3: Check your setup
 
 ```bash
 # Validate configuration and available runtimes
-bin/pi system doctor
+bin/pi-box system doctor
 ```
 
 Expected output:
@@ -61,7 +61,7 @@ Status: OK
 
 ```bash
 # Create a sandbox with the node-python template
-bin/pi box create myapp node-python
+bin/pi-box box create myapp node-python
 ```
 
 Expected output:
@@ -73,31 +73,31 @@ Created sandbox: <sandbox-id>
 
 ```bash
 # Clone any public Git repo into the sandbox
-bin/pi box clone myapp https://github.com/nodejs/node.git
+bin/pi-box box clone myapp https://github.com/nodejs/node.git
 ```
 
 ### Step 6: Run commands
 
 ```bash
 # Execute any command inside the sandbox
-bin/pi box exec myapp -- echo "Hello from sandbox!"
+bin/pi-box box exec myapp -- echo "Hello from sandbox!"
 ```
 
 With JSON output for machine consumption:
 ```bash
-bin/pi box exec myapp -- pnpm --version --json
+bin/pi-box box exec myapp -- pnpm --version --json
 ```
 
 ### Step 7: List sandboxes
 
 ```bash
-bin/pi box list
+bin/pi-box box list
 ```
 
 ### Step 8: Destroy the sandbox
 
 ```bash
-bin/pi box destroy myapp
+bin/pi-box box destroy myapp
 ```
 
 ## Interactive Shell
@@ -105,7 +105,7 @@ bin/pi box destroy myapp
 Open an interactive shell session in a sandbox:
 
 ```bash
-bin/pi box shell myapp
+bin/pi-box box shell myapp
 ```
 
 This starts a REPL that:
@@ -208,7 +208,7 @@ client.destroy(sandbox.id)
 
 ### Daemon API (Unix socket)
 
-The daemon exposes a REST API over a Unix socket at `~/.pi/sandboxd.sock`.
+The daemon exposes a REST API over a Unix socket at `~/.pi-box/sandboxd.sock`.
 
 #### Create Sandbox
 ```http
@@ -333,7 +333,7 @@ GET /v1/sandboxes/{id}/logs
 
 Check available runtimes:
 ```bash
-bin/pi system doctor
+bin/pi-box system doctor
 ```
 
 ## Available Templates
@@ -352,16 +352,16 @@ bin/pi system doctor
 
 ```bash
 # Check daemon status
-bin/pi system status
+bin/pi-box system status
 
 # Validate configuration
-bin/pi system doctor
+bin/pi-box system doctor
 
 # Remove old sandbox state
-bin/pi system prune
+bin/pi-box system prune
 
 # Show storage breakdown
-bin/pi system disk-usage
+bin/pi-box system disk-usage
 ```
 
 ## Next Steps

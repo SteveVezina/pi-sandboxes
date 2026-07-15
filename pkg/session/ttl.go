@@ -7,9 +7,9 @@ import (
 
 // TTLChecker runs a background goroutine that checks for expired sessions.
 type TTLChecker struct {
-	store  *Store
+	store    *Store
 	interval time.Duration
-	stopCh chan struct{}
+	stopCh   chan struct{}
 }
 
 // NewTTLChecker creates a new TTL checker.

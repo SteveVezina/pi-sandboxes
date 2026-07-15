@@ -30,7 +30,7 @@ Keep F1-F17 as the existing M1-M3/M2 hardening surface, and add:
 | F19 | Runtime Selection & Fallback | Runtime detection and backend selection across fast, compat, secure, and future microVM modes, including fallback to compat mode when secure mode is unavailable or incompatible | M4 |
 | F20 | MicroVM Backend | Firecracker or Cloud Hypervisor backend with `pi-vmm-manager`, tiny guest rootfs, workspace disk, template snapshot restore, artifact export, and reseed-on-restore behavior | M5 |
 | F21 | MicroVM Guest Control Plane | Guest-side `pi-init` and `pi-agentd` over virtio-vsock for command execution, lifecycle coordination, file/artifact transfer, and sandbox readiness reporting | M5 |
-| F22 | Remote Daemon Contexts | CLI context management for local and remote daemons, including `pi context create/use/list/inspect/delete` and context-aware `pi box` commands | M6 |
+| F22 | Remote Daemon Contexts | CLI context management for local and remote daemons, including `pi-box context create/use/list/inspect/delete` and context-aware `pi-box box` commands | M6 |
 | F23 | Remote Daemon Transport & Auth | SSH/Tailscale/WireGuard-friendly remote daemon access with secure local-to-remote API authentication and remote workstation support | M6 |
 
 ## Acceptance Criteria Additions
@@ -38,14 +38,14 @@ Keep F1-F17 as the existing M1-M3/M2 hardening surface, and add:
 Add structured acceptance criteria for the newly extracted features.
 
 ### AC-21: Secure Backend Works (F18)
-- [ ] `pi box create --mode secure <template>` creates a sandbox using gVisor/runsc when available
+- [ ] `pi-box box create --mode secure <template>` creates a sandbox using gVisor/runsc when available
 - [ ] Secure sandboxes execute commands through the same daemon API as fast/compat sandboxes
 - [ ] Secure mode does not mount the host home directory or Docker socket by default
 - [ ] Secure mode exposes compatibility errors with actionable guidance
 - [ ] Benchmarks compare fast vs compat vs secure modes
 
 ### AC-22: Runtime Selection and Fallback Works (F19)
-- [ ] `pi system doctor` reports available runtime backends
+- [ ] `pi-box system doctor` reports available runtime backends
 - [ ] Backend selection honors explicit `--mode` requests
 - [ ] Auto-selection prefers an available compatible backend based on trust/config
 - [ ] Secure-mode startup failure can fall back to compat mode when policy permits
@@ -68,10 +68,10 @@ Add structured acceptance criteria for the newly extracted features.
 - [ ] File and artifact transfer work without direct host filesystem mounting
 
 ### AC-25: Remote Daemon Contexts Work (F22)
-- [ ] `pi context create workstation ssh://gpu-box.local` creates a remote context
-- [ ] `pi context use workstation` switches the active context
-- [ ] `pi context list` shows local and remote contexts
-- [ ] `pi box create` uses the active context
+- [ ] `pi-box context create workstation ssh://gpu-box.local` creates a remote context
+- [ ] `pi-box context use workstation` switches the active context
+- [ ] `pi-box context list` shows local and remote contexts
+- [ ] `pi-box box create` uses the active context
 - [ ] Commands can override the active context explicitly
 
 ### AC-26: Remote Transport and Auth Work (F23)

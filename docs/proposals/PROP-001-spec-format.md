@@ -61,7 +61,7 @@ Add the following sections to SPEC.md **after §4 (Core design principle)** and 
 
 | Feature ID | Name | Description | Milestone |
 |------------|------|-------------|-----------|
-| F1 | CLI Entry Point | `pi` binary with `box` subcommands for sandbox lifecycle management | M1 |
+| F1 | CLI Entry Point | `pi-box` binary with `box` subcommands for sandbox lifecycle management | M1 |
 | F2 | Daemon API | `pi-sandboxd` local daemon exposing Unix socket HTTP API for sandbox operations | M1 |
 | F3 | Fast Backend | Native Linux sandbox using namespaces, cgroups, seccomp, Landlock isolation | M1 |
 | F4 | Compat Backend | OCI container backend (runc/containerd/Podman) for maximum compatibility | M1 |
@@ -76,7 +76,7 @@ Add the following sections to SPEC.md **after §4 (Core design principle)** and 
 | F13 | Snapshot & Rollback | Filesystem-level snapshot creation and rollback (overlay/reflink) | M2 |
 | F14 | Benchmarks | Mandatory benchmark suite measuring warm exec, install, test, snapshot, export, and density | M1 |
 | F15 | SDKs | TypeScript and Python SDKs with streaming output support | M3 |
-| F16 | System Commands | `pi system status/doctor/prune/disk-usage` for local state inspection | M1 |
+| F16 | System Commands | `pi-box system status/doctor/prune/disk-usage` for local state inspection | M1 |
 | F17 | Policy Enforcement | Default security policy: no host home mount, no Docker socket, process limits, output limits | M2 |
 ```
 
@@ -86,13 +86,13 @@ Add the following sections to SPEC.md **after §4 (Core design principle)** and 
 ## 7. Acceptance Criteria
 
 ### AC-1: CLI Works (F1)
-- [ ] `pi box create --name demo --template node-python --mode fast` creates a sandbox
-- [ ] `pi box list` shows created sandboxes
-- [ ] `pi box inspect demo` shows sandbox details
-- [ ] `pi box destroy demo` cleans up sandbox
+- [ ] `pi-box box create --name demo --template node-python --mode fast` creates a sandbox
+- [ ] `pi-box box list` shows created sandboxes
+- [ ] `pi-box box inspect demo` shows sandbox details
+- [ ] `pi-box box destroy demo` cleans up sandbox
 
 ### AC-2: Daemon API Responds (F2)
-- [ ] `pi-sandboxd` listens on `~/.pi/sandboxd.sock`
+- [ ] `pi-sandboxd` listens on `~/.pi-box/sandboxd.sock`
 - [ ] `POST /v1/sandboxes` creates a sandbox
 - [ ] `GET /v1/sandboxes` lists sandboxes
 - [ ] `GET /v1/sandboxes/{id}` returns sandbox state
@@ -115,19 +115,19 @@ Add the following sections to SPEC.md **after §4 (Core design principle)** and 
 
 ### AC-5: Templates Are Usable (F5)
 - [ ] `base`, `node`, `python`, `go`, `rust`, `node-python`, `polyglot` templates defined
-- [ ] `pi template list` shows available templates
-- [ ] `pi template inspect <name>` shows template details
+- [ ] `pi-box template list` shows available templates
+- [ ] `pi-box template inspect <name>` shows template details
 - [ ] Templates configure correct toolchains and cache mounts
 
 ### AC-6: File Operations Work (F6)
-- [ ] `pi box clone <repo>` clones a repository into sandbox workspace
-- [ ] `pi box files read <id> <path>` reads a file from sandbox
-- [ ] `pi box files write <id> <path>` writes a file to sandbox
-- [ ] `pi box diff <id>` shows workspace diff
-- [ ] `pi box patch <id>` exports workspace as patch
+- [ ] `pi-box box clone <repo>` clones a repository into sandbox workspace
+- [ ] `pi-box box files read <id> <path>` reads a file from sandbox
+- [ ] `pi-box box files write <id> <path>` writes a file to sandbox
+- [ ] `pi-box box diff <id>` shows workspace diff
+- [ ] `pi-box box patch <id>` exports workspace as patch
 
 ### AC-7: Exec Streams Output (F7)
-- [ ] `pi box exec <id> -- <cmd>` runs command with streaming stdout/stderr
+- [ ] `pi-box box exec <id> -- <cmd>` runs command with streaming stdout/stderr
 - [ ] Exit code returned accurately
 - [ ] Timeout status reported when exceeded
 - [ ] Output truncated when exceeding maxOutput, with `truncated` flag
@@ -137,16 +137,16 @@ Add the following sections to SPEC.md **after §4 (Core design principle)** and 
 - [ ] Sandbox created once and kept warm
 - [ ] Multiple exec calls reuse the same session
 - [ ] TTL expiration triggers cleanup
-- [ ] `pi box destroy --all` cleans all sandboxes
+- [ ] `pi-box box destroy --all` cleans all sandboxes
 
 ### AC-9: Artifacts Export (F9)
-- [ ] `pi box artifacts list <id>` lists available artifacts
-- [ ] `pi box artifacts pull <id> <dest>` pulls artifacts to host
-- [ ] `pi box artifacts pack <id> --output <file>` creates archive
+- [ ] `pi-box box artifacts list <id>` lists available artifacts
+- [ ] `pi-box box artifacts pull <id> <dest>` pulls artifacts to host
+- [ ] `pi-box box artifacts pack <id> --output <file>` creates archive
 
 ### AC-10: Logs Available (F10)
-- [ ] `pi box logs <id>` shows command logs
-- [ ] `pi box history <id>` shows command history
+- [ ] `pi-box box logs <id>` shows command logs
+- [ ] `pi-box box history <id>` shows command history
 - [ ] Each log entry includes: command, exit code, duration, timeout status, output truncation
 
 ### AC-11: Network Modes Work (F11)
@@ -158,16 +158,16 @@ Add the following sections to SPEC.md **after §4 (Core design principle)** and 
 ### AC-12: Caches Are Scoped (F12)
 - [ ] `/cache/npm`, `/cache/pnpm`, `/cache/pip`, `/cache/uv`, `/cache/go-mod`, `/cache/go-build`, `/cache/cargo` mounted
 - [ ] Caches scoped by template/runtime/user
-- [ ] `pi system prune` can clean caches
+- [ ] `pi-box system prune` can clean caches
 
 ### AC-13: Snapshots Work (F13)
-- [ ] `pi box snapshot <id> <name>` creates a named snapshot
-- [ ] `pi box rollback <id> <name>` restores to snapshot
+- [ ] `pi-box box snapshot <id> <name>` creates a named snapshot
+- [ ] `pi-box box rollback <id> <name>` restores to snapshot
 - [ ] Snapshot creation uses overlay upperdir or reflink
-- [ ] Snapshot metadata stored under `~/.pi/sandboxes/<id>/snapshots/`
+- [ ] Snapshot metadata stored under `~/.pi-box/sandboxes/<id>/snapshots/`
 
 ### AC-14: Benchmarks Run (F14)
-- [ ] `pi bench run` executes full benchmark suite
+- [ ] `pi-box bench run` executes full benchmark suite
 - [ ] All 13 required benchmarks execute: warm_exec_echo, warm_exec_shell, file_scan_rg, git_clone_small, pnpm_install_cached, uv_sync_cached, go_test_cached, cargo_test_cached, snapshot_create, snapshot_rollback, artifact_export_20mb, parallel_10, parallel_100
 - [ ] Output includes p50/p95 latency and memory per sandbox
 - [ ] Per-mode comparison (fast vs compat)
@@ -178,10 +178,10 @@ Add the following sections to SPEC.md **after §4 (Core design principle)** and 
 - [ ] Both support streaming output
 
 ### AC-16: System Commands Work (F16)
-- [ ] `pi system status` shows daemon and sandbox status
-- [ ] `pi system doctor` validates configuration
-- [ ] `pi system prune` cleans old state
-- [ ] `pi system disk-usage` shows storage breakdown
+- [ ] `pi-box system status` shows daemon and sandbox status
+- [ ] `pi-box system doctor` validates configuration
+- [ ] `pi-box system prune` cleans old state
+- [ ] `pi-box system disk-usage` shows storage breakdown
 
 ### AC-17: Policy Enforced (F17)
 - [ ] Host home directory not mounted by default
@@ -194,13 +194,13 @@ Add the following sections to SPEC.md **after §4 (Core design principle)** and 
 - [ ] Max processes 256 by default
 
 ### AC-18: End-to-End Agent Loop (F1, F2, F3, F5-F10)
-- [ ] `pi box create --name demo --template node-python --mode fast`
-- [ ] `pi box clone demo https://github.com/some/repo`
-- [ ] `pi box exec demo -- pnpm install`
-- [ ] `pi box exec demo -- pnpm test`
-- [ ] `pi box diff demo`
-- [ ] `pi box artifacts pull demo ./out`
-- [ ] `pi box destroy demo`
+- [ ] `pi-box box create --name demo --template node-python --mode fast`
+- [ ] `pi-box box clone demo https://github.com/some/repo`
+- [ ] `pi-box box exec demo -- pnpm install`
+- [ ] `pi-box box exec demo -- pnpm test`
+- [ ] `pi-box box diff demo`
+- [ ] `pi-box box artifacts pull demo ./out`
+- [ ] `pi-box box destroy demo`
 - [ ] All steps succeed without direct host filesystem access
 
 ### AC-19: Warm Exec Performance (F3, F4, F14)
@@ -263,7 +263,7 @@ Add the following sections to SPEC.md **after §4 (Core design principle)** and 
 ```markdown
 ## 9. Interface Contract
 
-### Daemon API (Unix socket: `~/.pi/sandboxd.sock`, optional HTTP: `127.0.0.1:7777`)
+### Daemon API (Unix socket: `~/.pi-box/sandboxd.sock`, optional HTTP: `127.0.0.1:7777`)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -319,22 +319,22 @@ Add the following sections to SPEC.md **after §4 (Core design principle)** and 
 
 ### CLI Commands (all map to API calls)
 ```
-pi box create <name> [template] [flags]
-pi box list
-pi box inspect <name>
-pi box clone <name> <url>
-pi box exec <name> -- <cmd> [flags]
-pi box shell <name>
-pi box files list|read|write|pull|push <name> [args]
-pi box diff <name>
-pi box patch <name>
-pi box artifacts list|pull|pack <name> [flags]
-pi box snapshot <name> <action> [name]
-pi box logs <name>
-pi box destroy <name> [--all]
-pi system status|doctor|prune|disk-usage
-pi bench run [flags]
-pi template list|inspect|build|update|prune [flags]
+pi-box box create <name> [template] [flags]
+pi-box box list
+pi-box box inspect <name>
+pi-box box clone <name> <url>
+pi-box box exec <name> -- <cmd> [flags]
+pi-box box shell <name>
+pi-box box files list|read|write|pull|push <name> [args]
+pi-box box diff <name>
+pi-box box patch <name>
+pi-box box artifacts list|pull|pack <name> [flags]
+pi-box box snapshot <name> <action> [name]
+pi-box box logs <name>
+pi-box box destroy <name> [--all]
+pi-box system status|doctor|prune|disk-usage
+pi-box bench run [flags]
+pi-box template list|inspect|build|update|prune [flags]
 ```
 ```
 

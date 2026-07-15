@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	gorillaws "github.com/gorilla/websocket"
-	"github.com/pi-sandbox/pi/cmd/pi/cli"
+	"github.com/pi-sandbox/pi/cmd/pi-box/cli"
 	pictx "github.com/pi-sandbox/pi/pkg/context"
 	"github.com/pi-sandbox/pi/pkg/remote"
 	pisystem "github.com/pi-sandbox/pi/pkg/system"
@@ -546,7 +546,7 @@ var filesWriteCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		if !isPipe() {
-			fmt.Fprintln(os.Stderr, "error: pipe content via stdin: cat file | pi box files write name path")
+			fmt.Fprintln(os.Stderr, "error: pipe content via stdin: cat file | pi-box box files write name path")
 			os.Exit(1)
 		}
 		reader := bufio.NewReader(os.Stdin)

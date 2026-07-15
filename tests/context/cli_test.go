@@ -22,10 +22,10 @@ func buildCLIBinary(t *testing.T) string {
 	if runtime.GOOS == "windows" {
 		out += ".exe"
 	}
-	cmd := exec.Command("go", "build", "-o", out, "./cmd/pi")
+	cmd := exec.Command("go", "build", "-o", out, "./cmd/pi-box")
 	cmd.Dir = root
 	if output, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("go build cmd/pi: %v\n%s", err, output)
+		t.Fatalf("go build cmd/pi-box: %v\n%s", err, output)
 	}
 	return out
 }
@@ -45,7 +45,7 @@ func repoRoot() (string, error) {
 	return "", os.ErrNotExist
 }
 
-// TestCLI_ContextCreateUseList verifies the pi context CLI group works
+// TestCLI_ContextCreateUseList verifies the pi-box context CLI group works
 // end-to-end with a temp contexts.yaml (F22 / AC-25.1, 25.2, 25.3, 25.6).
 func TestCLI_ContextCreateUseList(t *testing.T) {
 	bin := buildCLIBinary(t)
@@ -113,15 +113,15 @@ func TestCLI_ContextOverrideFlagPresent(t *testing.T) {
 	cmd := exec.Command(bin, "--help")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("pi --help: %v\n%s", err, out)
+		t.Fatalf("pi-box --help: %v\n%s", err, out)
 	}
 	if !strings.Contains(string(out), "--context") {
-		t.Fatalf("pi --help does not document --context override:\n%s", out)
+		t.Fatalf("pi-box --help does not document --context override:\n%s", out)
 	}
 }
 
 // TestCLI_RemoteContextOverrideRoutesToRemote verifies that --context <name>
-// causes `pi box list` to talk to the remote daemon target (AC-25.5/25.8 +
+// causes `pi-box box list` to talk to the remote daemon target (AC-25.5/25.8 +
 // AC-25.4 routing). Uses an httptest server as the remote target.
 func TestCLI_RemoteContextOverrideRoutesToRemote(t *testing.T) {
 	bin := buildCLIBinary(t)
@@ -146,7 +146,7 @@ func TestCLI_RemoteContextOverrideRoutesToRemote(t *testing.T) {
 		t.Fatalf("setup context: %v\n%s", err, out)
 	}
 
-	// Now run `pi --context ws box list` and check the remote was hit.
+	// Now run `pi-box --context ws box list` and check the remote was hit.
 	// We must point the store at our temp file via PI_CONTEXTS_PATH if the
 	// box command uses DefaultPath. Since we cannot inject the store path
 	// into box subcommands today, copy the temp store to ~/.pi-box/contexts.yaml
@@ -170,7 +170,7 @@ func TestCLI_RemoteContextOverrideRoutesToRemote(t *testing.T) {
 	cmd.Env = append(os.Environ(), "HOME="+home, "PI_OVERRIDE_TOKEN=hello-token")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("pi --context ws box list: %v\n%s", err, out)
+		t.Fatalf("pi-box --context ws box list: %v\n%s", err, out)
 	}
 	if hits == 0 {
 		t.Fatalf("remote daemon was never hit; output:\n%s", out)

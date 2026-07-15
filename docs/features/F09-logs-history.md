@@ -43,9 +43,9 @@ Full stdout/stderr content is stored in separate files (not inline in the JSON e
 
 CLI commands:
 ```bash
-pi box logs <name>
-pi box history <name>
-pi box metrics <name>
+pi-box box logs <name>
+pi-box box history <name>
+pi-box box metrics <name>
 ```
 
 - `logs` — Shows full log entries with stdout/stderr content
@@ -56,8 +56,8 @@ pi box metrics <name>
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-10.1: `pi box logs <id>` shows command logs
-- [x] AC-10.2: `pi box history <id>` shows command history
+- [x] AC-10.1: `pi-box box logs <id>` shows command logs
+- [x] AC-10.2: `pi-box box history <id>` shows command history
 - [x] AC-10.3: Each log entry includes: command, exit code, duration, timeout status, output truncation
 
 Each criterion must be:
@@ -124,8 +124,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement log listing and command history retrieval.
 
 **Acceptance criteria:**
-- [x] `pi box logs <id>` shows full log entries with stdout/stderr
-- [x] `pi box history <id>` shows summary (command, exit code, duration)
+- [x] `pi-box box logs <id>` shows full log entries with stdout/stderr
+- [x] `pi-box box history <id>` shows summary (command, exit code, duration)
 - [x] Logs ordered by sequence number (newest first)
 - [x] Empty session shows "no commands executed" message
 
@@ -133,7 +133,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] `go build ./pkg/logs/...`
 - [x] Integration test: logs and history work
 
-**Files:** `pkg/logs/list.go`, `cmd/pi/box/logs.go`
+**Files:** `pkg/logs/list.go`, `cmd/pi-box/box/logs.go`
 **Size:** S
 **Depends on:** T9.1 (log entry storage)
 

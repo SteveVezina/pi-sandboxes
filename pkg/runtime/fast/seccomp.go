@@ -11,16 +11,16 @@ import (
 
 // SeccompProfile defines the seccomp-bpf filter.
 type SeccompProfile struct {
-	DefaultAction string                  `json:"defaultAction"`
-	Architectures []string                `json:"architectures"`
-	Syscalls      []SeccompSyscallRule    `json:"syscalls"`
+	DefaultAction string               `json:"defaultAction"`
+	Architectures []string             `json:"architectures"`
+	Syscalls      []SeccompSyscallRule `json:"syscalls"`
 }
 
 // SeccompSyscallRule defines a syscall rule.
 type SeccompSyscallRule struct {
-	Names  []string        `json:"names"`
-	Action string          `json:"action"`
-	Errno  *int            `json:"errnoRet,omitempty"`
+	Names  []string `json:"names"`
+	Action string   `json:"action"`
+	Errno  *int     `json:"errnoRet,omitempty"`
 }
 
 // DefaultSeccompProfile returns the default seccomp profile.

@@ -42,9 +42,9 @@ Dashboard of all features for this project.
 | [F22](F22-remote-daemon-contexts.md) | Remote Daemon Contexts | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M6 | F2, F23 |
 | [F23](F23-remote-daemon-transport-auth.md) | Remote Daemon Transport & Auth | 🟢 Reviewed | ✅ Implemented | M6 | F2, F15, F22 |
 | [F24](F24-cross-platform-gui-workbench.md) | Cross-Platform GUI Workbench | 🟢 Reviewed | ✅ Implemented | M7 | F2, F15, F22, F23 |
-| [F25](F25-gui-workspace-authorization.md) | GUI Workspace Authorization | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M7 | F17, F24 |
+| [F25](F25-gui-workspace-authorization.md) | GUI Workspace Authorization | 🟢 Reviewed | ✅ Implemented | M7 | F17, F24 |
 | [F26](F26-gui-session-operations.md) | GUI Session Operations | 🟢 Reviewed | ✅ Implemented | M7 | F7, F6, F9, F10, F13, F24 |
-| [F27](F27-gui-settings-diagnostics.md) | GUI Settings and Diagnostics | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M7 | F16, F17, F19, F22, F24, F25 |
+| [F27](F27-gui-settings-diagnostics.md) | GUI Settings and Diagnostics | 🟢 Reviewed | ✅ Implemented | M7 | F16, F17, F19, F22, F24, F25 |
 
 ## Milestone Summary
 
@@ -56,7 +56,7 @@ Dashboard of all features for this project.
 | M4: Secure Backend | F18, F19 | ✅ Implemented |
 | M5: MicroVM Backend | F20, F21 | ✅ Implemented |
 | M6: Remote Daemon Mode | F22, F23 | ⚠️ Needs re-verify |
-| M7: Cross-Platform GUI Workbench | F24, F25, F26, F27 | ⚠️ Needs re-verify |
+| M7: Cross-Platform GUI Workbench | F24, F25, F26, F27 | ✅ Implemented |
 
 ## Summary
 

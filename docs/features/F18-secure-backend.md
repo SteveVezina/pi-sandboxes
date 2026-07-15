@@ -20,7 +20,7 @@ The secure backend must provide actionable compatibility errors. If gVisor is un
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-21.1: `pi box create --mode secure <template>` creates a sandbox using gVisor/runsc when available
+- [x] AC-21.1: `pi-box box create --mode secure <template>` creates a sandbox using gVisor/runsc when available
 - [x] AC-21.2: Secure sandboxes execute commands through the same daemon API as fast/compat sandboxes
 - [x] AC-21.3: Secure mode does not mount the host home directory or Docker socket by default
 - [x] AC-21.4: Secure mode exposes compatibility errors with actionable guidance
@@ -32,8 +32,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 |-----------|--------|
 | `pkg/runtime/gvisor/` | Secure backend implementation |
 | `pkg/runtime/` | Runtime registry and lifecycle dispatch |
-| `cmd/pi/box` | `--mode secure` support |
-| `cmd/pi/system` | Doctor/runtime availability reporting |
+| `cmd/pi-box/box` | `--mode secure` support |
+| `cmd/pi-box/system` | Doctor/runtime availability reporting |
 | `pkg/bench/` | Secure-mode benchmark comparison |
 
 ## Security Considerations
@@ -81,9 +81,9 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] Output compares fast, compat, and secure
 
 **Verification:**
-- [x] `pi bench run --mode secure --json`
+- [x] `pi-box bench run --mode secure --json`
 
-**Files:** `pkg/bench/benchmarks.go`, `cmd/pi/bench/commands.go`
+**Files:** `pkg/bench/benchmarks.go`, `cmd/pi-box/bench/commands.go`
 **Size:** M
 **Depends on:** T18.1
 

@@ -108,6 +108,7 @@ func (c *Client) Do(method, path string, body io.Reader) (*http.Response, error)
 	if c.bearerTok != "" {
 		req.Header.Set("Authorization", "Bearer "+c.bearerTok)
 	}
+	req.Header.Set("X-Pi-Context-Proxy", "1")
 	resp, err := c.httpC.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("remote %s %s: %w", method, path, err)

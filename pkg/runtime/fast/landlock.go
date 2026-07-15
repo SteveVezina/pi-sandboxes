@@ -9,11 +9,11 @@ import (
 
 // LandlockConfig holds landlock policy configuration.
 type LandlockConfig struct {
-	Enabled    bool
-	Paths      []string // Paths to restrict access to
-	Read       bool
-	Write      bool
-	Execute    bool
+	Enabled bool
+	Paths   []string // Paths to restrict access to
+	Read    bool
+	Write   bool
+	Execute bool
 }
 
 // DefaultLandlockConfig returns the default landlock configuration.

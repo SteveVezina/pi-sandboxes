@@ -62,7 +62,7 @@ CLI flags:
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-7.1: `pi box exec <id> -- <cmd>` runs command with streaming stdout/stderr
+- [x] AC-7.1: `pi-box box exec <id> -- <cmd>` runs command with streaming stdout/stderr
 - [x] AC-7.2: Exit code returned accurately
 - [x] AC-7.3: Timeout status reported when exceeded
 - [x] AC-7.4: Output truncated when exceeding maxOutput, with `truncated` flag
@@ -158,10 +158,10 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ### T5.3: CLI exec command
 
-**Description:** Implement `pi box exec <name> -- <cmd>` with all flags (cwd, timeout, max-output, memory, cpu, network, json).
+**Description:** Implement `pi-box box exec <name> -- <cmd>` with all flags (cwd, timeout, max-output, memory, cpu, network, json).
 
 **Acceptance criteria:**
-- [x] `pi box exec demo -- pnpm test` runs command
+- [x] `pi-box box exec demo -- pnpm test` runs command
 - [x] `--cwd /workspace` sets working directory
 - [x] `--timeout 60s` sets timeout
 - [x] `--max-output 8MiB` sets output limit
@@ -169,10 +169,10 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Streaming output displayed in real-time for interactive use
 
 **Verification:**
-- [x] `go build ./cmd/pi/...`
+- [x] `go build ./cmd/pi-box/...`
 - [x] Integration test: CLI exec works with daemon
 
-**Files:** `cmd/pi/box/exec.go`
+**Files:** `cmd/pi-box/box/exec.go`
 **Size:** S
 **Depends on:** T5.2 (exec API endpoint)
 
@@ -206,7 +206,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Out of Scope
 
-- Interactive shell mode (separate `pi box shell` command)
+- Interactive shell mode (separate `pi-box box shell` command)
 - Background/daemon command execution (all exec is synchronous)
 - Command history within exec (handled by F10: Logs & History)
 - Multi-command pipelines (single command per exec call)

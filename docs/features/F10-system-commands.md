@@ -8,7 +8,7 @@
 
 | Feature ID | Name | Description | Milestone |
 |------------|------|-------------|-----------|
-| F16 | System Commands | `pi system status/doctor/prune/disk-usage` for local state inspection | M1 |
+| F16 | System Commands | `pi-box system status/doctor/prune/disk-usage` for local state inspection | M1 |
 
 ## Expanded Specification
 
@@ -34,20 +34,20 @@ State directories under `~/.pi-box/`:
 
 CLI commands:
 ```bash
-pi system status
-pi system doctor
-pi system prune
-pi system disk-usage
+pi-box system status
+pi-box system doctor
+pi-box system prune
+pi-box system disk-usage
 ```
 
 ## Acceptance Criteria
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-16.1: `pi system status` shows daemon and sandbox status
-- [x] AC-16.2: `pi system doctor` validates configuration
-- [x] AC-16.3: `pi system prune` cleans old state
-- [x] AC-16.4: `pi system disk-usage` shows storage breakdown
+- [x] AC-16.1: `pi-box system status` shows daemon and sandbox status
+- [x] AC-16.2: `pi-box system doctor` validates configuration
+- [x] AC-16.3: `pi-box system prune` cleans old state
+- [x] AC-16.4: `pi-box system disk-usage` shows storage breakdown
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -59,13 +59,13 @@ Each criterion must be:
 | Component | Impact |
 |-----------|--------|
 | `pkg/system/` | System command handlers |
-| `cmd/pi/system/` | CLI system subcommands |
+| `cmd/pi-box/system/` | CLI system subcommands |
 | `~/.pi-box/` | State directory inspected by system commands |
 
 ## Security Considerations
 
-- `pi system prune` is destructive — requires explicit confirmation
-- `pi system doctor` reads filesystem permissions but doesn't modify
+- `pi-box system prune` is destructive — requires explicit confirmation
+- `pi-box system doctor` reads filesystem permissions but doesn't modify
 - No elevated privileges required
 - All operations scoped to `~/.pi-box/` directory
 
@@ -91,7 +91,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ### T10.1: System status
 
-**Description:** Implement `pi system status` showing daemon connection and sandbox summary.
+**Description:** Implement `pi-box system status` showing daemon connection and sandbox summary.
 
 **Acceptance criteria:**
 - [x] Shows daemon connection status (connected/disconnected)
@@ -100,16 +100,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Shows `~/.pi-box/` directory existence
 
 **Verification:**
-- [x] `go build ./cmd/pi/...`
+- [x] `go build ./cmd/pi-box/...`
 - [x] Integration test: status with and without daemon
 
-**Files:** `pkg/system/status.go`, `cmd/pi/system/status.go`
+**Files:** `pkg/system/status.go`, `cmd/pi-box/system/status.go`
 **Size:** S
 **Depends on:** F4 (Session Lifecycle — sandbox state)
 
 ### T10.2: System doctor
 
-**Description:** Implement `pi system doctor` validating configuration and reporting issues.
+**Description:** Implement `pi-box system doctor` validating configuration and reporting issues.
 
 **Acceptance criteria:**
 - [x] Checks `~/.pi-box/config.yaml` exists and is valid YAML
@@ -120,16 +120,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Creates default config if missing (non-destructive)
 
 **Verification:**
-- [x] `go build ./cmd/pi/...`
+- [x] `go build ./cmd/pi-box/...`
 - [x] Integration test: doctor with valid and invalid config
 
-**Files:** `pkg/system/doctor.go`, `cmd/pi/system/doctor.go`
+**Files:** `pkg/system/doctor.go`, `cmd/pi-box/system/doctor.go`
 **Size:** S
 **Depends on:** None
 
 ### T10.3: System prune
 
-**Description:** Implement `pi system prune` removing old sandbox state.
+**Description:** Implement `pi-box system prune` removing old sandbox state.
 
 **Acceptance criteria:**
 - [x] Removes destroyed sandbox metadata
@@ -139,16 +139,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] `--yes` flag skips confirmation
 
 **Verification:**
-- [x] `go build ./cmd/pi/...`
+- [x] `go build ./cmd/pi-box/...`
 - [x] Integration test: prune removes old state
 
-**Files:** `pkg/system/prune.go`, `cmd/pi/system/prune.go`
+**Files:** `pkg/system/prune.go`, `cmd/pi-box/system/prune.go`
 **Size:** S
 **Depends on:** F4 (Session Lifecycle)
 
 ### T10.4: System disk-usage
 
-**Description:** Implement `pi system disk-usage` showing storage breakdown.
+**Description:** Implement `pi-box system disk-usage` showing storage breakdown.
 
 **Acceptance criteria:**
 - [x] Shows size of `sandboxes/` directory
@@ -160,20 +160,20 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Output is human-readable (MiB/GiB)
 
 **Verification:**
-- [x] `go build ./cmd/pi/...`
+- [x] `go build ./cmd/pi-box/...`
 - [x] Integration test: disk-usage shows correct sizes
 
-**Files:** `pkg/system/disk-usage.go`, `cmd/pi/system/disk-usage.go`
+**Files:** `pkg/system/disk-usage.go`, `cmd/pi-box/system/disk-usage.go`
 **Size:** S
 **Depends on:** None
 
 ## Verification Plan
 
-- [x] `go build ./cmd/pi/...` succeeds
+- [x] `go build ./cmd/pi-box/...` succeeds
 - [x] All 4 system commands work
-- [x] `pi system doctor` detects and reports issues
-- [x] `pi system prune` removes old state safely
-- [x] `pi system disk-usage` shows correct breakdown
+- [x] `pi-box system doctor` detects and reports issues
+- [x] `pi-box system prune` removes old state safely
+- [x] `pi-box system disk-usage` shows correct breakdown
 
 ## Spec Gaps
 

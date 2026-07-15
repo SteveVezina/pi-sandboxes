@@ -72,12 +72,15 @@ Use a thin desktop shell around a TypeScript frontend. The preferred stack is Ta
 - [x] App starts locally in development mode
 - [x] App defines Dashboard, Sessions, Templates, Contexts, Policies, and Settings navigation
 - [x] App shell renders without requiring a daemon connection
+- [x] Policies navigation shows daemon-backed diagnostic/policy state rather than static scaffold data
 
 **Verification:**
 - [x] `npm run build` passes in `apps/gui`
 - [x] `npm run tauri -- build --no-bundle` passes in `apps/gui`
 - [x] `cargo check` passes in `apps/gui/src-tauri`
 - [x] Browser smoke screenshots verify nonblank app shell at desktop and mobile widths
+- [x] Browser smoke verifies Policies view renders with daemon status, diagnostic, and GUI preference state
+- [x] Release workflow defines macOS, Linux, and Windows desktop shell smoke builds
 
 **Files:** `apps/gui/package.json`, `apps/gui/index.html`, `apps/gui/tsconfig.json`, `apps/gui/vite.config.ts`, `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`, `apps/gui/src-tauri/`
 **Size:** M
@@ -94,6 +97,7 @@ Use a thin desktop shell around a TypeScript frontend. The preferred stack is Ta
 - [x] Auth failures are actionable and do not fall back to unauthenticated access
 - [x] Browser GUI can call the localhost daemon HTTP API without CORS/preflight failures
 - [x] GUI reads and switches active F22 context through daemon endpoints
+- [x] Local daemon proxies GUI sandbox/system/support routes through the active configured remote context without exposing bearer tokens to the renderer
 
 **Verification:**
 - [x] Unit tests for connection state via daemon/API route coverage
@@ -102,9 +106,11 @@ Use a thin desktop shell around a TypeScript frontend. The preferred stack is Ta
 - [x] API tests cover context list/use endpoints
 - [x] Live browser smoke shows connected local daemon, live context row, and real sessions
 - [x] GUI HTTP client sends bearer auth for direct remote daemon connections
-- [x] GUI blocks bearer-token context switches that would otherwise fall back to unauthenticated HTTP
+- [x] GUI configured context switches keep using the local daemon proxy so bearer tokens stay daemon-side
+- [x] API tests verify active remote context proxying and local context-management bypass
+- [x] Live browser smoke verifies configured remote context renders proxied remote sessions through the local daemon
 
-**Files:** `apps/gui/`, `pkg/daemon/router.go`, `tests/daemon/daemon_test.go`
+**Files:** `apps/gui/`, `pkg/daemon/router.go`, `tests/daemon/daemon_test.go`, `tests/api/contexts_test.go`
 **Size:** M
 **Depends on:** T24.1, F22, F23
 
@@ -114,11 +120,14 @@ Use a thin desktop shell around a TypeScript frontend. The preferred stack is Ta
 
 **Acceptance criteria:**
 - [x] User can start a sandbox session through daemon API/SDK calls
+- [x] User reviews create parameters in an explicit modal/screen before the daemon create request is sent
+- [x] Create flow exposes sandbox name, template, runtime mode, TTL, workspace source, workspace mode, workspace size, and optional repository clone instead of silently relying on GUI defaults
 - [x] Normal lifecycle creation does not shell out to `pi-box`
 - [x] Created session appears in dashboard state
 
 **Verification:**
 - [x] GUI integration smoke creates a session against the daemon API
+- [x] `npm run build` passes in `apps/gui` after explicit create parameter flow changes
 
 **Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`
 **Size:** M

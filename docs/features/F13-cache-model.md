@@ -48,7 +48,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 - [x] AC-12.1: `/cache/npm`, `/cache/pnpm`, `/cache/pip`, `/cache/uv`, `/cache/go-mod`, `/cache/go-build`, `/cache/cargo` mounted
 - [x] AC-12.2: Caches scoped by template/runtime/user
-- [x] AC-12.3: `pi system prune` can clean caches
+- [x] AC-12.3: `pi-box system prune` can clean caches
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -118,7 +118,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement cache pruning. Remove unused caches, respect size limits.
 
 **Acceptance criteria:**
-- [x] `pi system prune` cleans unused caches
+- [x] `pi-box system prune` cleans unused caches
 - [x] Cache size limit configurable (default: 50Gi)
 - [x] Unused caches detected (no active sessions using them)
 - [x] Pruning is safe (doesn't delete active session caches)
@@ -136,7 +136,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] `go build ./pkg/cache/...` succeeds
 - [x] All 7 cache types mounted correctly
 - [x] Caches scoped per template/runtime/user
-- [x] `pi system prune` cleans unused caches
+- [x] `pi-box system prune` cleans unused caches
 - [x] Benchmark: pnpm_install_cached p50 < 2s (SPEC.md §19)
 - [x] Benchmark: uv_sync_cached p50 < 2s (SPEC.md §19)
 

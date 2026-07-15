@@ -11,20 +11,20 @@ import (
 
 // MountConfig defines the filesystem mounts for a sandbox.
 type MountConfig struct {
-	Rootfs       string   // Read-only root filesystem path
-	Workspace    string   // Writable workspace path
-	Artifacts    string   // Writable artifacts path
-	Caches       map[string]string // cache name -> mount path
-	Tmp          string   // /tmp path
-	Home         string   // /home/agent path
-	HostMounts   []HostMount // Explicit host mounts (opt-in)
+	Rootfs     string            // Read-only root filesystem path
+	Workspace  string            // Writable workspace path
+	Artifacts  string            // Writable artifacts path
+	Caches     map[string]string // cache name -> mount path
+	Tmp        string            // /tmp path
+	Home       string            // /home/agent path
+	HostMounts []HostMount       // Explicit host mounts (opt-in)
 }
 
 // HostMount defines a host directory mount into the sandbox.
 type HostMount struct {
-	HostPath    string
+	HostPath      string
 	ContainerPath string
-	ReadOnly    bool
+	ReadOnly      bool
 }
 
 // DefaultMountConfig returns the default mount configuration.
@@ -42,8 +42,8 @@ func DefaultMountConfig(rootDir, sandboxID string) *MountConfig {
 			"go-build": filepath.Join(rootDir, "caches", "go-build"),
 			"cargo":    filepath.Join(rootDir, "caches", "cargo"),
 		},
-		Tmp:    filepath.Join(rootDir, "sandboxes", sandboxID, "tmp"),
-		Home:   filepath.Join(rootDir, "sandboxes", sandboxID, "home"),
+		Tmp:  filepath.Join(rootDir, "sandboxes", sandboxID, "tmp"),
+		Home: filepath.Join(rootDir, "sandboxes", sandboxID, "home"),
 	}
 }
 

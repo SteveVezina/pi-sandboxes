@@ -39,10 +39,10 @@ func LogsSandbox(store *session.Store) http.HandlerFunc {
 				return
 			}
 			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"id":       id,
-				"action":   "list",
-				"count":    len(entries),
-				"entries":  entries,
+				"id":      id,
+				"action":  "list",
+				"count":   len(entries),
+				"entries": entries,
 			})
 
 		case "history":
@@ -53,10 +53,10 @@ func LogsSandbox(store *session.Store) http.HandlerFunc {
 				return
 			}
 			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"id":       id,
-				"action":   "history",
-				"count":    len(history),
-				"entries":  history,
+				"id":      id,
+				"action":  "history",
+				"count":   len(history),
+				"entries": history,
 			})
 
 		case "get":
@@ -78,9 +78,9 @@ func LogsSandbox(store *session.Store) http.HandlerFunc {
 				return
 			}
 			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"id":       id,
-				"action":   "get",
-				"entries":  entries,
+				"id":      id,
+				"action":  "get",
+				"entries": entries,
 			})
 
 		case "stdout":

@@ -29,9 +29,9 @@ Operations:
 
 CLI commands:
 ```bash
-pi box artifacts list <name>
-pi box artifacts pull <name> <dest>
-pi box artifacts pack <name> --output <file>
+pi-box box artifacts list <name>
+pi-box box artifacts pull <name> <dest>
+pi-box box artifacts pack <name> --output <file>
 ```
 
 The artifact export avoids copying the whole workspace unless requested. It only copies from known artifact locations.
@@ -40,9 +40,9 @@ The artifact export avoids copying the whole workspace unless requested. It only
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-9.1: `pi box artifacts list <id>` lists available artifacts
-- [x] AC-9.2: `pi box artifacts pull <id> <dest>` pulls artifacts to host
-- [x] AC-9.3: `pi box artifacts pack <id> --output <file>` creates archive
+- [x] AC-9.1: `pi-box box artifacts list <id>` lists available artifacts
+- [x] AC-9.2: `pi-box box artifacts pull <id> <dest>` pulls artifacts to host
+- [x] AC-9.3: `pi-box box artifacts pack <id> --output <file>` creates archive
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -107,7 +107,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement artifact pull. Copies files from artifact locations to host destination.
 
 **Acceptance criteria:**
-- [x] `pi box artifacts pull demo ./artifacts` pulls all artifacts to host
+- [x] `pi-box box artifacts pull demo ./artifacts` pulls all artifacts to host
 - [x] Directory structure preserved on host
 - [x] Progress reported for large transfers
 - [x] Only known artifact locations are copied
@@ -125,7 +125,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement artifact packing. Creates tar.zst archive of artifact directories.
 
 **Acceptance criteria:**
-- [x] `pi box artifacts pack demo --output artifacts.tar.zst` creates compressed archive
+- [x] `pi-box box artifacts pack demo --output artifacts.tar.zst` creates compressed archive
 - [x] Archive contains all files from artifact locations
 - [x] Archive is valid tar.zst format
 - [x] Archive size validated (prevent DoS)

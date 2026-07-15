@@ -1,7 +1,7 @@
 # F4: Compat Backend
 
 > Source: `SPEC.md` §6 Features F4
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify *(2026-07-14: PROP-008 changes mount policy, lifecycle, limits, and engine layering — see ADR-005)*
 > Category: Infrastructure
 
 ## Definition (from block spec)
@@ -40,6 +40,16 @@ OCI runtime selection (first available):
 4. Docker (fallback)
 
 The compat backend is cross-platform (Linux, macOS via Colima/Docker, Windows via WSL2/Docker).
+
+Per PROP-008 / ADR-005 (`SPEC.md` §14.7.5):
+
+- Compat is a thin `Driver` over a shared `pkg/runtime/oci` engine (`PodmanEngine`, `DockerEngine`, later containerd); Docker/Podman CLI construction is no longer duplicated per backend.
+- Mount policy: `/workspace`, `/artifacts`, `/cache` are `rw,nosuid,nodev` (exec allowed — `./gradlew`, `node_modules/.bin/*`, `.venv/bin/python` must work); `noexec` applies to `/tmp` and secret mounts only.
+- Containers are not created with `--rm`; explicit destroy plus daemon startup reconciliation and orphan garbage collection replace auto-remove.
+- The stable session ID and the runtime container ID are distinct fields; `spec.ID` is never overwritten after creation.
+- Resource limits (memory, swap, CPUs, PIDs, ulimits) come from the shared `ResourceLimits` model and are passed at creation.
+- Containers run as an explicit unprivileged user (Podman `--userns=keep-id --user uid:gid`; Docker explicit `--user` mapping).
+- The project's versioned seccomp profile is passed explicitly via `--security-opt seccomp=` on both engines.
 
 ## Acceptance Criteria
 
@@ -119,29 +129,35 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Size:** S
 **Depends on:** None
 
-### T15.2: Container creation
+### T15.2: Container creation ⚠️ *(2026-07-14: AC updated per PROP-008 — mount exec policy, no --rm, limits, user mapping, versioned seccomp, ID separation)*
 
-**Description:** Implement container creation with hardened defaults. OCI container spec generation, container start.
+**Description:** Implement container creation with hardened defaults through the shared OCI engine. OCI container spec generation, container start.
 
 **Acceptance criteria:**
-- [x] Container created from template OCI image
-- [x] Runtime CLI creation fails instead of hanging indefinitely when the OCI runtime stalls
-- [x] No privileged mode
-- [x] No host network (bridge network)
-- [x] No Docker socket mount
-- [x] No hostPath unless explicitly configured
-- [x] Capabilities dropped by default
-- [x] Seccomp profile enabled
-- [x] Workspace, artifacts, caches mounted
+- [ ] Container created from template OCI image via `oci.Engine`
+- [ ] Runtime CLI creation fails instead of hanging indefinitely when the OCI runtime stalls
+- [ ] No privileged mode
+- [ ] No host network (bridge network)
+- [ ] No Docker socket mount
+- [ ] No hostPath unless explicitly configured
+- [ ] Capabilities dropped by default
+- [ ] Project-versioned seccomp profile passed explicitly (`--security-opt seccomp=`)
+- [ ] Workspace, artifacts, caches mounted `rw,nosuid,nodev` (exec allowed); `noexec` on `/tmp` and secret mounts only
+- [ ] No `--rm`; container survives daemon crash for reconciliation
+- [ ] Explicit unprivileged user (`--userns=keep-id`/`--user`)
+- [ ] `ResourceLimits` (memory, cpus, pids, ulimits) passed at creation
+- [ ] Session ID never overwritten with runtime container ID
 
 **Verification:**
-- [x] `go build ./pkg/runtime/compat/...`
-- [x] Integration test: container created with hardened defaults
-- [x] Unit test: stalled runtime CLI creation times out
-- [x] Integration test: container cannot access host filesystem
+- [ ] `go build ./pkg/runtime/compat/...`
+- [ ] Integration test: container created with hardened defaults
+- [ ] Unit test: stalled runtime CLI creation times out
+- [ ] Integration test: container cannot access host filesystem
+- [ ] Integration test: `./script` in `/workspace` executes (no noexec regression)
+- [ ] Integration test: daemon restart reconciles existing containers
 
-**Files:** `pkg/runtime/compat/create.go`
-**Size:** M
+**Files:** `pkg/runtime/oci/engine.go`, `pkg/runtime/oci/podman.go`, `pkg/runtime/oci/docker.go`, `pkg/runtime/compat/create.go`
+**Size:** L
 **Depends on:** T15.1 (runtime detection), F5 (Template System — OCI images)
 
 ### T15.3: Container exec and lifecycle
@@ -192,7 +208,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
-| — | — | — |
+| ~~Shared OCI engine layering~~ | F4, F18 | **Resolved 2026-07-14:** ADR-005 (per PROP-008) |
 
 ## Out of Scope
 

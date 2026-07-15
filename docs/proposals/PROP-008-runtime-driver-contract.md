@@ -1,7 +1,7 @@
 # PROP-008: Formal Runtime Driver Contract and Shared OCI Engine
 
 ## Status
-🟡 Proposed
+✅ Applied to block spec (2026-07-14)
 
 > Note: PROP-006 is still 🟡 Proposed. This PROP was explicitly requested by the human
 > and is independent of PROP-006 (templates); treated as a permitted exception to the
@@ -269,3 +269,17 @@ Deferred deliberately (both reviews agree these come after the contract is stabl
 - Exec/PTY protocol unification (WebSocket subprotocol) — separate PROP
 - Lifecycle state-machine renaming (WARM vs READY split) — separate PROP
 - Constraint-based scoring beyond mode/trust/fallback (latency budgets, GPU, placement)
+
+## Cascade completed
+
+Applied on 2026-07-14 (accepted by human same day):
+
+- **Block spec:** `SPEC.md` §14 — added §14.7.5 "Runtime driver contract" (driver lifecycle, capability reports, shared OCI engine, mount/lifecycle/seccomp/limits rules, four-input selection, no-silent-downgrade)
+- **ADRs:** `docs/decisions/ADR-005-runtime-driver-contract.md` created (resolves the runtime registry/fallback ADR gap recorded in F15, F18, F19)
+- **Feature specs cascaded:**
+  - `docs/features/F03-fast-backend.md` — T3.1 reset ⚠️ (SysProcIDMap build fix, real `Validate()`)
+  - `docs/features/F15-compat-backend.md` — status ⚠️; T15.2 reset ⚠️ (OCI engine, mount exec policy, no `--rm`, limits, user mapping, versioned seccomp, ID separation); ADR gap resolved
+  - `docs/features/F18-secure-backend.md` — status ⚠️; T18.1 reset ⚠️ (rebuilt on shared OCI engine); ADR gap resolved
+  - `docs/features/F19-runtime-selection-fallback.md` — status ⚠️; T19.1/T19.2 reset ⚠️ (capability reports, four-input selection); ADR gap resolved
+- **INDEX files:** `docs/features/INDEX.md` (F4/F18/F19 → ⚠️, M4 → ⚠️, summary note), `docs/proposals/INDEX.md` (PROP-008 → ✅ Applied)
+- **Plan:** `docs/plan.md` Active Cursor points at PROP-008 P0-P3 implementation order

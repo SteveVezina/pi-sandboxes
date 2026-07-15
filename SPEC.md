@@ -679,6 +679,32 @@ MicroVM guest control protocol:
 - The final exec response includes `exit_code`, `duration_ms`, `timed_out`, and `truncated`.
 - Guest readiness is explicit: `pi-init` starts `pi-agentd`, `pi-agentd` sends a `ready` event, and only then may the host mark the sandbox warm.
 
+### 7.5 Runtime driver contract
+
+*(Added per PROP-008, 2026-07-14)*
+
+All isolation backends implement one internal lifecycle driver contract owned by `pkg/runtime`:
+
+- A driver exposes: `Probe`, `Create`, `Start`, `Exec`, `Inspect`, `Stop`, `Destroy`, and `Stats`.
+- Files, artifacts, logs, metadata, policy evaluation, and API semantics live **above** the driver layer. Drivers own only isolation, process creation, mounts, network attachment, resource controls, and termination.
+- Workspace snapshots are runtime-independent; drivers never gate snapshot semantics.
+- A sandbox handle carries the stable session ID and the driver-owned runtime object ID as **distinct** fields. The session ID is never mutated after creation.
+- `Probe` returns a structured capability report (availability, missing prerequisites, per-capability flags, isolation tier, compatibility tier). Availability probes must actually execute; a probe that always succeeds is a defect. A runtime is never summarized by a single security integer.
+- Compat and secure modes share one OCI engine layer (image ensure, create, start, exec, inspect, stop, remove) with pluggable engine implementations (Podman, Docker, later containerd). Secure mode is the same OCI lifecycle with a `runsc` runtime handler, not a parallel implementation.
+- Compat/secure mount policy: `/workspace`, `/artifacts`, and `/cache` are `rw,nosuid,nodev` (exec allowed); `noexec` applies to `/tmp` and secret mounts only.
+- Containers are not created with auto-remove; the daemon reconciles runtime state at startup and garbage-collects orphans.
+- The project ships and versions its own seccomp profile and passes it explicitly to every OCI engine.
+- All drivers honor a shared resource-limit model (memory, swap, CPUs, PIDs, ulimits).
+
+Runtime selection separates four concepts that must never be collapsed into one ordered list:
+
+1. requested mode (`fast|compat|secure|isolated|microvm|auto`)
+2. workload trust (`trusted|reviewed|untrusted`)
+3. discovered host capabilities
+4. explicit fallback policy (allow/deny lists)
+
+Selection never silently downgrades isolation below the requested mode. A denied fallback fails with actionable guidance derived from the capability report, and fallback decisions remain visible in logs and history.
+
 ## 15. Local filesystem layout
 
 Use predictable state under `~/.pi-box` by default for host-side Pi sandbox runtime state.

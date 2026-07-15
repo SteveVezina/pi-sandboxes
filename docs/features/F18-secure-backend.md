@@ -1,7 +1,7 @@
 # F18: Secure Backend
 
 > Source: `SPEC.md` §6 Features F18
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify *(2026-07-14: PROP-008 rebuilds secure on the shared OCI engine — see ADR-005)*
 > Category: Service-layer / Infrastructure
 
 ## Definition (from block spec)
@@ -15,6 +15,8 @@
 Secure backend adds a `secure` runtime mode backed by gVisor/runsc. It must preserve the daemon API and CLI surface used by fast and compat modes while adding stronger isolation for unknown or untrusted repositories.
 
 The secure backend must provide actionable compatibility errors. If gVisor is unavailable or cannot run a workload, the runtime selection layer decides whether fallback is allowed.
+
+Per PROP-008 / ADR-005 (`SPEC.md` §14.7.5): secure mode is the same OCI lifecycle as compat with a `runsc` runtime handler — the handcrafted OCI bundle builder in `pkg/runtime/gvisor/` is deleted. Secure inherits image pull/unpack, mounts, exec, logs, resource limits, and cleanup from the shared `pkg/runtime/oci` engine. Sandboxes run as an unprivileged user (never root-in-config by default), with `/workspace` mounted. Fallback from secure toward lower isolation is denied by default per the selection engine's no-silent-downgrade rule.
 
 ## Acceptance Criteria
 
@@ -59,20 +61,23 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Tasks
 
-### T18.1: gVisor backend lifecycle
+### T18.1: gVisor backend lifecycle ⚠️ *(2026-07-14: AC updated per PROP-008 — rebuilt on shared OCI engine; bundle builder deleted)*
 
 **Acceptance criteria:**
-- [x] Create/destroy/exec work through gVisor/runsc
-- [x] Secure backend returns actionable errors when unavailable
-- [x] Secure backend enforces default policy
+- [ ] Create/destroy/exec work through the shared OCI engine with a `runsc` runtime handler
+- [ ] Template image is pulled/unpacked (no empty rootfs); container is created **and** started
+- [ ] Sandbox runs as unprivileged user with `/workspace` mounted
+- [ ] Secure backend returns actionable errors when unavailable (probe executes `runsc` check)
+- [ ] Secure backend enforces default policy; no silent downgrade below secure
 
 **Verification:**
-- [x] `go build ./pkg/runtime/gvisor/...`
-- [x] Integration test: secure sandbox create/exec/destroy
+- [ ] `go build ./pkg/runtime/gvisor/...`
+- [ ] Integration test: secure sandbox create/exec/destroy through shared OCI lifecycle
+- [ ] Integration test: secure sandbox executes command in `/workspace` as non-root
 
-**Files:** `pkg/runtime/gvisor/runtime.go`
+**Files:** `pkg/runtime/gvisor/runtime.go`, `pkg/runtime/oci/engine.go`
 **Size:** L
-**Depends on:** F17, F19
+**Depends on:** F17, F19, T15.2 (shared OCI engine)
 
 ### T18.2: Secure-mode benchmark comparison
 
@@ -106,7 +111,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
-| Runtime registry/fallback policy | F18, F19, F20 | ADR for runtime selection |
+| ~~Runtime registry/fallback policy~~ | F18, F19, F20 | **Resolved 2026-07-14:** ADR-005 (per PROP-008) |
 
 ## Out of Scope
 

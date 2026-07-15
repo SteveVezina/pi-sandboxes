@@ -100,19 +100,22 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Tasks
 
-### T3.1: Namespace setup
+### T3.1: Namespace setup ⚠️ *(2026-07-14: AC updated per PROP-008 — P0 build fix and real availability validation)*
 
 **Description:** Implement Linux namespace setup (user, mount, PID) for sandbox processes. Use `syscall.Unshare` or Go's `os/exec` with namespace flags.
 
 **Acceptance criteria:**
-- [x] User namespace maps sandbox root to unprivileged host user (uid 1000)
-- [x] Mount namespace isolates filesystem view
-- [x] PID namespace isolates process tree
-- [x] Namespace setup completes in < 5ms
+- [ ] `syscall.SysProcIDRange` replaced with `syscall.SysProcIDMap` (or `golang.org/x/sys/unix`) — Linux build compiles
+- [ ] `fast.Validate()` actually executes its probe command and reports real errors (no false-positive availability when unprivileged user namespaces are disabled)
+- [ ] User namespace maps sandbox root to unprivileged host user (uid 1000)
+- [ ] Mount namespace isolates filesystem view
+- [ ] PID namespace isolates process tree
+- [ ] Namespace setup completes in < 5ms
 
 **Verification:**
-- [x] `go build ./pkg/runtime/fast/...`
-- [x] Integration test: sandboxed process sees isolated PID 1
+- [ ] `GOOS=linux go build ./pkg/runtime/fast/...` succeeds
+- [ ] Unit test: `Validate()` fails on host with user namespaces disabled
+- [ ] Integration test: sandboxed process sees isolated PID 1
 
 **Files:** `pkg/runtime/fast/namespace.go`
 **Size:** M

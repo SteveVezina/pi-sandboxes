@@ -21,7 +21,7 @@ Dashboard of all features for this project.
 | [F1](F01-cli-entry-point.md) | CLI Entry Point | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | — |
 | [F2](F02-daemon-api.md) | Daemon API | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F1 |
 | [F3](F03-fast-backend.md) | Fast Backend | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F8 |
-| [F4](F15-compat-backend.md) | Compat Backend | 🟢 Reviewed | ✅ Implemented | M1 | F8, F5 |
+| [F4](F15-compat-backend.md) | Compat Backend | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F8, F5 |
 | [F5](F07-template-system.md) | Template System | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F3, F4 |
 | [F6](F06-workspace-file-ops.md) | Workspace & File Operations | 🟢 Reviewed | ✅ Implemented | M1 | F8 |
 | [F7](F05-command-execution.md) | Command Execution | 🟢 Reviewed | ✅ Implemented | M1 | F3, F8 |
@@ -35,8 +35,8 @@ Dashboard of all features for this project.
 | [F15](F16-sdk.md) | SDKs | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M3 | F2 |
 | [F16](F10-system-commands.md) | System Commands | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F8 |
 | [F17](F17-policy-enforcement.md) | Policy Enforcement | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F3, F4, F11 |
-| [F18](F18-secure-backend.md) | Secure Backend | 🟢 Reviewed | ✅ Implemented | M4 | F4, F17, F19 |
-| [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | 🟢 Reviewed | ✅ Implemented | M4 | F3, F4, F18 |
+| [F18](F18-secure-backend.md) | Secure Backend | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M4 | F4, F17, F19 |
+| [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M4 | F3, F4, F18 |
 | [F20](F20-microvm-backend.md) | MicroVM Backend | 🟢 Reviewed | ✅ Implemented | M5 | F19, F21 |
 | [F21](F21-microvm-guest-control-plane.md) | MicroVM Guest Control Plane | 🟢 Reviewed | ✅ Implemented | M5 | F20 |
 | [F22](F22-remote-daemon-contexts.md) | Remote Daemon Contexts | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M6 | F2, F23 |
@@ -53,13 +53,13 @@ Dashboard of all features for this project.
 | M1: Local Linux MVP | F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F14, F16 | ⚠️ Needs re-verify |
 | M2: Hardening & Cache | F11, F12, F13, F17 | ⚠️ Needs re-verify |
 | M3: Agent Integrations | F15 | ⚠️ Needs re-verify |
-| M4: Secure Backend | F18, F19 | ✅ Implemented |
+| M4: Secure Backend | F18, F19 | ⚠️ Needs re-verify |
 | M5: MicroVM Backend | F20, F21 | ✅ Implemented |
 | M6: Remote Daemon Mode | F22, F23 | ⚠️ Needs re-verify |
 | M7: Cross-Platform GUI Workbench | F24, F25, F26, F27 | ✅ Implemented |
 
 ## Summary
 
-All 27 feature specs tracked. PROP-005 moved the default Pi Box home to `~/.pi-box`; affected implemented features are marked for re-verification.
+All 27 feature specs tracked. PROP-005 moved the default Pi Box home to `~/.pi-box`; affected implemented features are marked for re-verification. PROP-008 (2026-07-14) introduced the runtime driver contract, capability reports, shared OCI engine, and no-downgrade selection engine (ADR-005); F3, F4, F18, and F19 tasks were reset where acceptance criteria changed.
 
 > Note: some legacy filenames predate PROP-002, but the feature labels, titles, source IDs, and index rows now use the canonical `SPEC.md` §6 feature IDs.

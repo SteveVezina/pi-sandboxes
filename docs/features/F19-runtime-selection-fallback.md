@@ -1,7 +1,7 @@
 # F19: Runtime Selection & Fallback
 
 > Source: `SPEC.md` §6 Features F19
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify *(2026-07-14: PROP-008 replaces detection interface and priority list — see ADR-005)*
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -15,6 +15,13 @@
 Runtime selection centralizes backend discovery, explicit mode handling, auto-selection, and fallback. It must make backend decisions visible in system doctor output, logs, and command history.
 
 Fallback cannot weaken policy silently. If fallback is allowed, the user-visible result must explain what happened and which backend actually ran.
+
+Per PROP-008 / ADR-005 (`SPEC.md` §14.7.5):
+
+- Backends implement the lifecycle `Driver` contract (`Probe/Create/Start/Exec/Inspect/Stop/Destroy/Stats`); detection is no longer a metadata-only interface.
+- `Probe` returns a structured `CapabilityReport` (availability, missing prerequisites, capability flags, isolation tier, compatibility tier). The one-integer `GetSecurityLevel()` is removed. Probes must actually execute.
+- Selection separates four inputs — requested mode, workload trust, host capabilities, explicit fallback allow/deny policy — replacing the single global priority list. `auto` is trust-dependent: trusted work prefers performance ordering, untrusted work prefers isolation ordering.
+- Isolation is never silently downgraded below the requested mode; denied fallbacks fail with actionable guidance from the capability report.
 
 ## Acceptance Criteria
 
@@ -59,32 +66,36 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Tasks
 
-### T19.1: Runtime registry and detection
+### T19.1: Runtime registry and detection ⚠️ *(2026-07-14: AC updated per PROP-008 — capability reports replace security levels)*
 
 **Acceptance criteria:**
-- [x] Detect fast, compat, secure, and future microVM backend availability
-- [x] `pi-box system doctor` reports backend status
+- [ ] Detect fast, compat, secure, and microVM backend availability via `Driver.Probe`
+- [ ] `Probe` returns a structured `CapabilityReport` (availability, reason, missing prerequisites, capability flags, isolation/compat tiers)
+- [ ] Probes actually execute their checks (no always-true validation)
+- [ ] `pi-box system doctor` renders capability reports instead of `security_level` integers
 
 **Verification:**
-- [x] Unit tests for runtime detection
-- [x] `pi-box system doctor` includes runtime backend table
+- [ ] Unit tests for runtime probing per driver
+- [ ] `pi-box system doctor` includes runtime capability table
 
-**Files:** `pkg/runtime/detect/detect.go`, `pkg/system/doctor.go`
+**Files:** `pkg/runtime/registry.go`, `pkg/runtime/capabilities.go`, `pkg/system/doctor.go`
 **Size:** M
 **Depends on:** F3, F15, F18
 
-### T19.2: Selection and fallback policy
+### T19.2: Selection and fallback policy ⚠️ *(2026-07-14: AC updated per PROP-008 — four-input selection replaces priority list)*
 
 **Acceptance criteria:**
-- [x] Explicit mode selection is honored
-- [x] Auto-selection follows config/trust policy
-- [x] Secure-to-compat fallback is policy-gated and logged
+- [ ] Explicit mode selection is honored
+- [ ] Selection takes requested mode, workload trust, host capabilities, and explicit fallback allow/deny policy as separate inputs
+- [ ] `auto` resolution is trust-dependent (trusted → performance ordering; untrusted → isolation ordering)
+- [ ] Isolation never silently downgrades below the requested mode; denied fallback fails with actionable guidance
+- [ ] Fallback decisions are logged with requested-vs-resolved mode fields
 
 **Verification:**
-- [x] Unit tests for explicit/auto/fallback selection
-- [x] Integration test: secure unavailable fallback behavior
+- [ ] Unit tests for explicit/auto/fallback selection across trust levels
+- [ ] Integration test: secure unavailable with fallback denied fails with guidance; with fallback allowed resolves upward only
 
-**Files:** `pkg/runtime/detect/detect.go`, `pkg/logs/entry.go`
+**Files:** `pkg/runtime/selector.go`, `pkg/logs/entry.go`
 **Size:** M
 **Depends on:** T19.1, F17
 
@@ -125,7 +136,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
-| Runtime selection precedence | F18, F19, F20 | ADR for runtime registry and fallback |
+| ~~Runtime selection precedence~~ | F18, F19, F20 | **Resolved 2026-07-14:** ADR-005 (runtime driver contract and selection engine, per PROP-008) |
 
 ## Out of Scope
 

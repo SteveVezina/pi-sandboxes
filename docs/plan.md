@@ -5,8 +5,8 @@
 
 ## Active Cursor
 
-**Current phase:** M1-M7 implemented
-**Next work:** Review and package the completed implementation
+**Current phase:** PROP-008 runtime driver contract (applied 2026-07-14, ADR-005)
+**Next work:** P0 — fast backend build fix (`SysProcIDMap`) + real `Validate()` (F3/T3.1); then P1 driver contract + selector (F19/T19.1-T19.2), P2 shared OCI engine + compat fixes (F4/T15.2), P3 secure rebuild on OCI engine (F18/T18.1)
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph

@@ -2,15 +2,70 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/gorilla/mux"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 	"github.com/pi-sandbox/pi/pkg/snapshot"
-	"github.com/pi-sandbox/pi/pkg/workspace"
 )
+
+// snapshotFromContainer copies /workspace out of the sandbox container and
+// stores it as a named snapshot in the daemon-owned snapshot store.
+func snapshotFromContainer(r *http.Request, id, name string) error {
+	c, err := compatContainerHandle(id)
+	if err != nil {
+		return err
+	}
+	staging, err := os.MkdirTemp("", "pi-box-snapshot-*")
+	if err != nil {
+		return fmt.Errorf("stage snapshot: %w", err)
+	}
+	defer os.RemoveAll(staging)
+
+	if err := c.CopyFrom(workspaceRoot+"/.", staging); err != nil {
+		return fmt.Errorf("copy workspace: %w", err)
+	}
+	sm := snapshot.NewManager(id)
+	if _, err := sm.Create(name, staging); err != nil {
+		return err
+	}
+	return nil
+}
+
+// restoreToContainer replaces /workspace inside the sandbox container with
+// the content of a named snapshot.
+func restoreToContainer(r *http.Request, id, name string) error {
+	c, err := compatContainerHandle(id)
+	if err != nil {
+		return err
+	}
+	staging, err := os.MkdirTemp("", "pi-box-rollback-*")
+	if err != nil {
+		return fmt.Errorf("stage rollback: %w", err)
+	}
+	defer os.RemoveAll(staging)
+
+	sm := snapshot.NewManager(id)
+	if err := sm.Rollback(name, staging); err != nil {
+		return err
+	}
+
+	// Clear the live workspace, then copy the snapshot content back in.
+	if _, err := workspaceExec(r.Context(), id,
+		"find "+workspaceRoot+" -mindepth 1 -maxdepth 1 -exec rm -rf {} +"); err != nil {
+		return fmt.Errorf("clear workspace: %w", err)
+	}
+	if err := c.CopyTo(staging+"/.", workspaceRoot); err != nil {
+		return fmt.Errorf("restore workspace: %w", err)
+	}
+	// docker cp writes as root; hand the files back to the sandbox user.
+	if err := c.ExecAsRoot(r.Context(), "chown -R 1000:1000 "+workspaceRoot); err != nil {
+		return fmt.Errorf("fix ownership: %w", err)
+	}
+	return nil
+}
 
 // SnapshotSandbox returns an HTTP handler for snapshot operations.
 func SnapshotSandbox(store *sandbox.Store) http.HandlerFunc {
@@ -18,10 +73,13 @@ func SnapshotSandbox(store *sandbox.Store) http.HandlerFunc {
 		vars := mux.Vars(r)
 		id := vars["id"]
 
-		// Validate sandbox exists
-		_, err := store.Get(id)
+		meta, err := store.Get(id)
 		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
+			return
+		}
+		if err := requireCompat(meta); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
 
@@ -34,24 +92,14 @@ func SnapshotSandbox(store *sandbox.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 			return
 		}
-		if req.Name == "" {
+		if req.Name == "" && req.Action != "list" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "name is required"})
 			return
 		}
 
-		// Create workspace manager
-		mgr := workspace.NewManager(id, workspace.ModeCopy)
-		if err := mgr.EnsureDir(); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "ensure workspace: " + err.Error()})
-			return
-		}
-
-		sm := snapshot.NewManager(id)
-
 		switch req.Action {
 		case "create", "":
-			// Create snapshot
-			if err := createSnapshot(id, mgr, sm, req.Name); err != nil {
+			if err := snapshotFromContainer(r, id, req.Name); err != nil {
 				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "create snapshot: " + err.Error()})
 				return
 			}
@@ -62,7 +110,7 @@ func SnapshotSandbox(store *sandbox.Store) http.HandlerFunc {
 			})
 
 		case "list":
-			// List snapshots
+			sm := snapshot.NewManager(id)
 			list, err := sm.List()
 			if err != nil {
 				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "list snapshots: " + err.Error()})
@@ -86,9 +134,13 @@ func SnapshotCreate(store *sandbox.Store) http.HandlerFunc {
 		vars := mux.Vars(r)
 		id := vars["id"]
 
-		_, err := store.Get(id)
+		meta, err := store.Get(id)
 		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
+			return
+		}
+		if err := requireCompat(meta); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
 
@@ -104,14 +156,7 @@ func SnapshotCreate(store *sandbox.Store) http.HandlerFunc {
 			return
 		}
 
-		mgr := workspace.NewManager(id, workspace.ModeCopy)
-		if err := mgr.EnsureDir(); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "ensure workspace: " + err.Error()})
-			return
-		}
-
-		sm := snapshot.NewManager(id)
-		if err := createSnapshot(id, mgr, sm, req.Name); err != nil {
+		if err := snapshotFromContainer(r, id, req.Name); err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "create snapshot: " + err.Error()})
 			return
 		}
@@ -157,9 +202,13 @@ func SnapshotRollback(store *sandbox.Store) http.HandlerFunc {
 		vars := mux.Vars(r)
 		id := vars["id"]
 
-		_, err := store.Get(id)
+		meta, err := store.Get(id)
 		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
+			return
+		}
+		if err := requireCompat(meta); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
 
@@ -175,14 +224,7 @@ func SnapshotRollback(store *sandbox.Store) http.HandlerFunc {
 			return
 		}
 
-		mgr := workspace.NewManager(id, workspace.ModeCopy)
-		if err := mgr.EnsureDir(); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "ensure workspace: " + err.Error()})
-			return
-		}
-
-		sm := snapshot.NewManager(id)
-		if err := sm.Rollback(req.Name, mgr.Dir()); err != nil {
+		if err := restoreToContainer(r, id, req.Name); err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "rollback: " + err.Error()})
 			return
 		}
@@ -231,25 +273,4 @@ func SnapshotDelete(store *sandbox.Store) http.HandlerFunc {
 			"name":   req.Name,
 		})
 	}
-}
-
-// createSnapshot creates a snapshot by copying the workspace.
-func createSnapshot(sandboxID string, mgr *workspace.Manager, sm *snapshot.Manager, name string) error {
-	_, err := sm.Create(name, mgr.Dir())
-	return err
-}
-
-// dirSize calculates the total size of a directory.
-func dirSize(path string) (int64, error) {
-	var size int64
-	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if !info.IsDir() {
-			size += info.Size()
-		}
-		return nil
-	})
-	return size, err
 }

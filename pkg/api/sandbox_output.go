@@ -1,17 +1,71 @@
 package api
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
-	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
+
+// tarGzDir archives the contents of dir into a .tar.gz file at output.
+func tarGzDir(dir, output string) error {
+	f, err := os.Create(output)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	gz := gzip.NewWriter(f)
+	defer gz.Close()
+	tw := tar.NewWriter(gz)
+	defer tw.Close()
+
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil || rel == "." {
+			return err
+		}
+		hdr, err := tar.FileInfoHeader(info, "")
+		if err != nil {
+			return err
+		}
+		hdr.Name = filepath.ToSlash(rel)
+		if err := tw.WriteHeader(hdr); err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() {
+			return nil
+		}
+		src, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+		_, err = io.Copy(tw, src)
+		return err
+	})
+}
+
+// outputSources are the deliverable locations inside a sandbox (SPEC.md).
+var outputSources = []string{
+	"/artifacts",
+	"/workspace/dist",
+	"/workspace/build",
+	"/workspace/coverage",
+	"/workspace/test-results",
+	"/workspace/target/release",
+}
 
 // OutputRequest is the request body for the output endpoint.
 type OutputRequest struct {
@@ -36,9 +90,9 @@ type OutputListResponse struct {
 
 // OutputPullResponse is the response for pulling outputs.
 type OutputPullResponse struct {
-	SandboxID string   `json:"sandbox_id"`
-	Destination string `json:"destination"`
-	Items     []string `json:"items"`
+	SandboxID   string   `json:"sandbox_id"`
+	Destination string   `json:"destination"`
+	Items       []string `json:"items"`
 }
 
 // OutputPackResponse is the response for packing outputs.
@@ -49,9 +103,12 @@ type OutputPackResponse struct {
 }
 
 // OutputSandbox returns an HTTP handler for the single output endpoint.
+// All deliverables (artifacts, build outputs, workspace patch) leave the
+// sandbox through this channel; the data is read from inside the sandbox
+// container, never from a host workspace directory.
 func OutputSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		sandboxID := r.PathValue("id")
+		sandboxID := mux.Vars(r)["id"]
 		if sandboxID == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "sandbox ID is required"})
 			return
@@ -61,6 +118,10 @@ func OutputSandbox(store *sandbox.Store) http.HandlerFunc {
 		meta, err := store.Get(sandboxID)
 		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
+			return
+		}
+		if err := requireCompat(meta); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
 
@@ -80,148 +141,143 @@ func OutputSandbox(store *sandbox.Store) http.HandlerFunc {
 
 		switch req.Action {
 		case "list":
-			handleOutputList(w, sandboxID, meta)
+			handleOutputList(w, r, sandboxID)
 		case "pull":
-			handleOutputPull(w, r, sandboxID, meta, req)
+			handleOutputPull(w, r, sandboxID, req)
 		case "pack":
-			handleOutputPack(w, sandboxID, meta, req)
+			handleOutputPack(w, r, sandboxID, req)
 		default:
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("unknown action: %s", req.Action)})
 		}
 	}
 }
 
-// handleOutputList lists available deliverables from a sandbox.
-func handleOutputList(w http.ResponseWriter, sandboxID string, meta *sandbox.Meta) {
-	// Known output sources from SPEC.md
-	outputSources := map[string]string{
-		"/artifacts":           "primary artifacts",
-		"/workspace/dist":      "build outputs",
-		"/workspace/build":     "build outputs",
-		"/workspace/coverage":  "test coverage reports",
-		"/workspace/test-results": "test result files",
-		"/workspace/target/release": "Rust release binaries",
+// existingOutputSources returns the output source dirs that exist and are
+// non-empty inside the container.
+func existingOutputSources(r *http.Request, sandboxID string) ([]string, error) {
+	var existing []string
+	for _, src := range outputSources {
+		out, err := workspaceExec(r.Context(), sandboxID,
+			"[ -d "+shellQuote(src)+" ] && ls -A "+shellQuote(src)+" 2>/dev/null | head -1 || true")
+		if err != nil {
+			return nil, err
+		}
+		if strings.TrimSpace(out) != "" {
+			existing = append(existing, src)
+		}
 	}
+	return existing, nil
+}
 
+// handleOutputList lists available deliverables from a sandbox.
+func handleOutputList(w http.ResponseWriter, r *http.Request, sandboxID string) {
 	var items []OutputItem
 
-	// Scan known output sources
-	for srcPath := range outputSources {
-		fullPath := filepath.Join("/sandbox", sandboxID, srcPath)
-		if info, err := os.Stat(fullPath); err == nil {
-			if info.IsDir() {
-				// List files in directory
-				entries, err := os.ReadDir(fullPath)
-				if err == nil {
-					for _, entry := range entries {
-						if !entry.IsDir() {
-							itemInfo, err := entry.Info()
-							if err == nil {
-								items = append(items, OutputItem{
-									Path:     filepath.Join(srcPath, entry.Name()),
-									Type:     "file",
-									Size:     itemInfo.Size(),
-									Modified: itemInfo.ModTime().Format(time.RFC3339),
-								})
-							}
-						}
-					}
-				}
-			} else {
-				items = append(items, OutputItem{
-					Path:     srcPath,
-					Type:     "file",
-					Size:     info.Size(),
-					Modified: info.ModTime().Format(time.RFC3339),
-				})
+	for _, src := range outputSources {
+		// One find per source: path, size, mtime for regular files.
+		out, err := workspaceExec(r.Context(), sandboxID,
+			"[ -d "+shellQuote(src)+" ] && find "+shellQuote(src)+" -maxdepth 2 -type f -printf '%p\\t%s\\t%TY-%Tm-%TdT%TH:%TM:%TSZ\\n' 2>/dev/null || true")
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "list output: " + err.Error()})
+			return
+		}
+		for _, line := range strings.Split(out, "\n") {
+			parts := strings.SplitN(line, "\t", 3)
+			if len(parts) != 3 {
+				continue
 			}
+			size, _ := strconv.ParseInt(parts[1], 10, 64)
+			items = append(items, OutputItem{
+				Path:     parts[0],
+				Type:     "file",
+				Size:     size,
+				Modified: parts[2],
+			})
 		}
 	}
 
-	// Check for workspace patch
-	if hasWorkspaceChanges(sandboxID) {
+	// Workspace patch is a deliverable when the workspace has changes.
+	if diff, err := workspaceDiff(r.Context(), sandboxID); err == nil && strings.TrimSpace(diff) != "" {
 		items = append(items, OutputItem{
 			Path: "/workspace.patch",
 			Type: "patch",
-			Size: 0, // Will be calculated on pull
-			Modified: time.Now().Format(time.RFC3339),
+			Size: int64(len(diff)),
 		})
 	}
 
+	if items == nil {
+		items = []OutputItem{}
+	}
 	writeJSON(w, http.StatusOK, OutputListResponse{
 		SandboxID: sandboxID,
 		Items:     items,
 	})
 }
 
-// handleOutputPull delivers artifacts or patches to a host destination.
-func handleOutputPull(w http.ResponseWriter, r *http.Request, sandboxID string, meta *sandbox.Meta, req OutputRequest) {
+// handleOutputPull delivers artifacts and the workspace patch to a host
+// destination directory.
+func handleOutputPull(w http.ResponseWriter, r *http.Request, sandboxID string, req OutputRequest) {
 	if req.Dest == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "destination is required for pull"})
 		return
 	}
 
-	// Create destination directory
 	if err := os.MkdirAll(req.Dest, 0755); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("create destination: %v", err)})
 		return
 	}
 
-	// Known output sources
-	outputSources := []string{
-		"/artifacts",
-		"/workspace/dist",
-		"/workspace/build",
-		"/workspace/coverage",
-		"/workspace/test-results",
-		"/workspace/target/release",
+	c, err := compatContainerHandle(sandboxID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	existing, err := existingOutputSources(r, sandboxID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
 	}
 
 	var delivered []string
-
-	// Copy known output sources
-	for _, srcPath := range outputSources {
-		srcDir := filepath.Join("/sandbox", sandboxID, srcPath)
-		destPath := filepath.Join(req.Dest, srcPath[1:]) // Remove leading /
-
-		if info, err := os.Stat(srcDir); err == nil && info.IsDir() {
-			// Copy directory contents
-			if err := copyDir(srcDir, destPath); err != nil {
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("copy %s: %v", srcPath, err)})
-				return
-			}
-			delivered = append(delivered, srcPath)
+	for _, src := range existing {
+		destPath := filepath.Join(req.Dest, strings.TrimPrefix(src, "/"))
+		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("prepare %s: %v", destPath, err)})
+			return
 		}
+		if err := c.CopyFrom(src, destPath); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("copy %s: %v", src, err)})
+			return
+		}
+		delivered = append(delivered, src)
 	}
 
-	// Check for workspace patch
-	if hasWorkspaceChanges(sandboxID) {
+	// Deliver the workspace patch when there are changes.
+	if diff, err := workspaceDiff(r.Context(), sandboxID); err == nil && strings.TrimSpace(diff) != "" {
 		patchPath := filepath.Join(req.Dest, "workspace.patch")
-		if err := generatePatch(sandboxID, patchPath); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("generate patch: %v", err)})
+		if err := os.WriteFile(patchPath, []byte(diff), 0644); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("write patch: %v", err)})
 			return
 		}
 		delivered = append(delivered, "/workspace.patch")
 	}
 
-	// Emit pi.artifact.delivered event (in production, this would be emitted via the daemon)
-	_ = meta // In production, emit event here
-
 	writeJSON(w, http.StatusOK, OutputPullResponse{
-		SandboxID:     sandboxID,
-		Destination:   req.Dest,
-		Items:         delivered,
+		SandboxID:   sandboxID,
+		Destination: req.Dest,
+		Items:       delivered,
 	})
 }
 
-// handleOutputPack creates a compressed archive of selected output sources.
-func handleOutputPack(w http.ResponseWriter, sandboxID string, meta *sandbox.Meta, req OutputRequest) {
+// handleOutputPack creates a compressed archive of the deliverables,
+// built inside the container and copied to the host output path.
+func handleOutputPack(w http.ResponseWriter, r *http.Request, sandboxID string, req OutputRequest) {
 	if req.Output == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "output path is required for pack"})
 		return
 	}
 
-	// Create parent directory if needed
 	if dir := filepath.Dir(req.Output); dir != "" {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("create output dir: %v", err)})
@@ -229,112 +285,59 @@ func handleOutputPack(w http.ResponseWriter, sandboxID string, meta *sandbox.Met
 		}
 	}
 
-	// Known output sources
-	outputSources := []string{
-		"/artifacts",
-		"/workspace/dist",
-		"/workspace/build",
-		"/workspace/coverage",
-		"/workspace/test-results",
-		"/workspace/target/release",
+	c, err := compatContainerHandle(sandboxID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
 	}
 
-	var collected []string
+	existing, err := existingOutputSources(r, sandboxID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	if len(existing) == 0 {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no output to pack"})
+		return
+	}
 
-	// Collect known output sources
-	for _, srcPath := range outputSources {
-		srcDir := filepath.Join("/sandbox", sandboxID, srcPath)
-		if info, err := os.Stat(srcDir); err == nil && info.IsDir() {
-			collected = append(collected, srcPath)
+	// Copy sources to a host staging dir, then archive with the Go
+	// stdlib. Building the archive inside the container is fragile:
+	// /tmp is tmpfs (invisible to docker cp) and archiving a source
+	// directory into itself makes tar fail.
+	staging, err := os.MkdirTemp("", "pi-box-pack-*")
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("stage archive: %v", err)})
+		return
+	}
+	defer os.RemoveAll(staging)
+
+	for _, src := range existing {
+		destPath := filepath.Join(staging, strings.TrimPrefix(src, "/"))
+		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("stage %s: %v", src, err)})
+			return
+		}
+		if err := c.CopyFrom(src, destPath); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("copy %s: %v", src, err)})
+			return
 		}
 	}
 
-	// Create tar.zst archive (simplified - in production, use proper tar+zstd)
-	if err := createArchive(req.Output, collected); err != nil {
+	if err := tarGzDir(staging, req.Output); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("create archive: %v", err)})
 		return
 	}
 
-	// Get archive size
 	info, err := os.Stat(req.Output)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("get archive size: %v", err)})
 		return
 	}
 
-	// Emit pi.artifact.delivered event
-	_ = meta // In production, emit event here
-
 	writeJSON(w, http.StatusOK, OutputPackResponse{
 		SandboxID: sandboxID,
 		Output:    req.Output,
 		Size:      info.Size(),
 	})
-}
-
-// hasWorkspaceChanges checks if the workspace has changes.
-func hasWorkspaceChanges(sandboxID string) bool {
-	// In production, check the workspace diff
-	return false
-}
-
-// generatePatch generates a workspace patch.
-func generatePatch(sandboxID, destPath string) error {
-	// In production, generate actual patch
-	return os.WriteFile(destPath, []byte("# Patch placeholder"), 0644)
-}
-
-// copyDir copies a directory recursively.
-func copyDir(src, dest string) error {
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		relPath, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-
-		destPath := filepath.Join(dest, relPath)
-
-		if info.IsDir() {
-			return os.MkdirAll(destPath, info.Mode())
-		}
-
-		return copyFile(path, destPath)
-	})
-}
-
-// copyFile copies a single file.
-func copyFile(src, dest string) error {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	destFile, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
-
-	_, err = io.Copy(destFile, srcFile)
-	return err
-}
-
-// createArchive creates a tar.zst archive (simplified).
-func createArchive(outputPath string, sources []string) error {
-	// In production, use proper tar+zstd implementation
-	return os.WriteFile(outputPath, []byte("archive placeholder"), 0644)
-}
-
-// sanitizePath validates and sanitizes a file path to prevent directory traversal.
-func sanitizePath(base, requested string) (string, error) {
-	cleaned := filepath.Clean(filepath.Join(base, requested))
-	if !strings.HasPrefix(cleaned, base) {
-		return "", fmt.Errorf("path traversal detected")
-	}
-	return cleaned, nil
 }

@@ -4,12 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pi-sandbox/pi/pkg/git"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
-	"github.com/pi-sandbox/pi/pkg/workspace"
 )
 
 // CloneRequest is the request body for cloning a repository.
@@ -17,16 +16,21 @@ type CloneRequest struct {
 	URL string `json:"url"`
 }
 
-// CloneSandbox returns an HTTP handler that clones a repository into a sandbox workspace.
+// CloneSandbox returns an HTTP handler that clones a repository into the
+// sandbox workspace, running git inside the sandbox container so the
+// checkout lands on the daemon-managed workspace volume.
 func CloneSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
 
-		// Validate sandbox exists
 		meta, err := store.Get(id)
 		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
+			return
+		}
+		if err := requireCompat(meta); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
 
@@ -36,34 +40,30 @@ func CloneSandbox(store *sandbox.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 			return
 		}
+		req.URL = strings.TrimSpace(req.URL)
 		if req.URL == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "url is required"})
 			return
 		}
 
-		// Create workspace manager
-		mgr := workspace.NewManager(id, workspace.ModeCopy)
-		if err := mgr.EnsureDir(); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "create workspace: " + err.Error()})
-			return
-		}
-
-		// Clone the repository
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
 		defer cancel()
 
-		if _, err := git.Clone(ctx, req.URL, mgr.Dir()); err != nil {
+		script := gitPreamble +
+			"cd /workspace && if [ -n \"$(ls -A . 2>/dev/null)\" ]; then " +
+			"echo 'workspace is not empty' >&2; exit 1; fi; " +
+			"git clone " + shellQuote(req.URL) + " ."
+		if _, err := workspaceExec(ctx, id, script); err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "clone failed: " + err.Error()})
 			return
 		}
 
-		// Update last used
 		store.UpdateLastUsed(id)
 
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"id":          id,
 			"name":        meta.Name,
-			"workspace":   mgr.Dir(),
+			"workspace":   workspaceRoot,
 			"cloned_from": req.URL,
 		})
 	}

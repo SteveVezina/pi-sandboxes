@@ -20,22 +20,22 @@ Per ADR-002, host and guest exchange newline-delimited JSON frames over virtio-v
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-24.1: `pi-init` starts inside the guest and reports readiness
-- [ ] AC-24.2: `pi-agentd` communicates with the host over virtio-vsock
-- [ ] AC-24.3: Exec requests stream stdout/stderr over the guest control channel
-- [ ] AC-24.4: Guest lifecycle events map back to sandbox state
-- [ ] AC-24.5: File and artifact transfer work without direct host filesystem mounting
-- [ ] AC-24.6: Host and guest exchange newline-delimited JSON frames over virtio-vsock
-- [ ] AC-24.7: Exec stdout/stderr stream frames carry base64 payloads
-- [ ] AC-24.8: Final exec response includes exit code, duration, timeout, and truncation metadata
-- [ ] AC-24.9: Host marks sandbox warm only after the guest sends `ready`
+- [x] AC-24.1: `pi-init` starts inside the guest and reports readiness
+- [x] AC-24.2: `pi-agentd` communicates with the host over virtio-vsock
+- [x] AC-24.3: Exec requests stream stdout/stderr over the guest control channel
+- [x] AC-24.4: Guest lifecycle events map back to sandbox state
+- [x] AC-24.5: File and artifact transfer work without direct host filesystem mounting
+- [x] AC-24.6: Host and guest exchange newline-delimited JSON frames over virtio-vsock
+- [x] AC-24.7: Exec stdout/stderr stream frames carry base64 payloads
+- [x] AC-24.8: Final exec response includes exit code, duration, timeout, and truncation metadata
+- [x] AC-24.9: Host marks sandbox warm only after the guest sends `ready`
 
 ## Interface Impact
 
 | Component | Impact |
 |-----------|--------|
-| `cmd/pi-init/` | Guest init binary (new — to be created) |
-| `cmd/pi-agentd/` | Guest agent binary (new — to be created) |
+| `cmd/pi-init/` | Guest init binary |
+| `cmd/pi-agentd/` | Guest agent binary |
 | `pkg/runtime/microvm/` | Host-side vsock client |
 | F20: MicroVM Backend | Consumes guest readiness/control |
 | `docs/decisions/ADR-002-microvm-guest-control-protocol.md` | Guest protocol decision |

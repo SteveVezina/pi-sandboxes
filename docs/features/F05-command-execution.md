@@ -1,4 +1,4 @@
-# F05: Command Execution
+# F7: Command Execution
 
 > Source: `SPEC.md` §6 Features F7
 > Status: 🟢 Implemented
@@ -181,9 +181,14 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] `go build ./pkg/exec/...` succeeds
 - [x] Exec engine handles timeout correctly
 - [x] Exec engine handles output truncation correctly
-- [x] Exec API endpoint streams response
+- [x] Exec API endpoint streams response (NDJSON via `?stream=true` or `Accept: application/x-ndjson`)
 - [x] CLI exec command works end-to-end
 - [x] Benchmark: warm exec p50 < 10ms (fast mode)
+- [x] `RunStream` emits real-time stdout/stderr events (`tests/exec/stream_test.go`)
+- [x] Done event carries exitCode (always, even 0), durationMs, truncated, timedOut (`tests/api/exec_stream_test.go`)
+- [x] Non-streaming path unchanged (backwards-compatible JSON response)
+- [x] Python SDK `exec_stream` sends `?stream=true` + `Accept: application/x-ndjson`
+- [x] TypeScript SDK `execStream` sends `?stream=true` + `Accept: application/x-ndjson`
 
 ## Spec Gaps
 

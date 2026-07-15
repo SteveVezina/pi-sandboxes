@@ -12,7 +12,7 @@ func TestScope_Dir(t *testing.T) {
 	s := cache.Scope{Template: "node", Runtime: "auto", User: "alice"}
 	dir := s.Dir(cache.TypeNPM)
 
-	expected := filepath.Join(os.Getenv("HOME"), ".pi", "caches", "node/auto/alice", "npm")
+	expected := filepath.Join(os.Getenv("HOME"), ".pi-box", "caches", "node/auto/alice", "npm")
 	if dir != expected {
 		t.Errorf("Expected %s, got %s", expected, dir)
 	}
@@ -137,7 +137,7 @@ func TestPrune(t *testing.T) {
 		t.Fatalf("Prune failed: %v", err)
 	}
 
-	// The unused scope should be removed (but it's not under ~/.pi/caches, so prune won't find it)
+	// The unused scope should be removed (but it's not under ~/.pi-box/caches, so prune won't find it)
 	// This test verifies the API works, not the actual removal
 	_ = result
 }

@@ -1,9 +1,12 @@
 package system
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -26,9 +29,14 @@ func RunPrune(askConfirm bool) (*PruneResult, error) {
 	// Ask for confirmation
 	if askConfirm {
 		fmt.Println("This will remove old sandbox state and logs.")
-		fmt.Println("Type 'yes' to confirm: ")
-		// In CLI mode, this would read from stdin.
-		// For now, we just proceed — the --yes flag is handled by the CLI.
+		fmt.Print("Type 'yes' to confirm: ")
+		answer, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		if err != nil && err != io.EOF {
+			return result, fmt.Errorf("read confirmation: %w", err)
+		}
+		if strings.TrimSpace(answer) != "yes" {
+			return result, fmt.Errorf("prune aborted")
+		}
 	}
 
 	// Remove destroyed sandboxes

@@ -20,7 +20,7 @@ type Meta struct {
 
 // Manager manages snapshots for a sandbox.
 type Manager struct {
-	sandboxID string
+	sandboxID    string
 	snapshotsDir string
 }
 
@@ -30,9 +30,9 @@ func NewManager(sandboxID string) *Manager {
 	if home == "" {
 		home = "."
 	}
-	snapshotsDir := filepath.Join(home, ".pi", "sandboxes", sandboxID, "snapshots")
+	snapshotsDir := filepath.Join(home, ".pi-box", "sandboxes", sandboxID, "snapshots")
 	return &Manager{
-		sandboxID: sandboxID,
+		sandboxID:    sandboxID,
 		snapshotsDir: snapshotsDir,
 	}
 }

@@ -31,7 +31,7 @@ const (
 const LocalContextName = "local"
 
 // DefaultLocalTarget is the default daemon socket path.
-const DefaultLocalTarget = "unix://~/.pi/sandboxd.sock"
+const DefaultLocalTarget = "unix://~/.pi-box/sandboxd.sock"
 
 // AuthConfig describes how to authenticate to a remote daemon.
 // Per ADR-003, raw secrets are never written to disk; bearer tokens are
@@ -54,7 +54,7 @@ type Context struct {
 	Auth      AuthConfig `yaml:"auth"`
 }
 
-// onDiskState is the YAML schema for ~/.pi/contexts.yaml.
+// onDiskState is the YAML schema for ~/.pi-box/contexts.yaml.
 type onDiskState struct {
 	ActiveContext string    `yaml:"active_context"`
 	Contexts      []Context `yaml:"contexts"`
@@ -283,11 +283,11 @@ func localContext() Context {
 	}
 }
 
-// DefaultPath returns the default context store path (~/.pi/contexts.yaml).
+// DefaultPath returns the default context store path (~/.pi-box/contexts.yaml).
 func DefaultPath() string {
 	home, err := os.UserHomeDir()
 	if err != nil || home == "" {
 		home = "."
 	}
-	return filepath.Join(home, ".pi", "contexts.yaml")
+	return filepath.Join(home, ".pi-box", "contexts.yaml")
 }

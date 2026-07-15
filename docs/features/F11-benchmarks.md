@@ -1,7 +1,7 @@
-# F11: Benchmarks
+# F14: Benchmarks
 
 > Source: `SPEC.md` §6 Features F14
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -100,7 +100,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Category | Meaning |
 |----------|---------|
 | **Service-layer** | Go benchmark framework in `pkg/bench/` |
-| **Configuration** | Benchmark config from `~/.pi/config.yaml` |
+| **Configuration** | Benchmark config from `~/.pi-box/config.yaml` |
 
 **ADR references:** None yet.
 **ADR gaps:** None identified.

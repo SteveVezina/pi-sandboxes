@@ -1,7 +1,7 @@
-# F16: SDKs
+# F15: SDKs
 
 > Source: `SPEC.md` §6 Features F15
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)

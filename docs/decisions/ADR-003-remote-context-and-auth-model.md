@@ -9,7 +9,9 @@ F22 and F23 require local and remote daemon contexts, SSH/Tailscale/WireGuard-fr
 
 ## Decision
 
-Context state is stored in `~/.pi/contexts.yaml`.
+Context state is stored in `~/.pi-box/contexts.yaml`.
+
+*(Updated 2026-07-15 per PROP-005: the default host-side Pi Box home moved from `~/.pi` to `~/.pi-box` to avoid colliding with the Pi coding agent home.)*
 
 Required context fields are:
 
@@ -46,4 +48,3 @@ Authentication rules:
 - `docs/features/F22-remote-daemon-contexts.md`
 - `docs/features/F23-remote-daemon-transport-auth.md`
 - PROP-003
-

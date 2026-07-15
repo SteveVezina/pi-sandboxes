@@ -21,7 +21,7 @@ func Prune(activeScopes []Scope, maxSize int64) (*PruneResult, error) {
 	if home == "" {
 		home = "."
 	}
-	cacheDir := filepath.Join(home, ".pi", "caches")
+	cacheDir := filepath.Join(home, ".pi-box", "caches")
 
 	entries, err := os.ReadDir(cacheDir)
 	if err != nil {
@@ -84,4 +84,3 @@ func cleanOldFiles(dir string, age time.Duration) {
 		}
 	}
 }
-

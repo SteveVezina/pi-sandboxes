@@ -1,7 +1,7 @@
-# F10: System Commands
+# F16: System Commands
 
 > Source: `SPEC.md` §6 Features F16
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -12,7 +12,7 @@
 
 ## Expanded Specification
 
-System commands provide local state inspection and maintenance for the pi-sandbox runtime. They operate on the `~/.pi/` directory structure.
+System commands provide local state inspection and maintenance for the pi-sandbox runtime. They operate on the `~/.pi-box/` directory structure.
 
 Commands:
 1. **status** — Shows daemon connection status, number of active sandboxes, total state size
@@ -20,9 +20,9 @@ Commands:
 3. **prune** — Removes old sandbox state (destroyed sessions, orphaned data, old logs). Asks for confirmation before destructive operations.
 4. **disk-usage** — Shows storage breakdown by category (sandboxes, templates, caches, images, logs)
 
-State directories under `~/.pi/`:
+State directories under `~/.pi-box/`:
 ```
-~/.pi/
+~/.pi-box/
   config.yaml
   sandboxd.sock
   templates/     — template definitions
@@ -60,14 +60,14 @@ Each criterion must be:
 |-----------|--------|
 | `pkg/system/` | System command handlers |
 | `cmd/pi/system/` | CLI system subcommands |
-| `~/.pi/` | State directory inspected by system commands |
+| `~/.pi-box/` | State directory inspected by system commands |
 
 ## Security Considerations
 
 - `pi system prune` is destructive — requires explicit confirmation
 - `pi system doctor` reads filesystem permissions but doesn't modify
 - No elevated privileges required
-- All operations scoped to `~/.pi/` directory
+- All operations scoped to `~/.pi-box/` directory
 
 Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
@@ -82,7 +82,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Category | Meaning |
 |----------|---------|
 | **Service-layer** | Go system commands in `pkg/system/` |
-| **Configuration** | Reads `~/.pi/` directory structure |
+| **Configuration** | Reads `~/.pi-box/` directory structure |
 
 **ADR references:** None yet.
 **ADR gaps:** None identified.
@@ -97,7 +97,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Shows daemon connection status (connected/disconnected)
 - [x] Shows number of active sandboxes (WARM + EXECUTING states)
 - [x] Shows total sandbox count
-- [x] Shows `~/.pi/` directory existence
+- [x] Shows `~/.pi-box/` directory existence
 
 **Verification:**
 - [x] `go build ./cmd/pi/...`
@@ -112,10 +112,10 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement `pi system doctor` validating configuration and reporting issues.
 
 **Acceptance criteria:**
-- [x] Checks `~/.pi/config.yaml` exists and is valid YAML
+- [x] Checks `~/.pi-box/config.yaml` exists and is valid YAML
 - [x] Checks required directories exist (`sandboxes/`, `templates/`)
 - [x] Checks disk space (warns if < 1GiB free)
-- [x] Checks filesystem permissions on `~/.pi/`
+- [x] Checks filesystem permissions on `~/.pi-box/`
 - [x] Reports issues with actionable recommendations
 - [x] Creates default config if missing (non-destructive)
 

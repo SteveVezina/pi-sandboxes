@@ -64,7 +64,7 @@ class SandboxClient:
         to disk by the SDK.
         """
         self.socket_path = socket_path or os.environ.get(
-            "PI_SOCKET_PATH", "~/.pi/sandboxd.sock"
+            "PI_SOCKET_PATH", "~/.pi-box/sandboxd.sock"
         )
         self.base_url = base_url
         self.auth_token = auth_token or os.environ.get("PI_AUTH_TOKEN")
@@ -179,7 +179,7 @@ class SandboxClient:
         """
         import urllib.request
 
-        url = f"{self.base_url}/v1/sandboxes/{sandbox_id}/exec"
+        url = f"{self.base_url}/v1/sandboxes/{sandbox_id}/exec?stream=true"
         body = json.dumps({
             "command": command,
             "timeoutMs": timeout_ms,
@@ -189,6 +189,7 @@ class SandboxClient:
 
         req = urllib.request.Request(url, data=body, method="POST")
         req.add_header("Content-Type", "application/json")
+        req.add_header("Accept", "application/x-ndjson")
 
         buffer = ""
         try:

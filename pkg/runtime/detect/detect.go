@@ -86,6 +86,14 @@ func (c *compatRuntime) IsGvisor() bool      { return false }
 func (c *compatRuntime) GetMode() string     { return "compat" }
 func (c *compatRuntime) GetSecurityLevel() int { return 3 }
 
+// RuntimeInfo holds detailed information about a single runtime backend.
+type RuntimeInfo struct {
+	Name          string `json:"name"`
+	Available     bool   `json:"available"`
+	SecurityLevel int    `json:"security_level"`
+	Description   string `json:"description"`
+}
+
 // AvailableRuntimes returns a list of all available runtime names.
 func AvailableRuntimes(rootDir string) []string {
 	var available []string
@@ -95,6 +103,40 @@ func AvailableRuntimes(rootDir string) []string {
 		}
 	}
 	return available
+}
+
+// AllRuntimes returns detailed info for every known runtime backend.
+func AllRuntimes(rootDir string) []RuntimeInfo {
+	var result []RuntimeInfo
+	runtimeDescriptions := map[string]string{
+		"gvisor": "gVisor sandboxed runtime — strong isolation, may have syscall compatibility issues",
+		"fast":   "Native Linux namespaces/cgroups — fastest path, Linux-only",
+		"compat": "OCI container runtime (runc/podman) — best compatibility",
+		"microvm":"Firecracker/Cloud Hypervisor microVM — highest isolation",
+	}
+	for _, name := range priority {
+		rt, err := tryRuntime(name, rootDir)
+		info := RuntimeInfo{
+			Name:          name,
+			Available:     err == nil,
+			SecurityLevel: 0,
+			Description:   runtimeDescriptions[name],
+		}
+		if err == nil {
+			info.SecurityLevel = rt.GetSecurityLevel()
+		}
+		result = append(result, info)
+	}
+	// Add microvm separately (not in priority but a known backend)
+	if _, err := tryRuntime("microvm", rootDir); err == nil {
+		result = append(result, RuntimeInfo{
+			Name:          "microvm",
+			Available:     true,
+			SecurityLevel: 10,
+			Description:   "Firecracker/Cloud Hypervisor microVM — highest isolation",
+		})
+	}
+	return result
 }
 
 // BestMode returns the best available mode string.

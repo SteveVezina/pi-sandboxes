@@ -3,20 +3,17 @@ package session
 import (
 	"log"
 	"os"
-	"path/filepath"
 )
 
 // OrphanCleanup scans for sessions in non-terminal states with no
 // corresponding backend process and marks them as DESTROYED.
 func OrphanCleanup(store *Store, baseDir string) {
-	sandboxesDir := filepath.Join(baseDir, "sandboxes")
-
-	entries, err := os.ReadDir(sandboxesDir)
+	entries, err := os.ReadDir(baseDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return
 		}
-		log.Printf("session: orphan cleanup: read sandboxes dir: %v", err)
+		log.Printf("session: orphan cleanup: read base dir: %v", err)
 		return
 	}
 

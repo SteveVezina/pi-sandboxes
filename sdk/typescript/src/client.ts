@@ -62,7 +62,7 @@ export class SandboxClient {
      */
     authToken?: string;
   }) {
-    this.socketPath = options?.socketPath || process.env.PI_SOCKET_PATH || '~/.pi/sandboxd.sock';
+    this.socketPath = options?.socketPath || process.env.PI_SOCKET_PATH || '~/.pi-box/sandboxd.sock';
     this.baseUrl = options?.baseUrl || null;
     this.authToken = options?.authToken || process.env.PI_AUTH_TOKEN || null;
   }
@@ -135,7 +135,7 @@ export class SandboxClient {
    * Uses SSE-style streaming from the daemon.
    */
   async *execStream(id: string, command: string, options?: ExecOptions): AsyncGenerator<ExecStreamEvent> {
-    const url = `${this.baseUrl}/v1/sandboxes/${id}/exec`;
+    const url = `${this.baseUrl}/v1/sandboxes/${id}/exec?stream=true`;
     const body = JSON.stringify({
       command,
       cwd: options?.cwd,
@@ -145,7 +145,7 @@ export class SandboxClient {
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/x-ndjson' },
       body,
     });
 

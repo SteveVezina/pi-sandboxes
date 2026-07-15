@@ -12,7 +12,7 @@ import (
 
 func TestPiHome(t *testing.T) {
 	home := os.Getenv("HOME")
-	expected := filepath.Join(home, ".pi")
+	expected := filepath.Join(home, ".pi-box")
 	if system.PiHome() != expected {
 		t.Errorf("Expected %s, got %s", expected, system.PiHome())
 	}
@@ -20,8 +20,8 @@ func TestPiHome(t *testing.T) {
 
 func TestPiHome_NoHomeEnv(t *testing.T) {
 	os.Unsetenv("HOME")
-	if system.PiHome() != filepath.Join(".", ".pi") {
-		t.Error("Expected ./\\.pi when HOME is unset")
+	if system.PiHome() != filepath.Join(".", ".pi-box") {
+		t.Error("Expected ./\\.pi-box when HOME is unset")
 	}
 	os.Setenv("HOME", "/tmp")
 }
@@ -76,21 +76,21 @@ func TestFormatSize(t *testing.T) {
 }
 
 func TestGetDiskUsage(t *testing.T) {
-	// Create a fake pi home at ~/.pi
+	// Create a fake Pi Box home at ~/.pi-box
 	fakeHome := filepath.Join(os.TempDir(), "pi-sys-home-"+randomID())
 	os.MkdirAll(fakeHome, 0755)
 	defer os.RemoveAll(fakeHome)
 
-	// Set HOME to fakeHome so PiHome() returns fakeHome/.pi
+	// Set HOME to fakeHome so PiHome() returns fakeHome/.pi-box
 	origHome := os.Getenv("HOME")
 	os.Setenv("HOME", fakeHome)
 	defer os.Setenv("HOME", origHome)
 
-	// Now create the actual .pi directory
-	realPiHome := filepath.Join(fakeHome, ".pi")
-	os.MkdirAll(filepath.Join(realPiHome, "sandboxes", "test1"), 0755)
+	// Now create the actual .pi-box directory
+	realPiHome := filepath.Join(fakeHome, ".pi-box")
+	os.MkdirAll(filepath.Join(realPiHome, "test1"), 0755)
 	os.MkdirAll(filepath.Join(realPiHome, "templates", "base"), 0755)
-	os.WriteFile(filepath.Join(realPiHome, "sandboxes", "test1", "meta.json"), []byte(`{"name":"test"}`), 0644)
+	os.WriteFile(filepath.Join(realPiHome, "test1", "meta.json"), []byte(`{"name":"test"}`), 0644)
 	os.WriteFile(filepath.Join(realPiHome, "templates", "base", "template.yaml"), []byte("name: base"), 0644)
 
 	info, err := system.GetDiskUsage()
@@ -145,7 +145,7 @@ func TestFormatTimeAgo(t *testing.T) {
 }
 
 func TestStatus(t *testing.T) {
-	// Create a fake pi home at ~/.pi
+	// Create a fake Pi Box home at ~/.pi-box
 	fakeHome := filepath.Join(os.TempDir(), "pi-sys-home-status-"+randomID())
 	os.MkdirAll(fakeHome, 0755)
 	defer os.RemoveAll(fakeHome)
@@ -154,13 +154,13 @@ func TestStatus(t *testing.T) {
 	os.Setenv("HOME", fakeHome)
 	defer os.Setenv("HOME", origHome)
 
-	realPiHome := filepath.Join(fakeHome, ".pi")
-	os.MkdirAll(filepath.Join(realPiHome, "sandboxes", "active1"), 0755)
-	os.MkdirAll(filepath.Join(realPiHome, "sandboxes", "active2"), 0755)
+	realPiHome := filepath.Join(fakeHome, ".pi-box")
+	os.MkdirAll(filepath.Join(realPiHome, "active1"), 0755)
+	os.MkdirAll(filepath.Join(realPiHome, "active2"), 0755)
 
-	os.WriteFile(filepath.Join(realPiHome, "sandboxes", "active1", "meta.json"),
+	os.WriteFile(filepath.Join(realPiHome, "active1", "meta.json"),
 		[]byte(`{"name":"active1","state":"WARM"}`), 0644)
-	os.WriteFile(filepath.Join(realPiHome, "sandboxes", "active2", "meta.json"),
+	os.WriteFile(filepath.Join(realPiHome, "active2", "meta.json"),
 		[]byte(`{"name":"active2","state":"EXECUTING"}`), 0644)
 
 	info, err := system.GetStatus("")
@@ -207,7 +207,7 @@ func TestPrune(t *testing.T) {
 	os.Setenv("HOME", fakeHome)
 	defer os.Setenv("HOME", origHome)
 
-	realPiHome := filepath.Join(fakeHome, ".pi")
+	realPiHome := filepath.Join(fakeHome, ".pi-box")
 	os.MkdirAll(filepath.Join(realPiHome, "sandboxes", "destroyed1"), 0755)
 	os.WriteFile(filepath.Join(realPiHome, "sandboxes", "destroyed1", "meta.json"),
 		[]byte(`{"name":"destroyed1","state":"destroyed"}`), 0644)
@@ -223,6 +223,87 @@ func TestPrune(t *testing.T) {
 
 	// Verify it was removed
 	if system.DirExists(filepath.Join(realPiHome, "sandboxes", "destroyed1")) {
+		t.Error("Expected destroyed sandbox to be removed")
+	}
+}
+
+func TestPruneRequiresExplicitConfirmation(t *testing.T) {
+	fakeHome := filepath.Join(os.TempDir(), "pi-sys-home-prune-confirm-"+randomID())
+	os.MkdirAll(fakeHome, 0755)
+	defer os.RemoveAll(fakeHome)
+
+	origHome := os.Getenv("HOME")
+	os.Setenv("HOME", fakeHome)
+	defer os.Setenv("HOME", origHome)
+
+	realPiHome := filepath.Join(fakeHome, ".pi-box")
+	destroyedDir := filepath.Join(realPiHome, "sandboxes", "destroyed1")
+	os.MkdirAll(destroyedDir, 0755)
+	os.WriteFile(filepath.Join(destroyedDir, "meta.json"),
+		[]byte(`{"name":"destroyed1","state":"destroyed"}`), 0644)
+
+	origStdin := os.Stdin
+	readPipe, writePipe, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe failed: %v", err)
+	}
+	os.Stdin = readPipe
+	defer func() {
+		os.Stdin = origStdin
+		readPipe.Close()
+	}()
+	writePipe.Close()
+
+	result, err := system.RunPrune(true)
+	if err == nil {
+		t.Fatal("Expected RunPrune to abort without explicit confirmation")
+	}
+	if result.RemovedSandboxes != 0 {
+		t.Errorf("Expected 0 removed sandboxes, got %d", result.RemovedSandboxes)
+	}
+	if !system.DirExists(destroyedDir) {
+		t.Error("Expected destroyed sandbox to remain after aborted prune")
+	}
+}
+
+func TestPruneProceedsWithConfirmation(t *testing.T) {
+	fakeHome := filepath.Join(os.TempDir(), "pi-sys-home-prune-yes-"+randomID())
+	os.MkdirAll(fakeHome, 0755)
+	defer os.RemoveAll(fakeHome)
+
+	origHome := os.Getenv("HOME")
+	os.Setenv("HOME", fakeHome)
+	defer os.Setenv("HOME", origHome)
+
+	realPiHome := filepath.Join(fakeHome, ".pi-box")
+	destroyedDir := filepath.Join(realPiHome, "sandboxes", "destroyed1")
+	os.MkdirAll(destroyedDir, 0755)
+	os.WriteFile(filepath.Join(destroyedDir, "meta.json"),
+		[]byte(`{"name":"destroyed1","state":"destroyed"}`), 0644)
+
+	origStdin := os.Stdin
+	readPipe, writePipe, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe failed: %v", err)
+	}
+	os.Stdin = readPipe
+	defer func() {
+		os.Stdin = origStdin
+		readPipe.Close()
+	}()
+	if _, err := writePipe.WriteString("yes\n"); err != nil {
+		t.Fatalf("write confirmation failed: %v", err)
+	}
+	writePipe.Close()
+
+	result, err := system.RunPrune(true)
+	if err != nil {
+		t.Fatalf("RunPrune failed: %v", err)
+	}
+	if result.RemovedSandboxes != 1 {
+		t.Errorf("Expected 1 removed sandbox, got %d", result.RemovedSandboxes)
+	}
+	if system.DirExists(destroyedDir) {
 		t.Error("Expected destroyed sandbox to be removed")
 	}
 }
@@ -244,7 +325,7 @@ func TestDiskUsage_Empty(t *testing.T) {
 	}
 
 	if info.Total != 0 {
-		t.Errorf("Expected 0 total for empty pi home, got %d", info.Total)
+		t.Errorf("Expected 0 total for empty Pi Box home, got %d", info.Total)
 	}
 }
 

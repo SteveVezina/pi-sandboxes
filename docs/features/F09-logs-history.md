@@ -1,7 +1,7 @@
-# F09: Logs & Command History
+# F10: Logs & Command History
 
 > Source: `SPEC.md` §6 Features F10
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -22,7 +22,7 @@ Logs and command history track all activity within sandbox sessions. Each exec c
 - stderr log file path
 - Resource usage (when available)
 
-Log entries are stored under `~/.pi/sandboxes/<id>/logs/` with naming convention `exec-{sequence}.log`.
+Log entries are stored under `~/.pi-box/sandboxes/<id>/logs/` with naming convention `exec-{sequence}.log`.
 
 Each log entry is a JSON file containing:
 ```json
@@ -34,8 +34,8 @@ Each log entry is a JSON file containing:
   "durationMs": 1842,
   "timedOut": false,
   "truncated": false,
-  "stdoutPath": "~/.pi/sandboxes/app1/logs/exec-42.stdout",
-  "stderrPath": "~/.pi/sandboxes/app1/logs/exec-42.stderr"
+  "stdoutPath": "~/.pi-box/sandboxes/app1/logs/exec-42.stdout",
+  "stderrPath": "~/.pi-box/sandboxes/app1/logs/exec-42.stderr"
 }
 ```
 
@@ -70,13 +70,13 @@ Each criterion must be:
 | Component | Impact |
 |-----------|--------|
 | `pkg/logs/` | Log management |
-| `~/.pi/sandboxes/<id>/logs/` | Log storage |
+| `~/.pi-box/sandboxes/<id>/logs/` | Log storage |
 | F5: Command Execution | Produces log entries |
 | F2: Daemon API | Logs endpoint |
 
 ## Security Considerations
 
-- Logs stored under `~/.pi/` with restricted permissions
+- Logs stored under `~/.pi-box/` with restricted permissions
 - No secrets in logs (command arguments may contain secrets — warn users)
 - Log rotation not implemented in MVP (future hardening)
 - Log files are plain text (no encryption)
@@ -94,7 +94,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Category | Meaning |
 |----------|---------|
 | **Service-layer** | Go logs package |
-| **Configuration** | Log directory under `~/.pi/sandboxes/<id>/` |
+| **Configuration** | Log directory under `~/.pi-box/sandboxes/<id>/` |
 
 **ADR references:** None yet.
 **ADR gaps:** None identified.
@@ -106,7 +106,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement log entry storage. Each exec command creates a JSON log entry and stdout/stderr files.
 
 **Acceptance criteria:**
-- [x] Log entries stored as JSON under `~/.pi/sandboxes/<id>/logs/exec-{seq}.json`
+- [x] Log entries stored as JSON under `~/.pi-box/sandboxes/<id>/logs/exec-{seq}.json`
 - [x] stdout/stderr content stored in separate files
 - [x] Sequence number auto-incremented per session
 - [x] Timestamp recorded at command completion

@@ -8,25 +8,20 @@ import (
 
 	"github.com/pi-sandbox/pi/pkg/daemon"
 	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/system"
 )
 
 func main() {
-	socketPath := flag.String("socket", "", "Unix socket path (default: ~/.pi/sandboxd.sock)")
+	socketPath := flag.String("socket", "", "Unix socket path (default: ~/.pi-box/sandboxd.sock)")
 	httpPort := flag.Int("http-port", 0, "HTTP port for development (0 = disabled)")
 	flag.Parse()
 
 	if *socketPath == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: could not determine home directory: %v\n", err)
-			os.Exit(1)
-		}
-		*socketPath = filepath.Join(home, ".pi", "sandboxd.sock")
+		*socketPath = filepath.Join(system.PiHome(), "sandboxd.sock")
 	}
 
 	// Create session store
-	home, _ := os.UserHomeDir()
-	storeDir := filepath.Join(home, ".pi", "sandboxes")
+	storeDir := filepath.Join(system.PiHome(), "sandboxes")
 	store := session.NewStore(storeDir)
 
 	d := daemon.New(*socketPath, *httpPort, store)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
@@ -47,6 +48,55 @@ func TestExecSandbox(t *testing.T) {
 	}
 	if result.DurationMs <= 0 {
 		t.Error("Expected positive duration")
+	}
+}
+
+func TestExecSandbox_AcceptsValidNetworkMode(t *testing.T) {
+	store, _ := newTestStore(t)
+
+	reqBody := `{"name":"exec-network","template":"base","mode":"fast"}`
+	req := httptest.NewRequest("POST", "/v1/sandboxes", bytes.NewBufferString(reqBody))
+	w := httptest.NewRecorder()
+	api.CreateSandbox(store)(w, req)
+
+	var createResp map[string]string
+	json.NewDecoder(w.Body).Decode(&createResp)
+	id := createResp["id"]
+
+	execBody := `{"command":"echo network ok","timeoutMs":5000,"network":"restricted"}`
+	req = httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(execBody))
+	router := daemon.NewRouter(store)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestExecSandbox_RejectsInvalidNetworkMode(t *testing.T) {
+	store, _ := newTestStore(t)
+
+	reqBody := `{"name":"exec-network","template":"base","mode":"fast"}`
+	req := httptest.NewRequest("POST", "/v1/sandboxes", bytes.NewBufferString(reqBody))
+	w := httptest.NewRecorder()
+	api.CreateSandbox(store)(w, req)
+
+	var createResp map[string]string
+	json.NewDecoder(w.Body).Decode(&createResp)
+	id := createResp["id"]
+
+	execBody := `{"command":"echo no","network":"wide-open"}`
+	req = httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(execBody))
+	router := daemon.NewRouter(store)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("Expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "invalid network mode") {
+		t.Fatalf("response = %s, want invalid network mode error", w.Body.String())
 	}
 }
 

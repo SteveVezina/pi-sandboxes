@@ -1,7 +1,7 @@
 # F03: Fast Backend
 
 > Source: `SPEC.md` §6 Features F3
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Infrastructure
 
 ## Definition (from block spec)
@@ -57,7 +57,7 @@ Each criterion must be:
 |-----------|--------|
 | `pkg/runtime/fast/` | Fast backend implementation |
 | `deploy/security/seccomp-profile.json` | Syscall whitelist |
-| `~/.pi/` | cgroup hierarchy for sandbox processes |
+| `~/.pi-box/` | cgroup hierarchy for sandbox processes |
 | F7: Command Execution | Fast backend is the execution target |
 | F8: Session Lifecycle | Fast backend manages process lifecycle |
 
@@ -123,7 +123,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement cgroup v2 hierarchy with CPU, memory, disk I/O, and PID limits. Create cgroup per sandbox session.
 
 **Acceptance criteria:**
-- [x] cgroup v2 hierarchy created under `~/.pi/cgroups/<sandbox-id>/`
+- [x] cgroup v2 hierarchy created under `~/.pi-box/cgroups/<sandbox-id>/`
 - [x] CPU limit enforced (cgroup CPU weight)
 - [x] Memory limit enforced (cgroup memory.max, OOM kill on breach)
 - [x] Disk I/O limit enforced (cgroup io.max)

@@ -1,7 +1,7 @@
-# F13: Cache Model
+# F12: Cache Model
 
 > Source: `SPEC.md` §6 Features F12
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -40,7 +40,7 @@ Recommended fast tools:
 - Go: GOMODCACHE and GOCACHE
 - Rust: cargo cache and optional sccache
 
-Cache directories stored under `~/.pi/caches/<scope>/` where scope is `<template>/<runtime>/<user>`.
+Cache directories stored under `~/.pi-box/caches/<scope>/` where scope is `<template>/<runtime>/<user>`.
 
 ## Acceptance Criteria
 
@@ -60,7 +60,7 @@ Each criterion must be:
 | Component | Impact |
 |-----------|--------|
 | `pkg/cache/` | Cache management |
-| `~/.pi/caches/` | Cache storage |
+| `~/.pi-box/caches/` | Cache storage |
 | F5: Template System | Templates define cache mounts |
 | F3: Fast Backend | Cache mounts in namespace |
 | F4: Compat Backend | Cache mounts in container |
@@ -87,7 +87,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Category | Meaning |
 |----------|---------|
 | **Service-layer** | Go cache package |
-| **Configuration** | Cache directories under `~/.pi/caches/` |
+| **Configuration** | Cache directories under `~/.pi-box/caches/` |
 
 **ADR references:** None yet.
 **ADR gaps:** None identified.
@@ -99,7 +99,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement cache mount management. Scoped cache directories, mount into sandbox sessions.
 
 **Acceptance criteria:**
-- [x] Cache directories created under `~/.pi/caches/<scope>/`
+- [x] Cache directories created under `~/.pi-box/caches/<scope>/`
 - [x] All 7 cache types mounted: npm, pnpm, pip, uv, go-mod, go-build, cargo
 - [x] Caches scoped by template/runtime/user
 - [x] Caches mounted as read-write in sandbox

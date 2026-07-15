@@ -2,13 +2,51 @@ package agent_test
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/pi-sandbox/pi/pkg/agent"
 )
 
+func newTestAdapter(t *testing.T) *agent.Adapter {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/sandboxes":
+			_, _ = w.Write([]byte(`{"id":"test-123"}`))
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/exec"):
+			_, _ = w.Write([]byte(`{"exitCode":0,"durationMs":1,"stdout":"","stderr":"","timedOut":false,"truncated":false}`))
+		case r.Method == http.MethodDelete && r.URL.Path == "/v1/sandboxes/test-123":
+			_, _ = w.Write([]byte(`{}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/sandboxes":
+			_, _ = w.Write([]byte(`[]`))
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/clone"):
+			_, _ = w.Write([]byte(`{"id":"test-123"}`))
+		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/diff"):
+			_, _ = w.Write([]byte(`{"diff":""}`))
+		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/patch"):
+			_, _ = w.Write([]byte(`{"patch":""}`))
+		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/files/read"):
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte("hello"))
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/files/write"):
+			_, _ = w.Write([]byte(`{}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	return agent.NewAdapter(server.URL)
+}
+
 func TestExecuteTool_Create(t *testing.T) {
-	adapter := agent.NewAdapter("http://localhost:9001")
+	adapter := newTestAdapter(t)
 
 	result, err := adapter.ExecuteTool(nil, agent.ToolCall{
 		Name: "sandbox.create",
@@ -38,7 +76,7 @@ func TestExecuteTool_Create(t *testing.T) {
 }
 
 func TestExecuteTool_Exec(t *testing.T) {
-	adapter := agent.NewAdapter("http://localhost:9001")
+	adapter := newTestAdapter(t)
 
 	result, err := adapter.ExecuteTool(nil, agent.ToolCall{
 		Name: "sandbox.exec",
@@ -63,7 +101,7 @@ func TestExecuteTool_Exec(t *testing.T) {
 }
 
 func TestExecuteTool_Destroy(t *testing.T) {
-	adapter := agent.NewAdapter("http://localhost:9001")
+	adapter := newTestAdapter(t)
 
 	result, err := adapter.ExecuteTool(nil, agent.ToolCall{
 		Name: "sandbox.destroy",
@@ -81,7 +119,7 @@ func TestExecuteTool_Destroy(t *testing.T) {
 }
 
 func TestExecuteTool_List(t *testing.T) {
-	adapter := agent.NewAdapter("http://localhost:9001")
+	adapter := newTestAdapter(t)
 
 	result, err := adapter.ExecuteTool(nil, agent.ToolCall{
 		Name: "sandbox.list",
@@ -96,7 +134,7 @@ func TestExecuteTool_List(t *testing.T) {
 }
 
 func TestExecuteTool_Clone(t *testing.T) {
-	adapter := agent.NewAdapter("http://localhost:9001")
+	adapter := newTestAdapter(t)
 
 	result, err := adapter.ExecuteTool(nil, agent.ToolCall{
 		Name: "sandbox.clone",
@@ -115,7 +153,7 @@ func TestExecuteTool_Clone(t *testing.T) {
 }
 
 func TestExecuteTool_Diff(t *testing.T) {
-	adapter := agent.NewAdapter("http://localhost:9001")
+	adapter := newTestAdapter(t)
 
 	result, err := adapter.ExecuteTool(nil, agent.ToolCall{
 		Name: "sandbox.diff",
@@ -133,7 +171,7 @@ func TestExecuteTool_Diff(t *testing.T) {
 }
 
 func TestExecuteTool_Patch(t *testing.T) {
-	adapter := agent.NewAdapter("http://localhost:9001")
+	adapter := newTestAdapter(t)
 
 	result, err := adapter.ExecuteTool(nil, agent.ToolCall{
 		Name: "sandbox.patch",
@@ -151,7 +189,7 @@ func TestExecuteTool_Patch(t *testing.T) {
 }
 
 func TestExecuteTool_FilesRead(t *testing.T) {
-	adapter := agent.NewAdapter("http://localhost:9001")
+	adapter := newTestAdapter(t)
 
 	result, err := adapter.ExecuteTool(nil, agent.ToolCall{
 		Name: "sandbox.files.read",
@@ -170,7 +208,7 @@ func TestExecuteTool_FilesRead(t *testing.T) {
 }
 
 func TestExecuteTool_FilesWrite(t *testing.T) {
-	adapter := agent.NewAdapter("http://localhost:9001")
+	adapter := newTestAdapter(t)
 
 	result, err := adapter.ExecuteTool(nil, agent.ToolCall{
 		Name: "sandbox.files.write",

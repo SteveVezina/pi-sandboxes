@@ -2,10 +2,22 @@ package compat_test
 
 import (
 	"context"
+	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 )
+
+func requireLocalDockerImage(t *testing.T, image string) {
+	t.Helper()
+	if !compat.IsAvailable(compat.RuntimeDocker) {
+		t.Skip("Docker not available")
+	}
+	if err := exec.Command("docker", "image", "inspect", image).Run(); err != nil {
+		t.Skipf("Docker image %s not available locally", image)
+	}
+}
 
 func TestBestRuntime(t *testing.T) {
 	rt := compat.Best()
@@ -30,6 +42,8 @@ func TestDetectRuntime(t *testing.T) {
 }
 
 func TestCreateContainer(t *testing.T) {
+	requireLocalDockerImage(t, "debian:slim")
+
 	spec := &compat.ContainerSpec{
 		ID:        "test-container-1",
 		Image:     "debian:slim",
@@ -42,6 +56,7 @@ func TestCreateContainer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateContainer failed: %v", err)
 	}
+	defer c.Destroy()
 
 	if c.ID != "test-container-1" {
 		t.Errorf("Expected ID 'test-container-1', got '%s'", c.ID)
@@ -55,15 +70,18 @@ func TestCreateContainer(t *testing.T) {
 }
 
 func TestCreateContainer_NetworkDefault(t *testing.T) {
+	requireLocalDockerImage(t, "debian:slim")
+
 	spec := &compat.ContainerSpec{
-		ID:      "test-net",
-		Image:   "debian:slim",
+		ID:    "test-net",
+		Image: "debian:slim",
 	}
 
 	c, err := compat.CreateContainer(spec)
 	if err != nil {
 		t.Fatalf("CreateContainer failed: %v", err)
 	}
+	defer c.Destroy()
 
 	if c.Spec.NetworkMode != "bridge" {
 		t.Errorf("Expected default network 'bridge', got '%s'", c.Spec.NetworkMode)
@@ -149,6 +167,8 @@ func TestContainerConfig(t *testing.T) {
 }
 
 func TestContainerLifecycle(t *testing.T) {
+	requireLocalDockerImage(t, "debian:slim")
+
 	spec := &compat.ContainerSpec{
 		ID:        "test-lifecycle",
 		Image:     "debian:slim",
@@ -159,6 +179,7 @@ func TestContainerLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateContainer failed: %v", err)
 	}
+	defer c.Destroy()
 
 	// Start/Stop/Destroy should not panic
 	if err := c.Start(); err != nil {
@@ -200,6 +221,8 @@ func TestExecCommand_NilRuntime(t *testing.T) {
 }
 
 func TestContainerExec(t *testing.T) {
+	requireLocalDockerImage(t, "debian:slim")
+
 	spec := &compat.ContainerSpec{
 		ID:        "test-exec",
 		Image:     "debian:slim",
@@ -210,8 +233,9 @@ func TestContainerExec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateContainer failed: %v", err)
 	}
+	defer c.Destroy()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5000)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	result, err := c.Exec(ctx, "echo hello")
@@ -248,6 +272,10 @@ func TestListContainers(t *testing.T) {
 }
 
 func TestPruneStale(t *testing.T) {
+	if !compat.IsAvailable(compat.RuntimeDocker) {
+		t.Skip("Docker not available")
+	}
+
 	count, err := compat.PruneStale()
 	if err != nil {
 		t.Fatalf("PruneStale failed: %v", err)
@@ -256,6 +284,8 @@ func TestPruneStale(t *testing.T) {
 }
 
 func TestContainerState(t *testing.T) {
+	requireLocalDockerImage(t, "debian:slim")
+
 	spec := &compat.ContainerSpec{
 		ID:        "test-state",
 		Image:     "debian:slim",
@@ -266,6 +296,7 @@ func TestContainerState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateContainer failed: %v", err)
 	}
+	defer c.Destroy()
 
 	state := c.State()
 	if state != "running" {

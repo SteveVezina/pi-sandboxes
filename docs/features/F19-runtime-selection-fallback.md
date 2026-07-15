@@ -30,7 +30,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Component | Impact |
 |-----------|--------|
-| `pkg/runtime/` | Runtime registry/detection (new — to be created) |
+| `pkg/runtime/` | Runtime registry/detection |
 | `pkg/system/` | Doctor backend availability |
 | `pkg/logs/` | Fallback decisions recorded |
 | `cmd/pi/box` | Explicit and auto runtime mode flags |
@@ -68,7 +68,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] Unit tests for runtime detection
 - [x] `pi system doctor` includes runtime backend table
 
-**Files:** `pkg/runtime/registry.go (new — to be created)`, `pkg/system/doctor.go`
+**Files:** `pkg/runtime/detect/detect.go`, `pkg/system/doctor.go`
 **Size:** M
 **Depends on:** F3, F15, F18
 
@@ -83,7 +83,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] Unit tests for explicit/auto/fallback selection
 - [x] Integration test: secure unavailable fallback behavior
 
-**Files:** `pkg/runtime/selector.go (new — to be created)`, `pkg/logs/entry.go`
+**Files:** `pkg/runtime/detect/detect.go`, `pkg/logs/entry.go`
 **Size:** M
 **Depends on:** T19.1, F17
 
@@ -100,7 +100,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
-| Auto-selection trust/config policy is high-level | §13 Runtime modes | Add exact precedence rules if implementation needs more detail |
+| ~~Auto-selection trust/config policy is high-level~~ | §13 Runtime modes | **Resolved 2026-06-27:** implemented deterministic runtime priority in `pkg/runtime/detect/detect.go`; future policy expansion can be proposed separately. |
 
 ### ADR gaps (needs architectural decision)
 
@@ -111,4 +111,3 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 ## Out of Scope
 
 - Implementing the backend internals selected by the registry
-

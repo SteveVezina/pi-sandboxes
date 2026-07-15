@@ -12,12 +12,12 @@ import (
 )
 
 var (
-	contextStorePath  string
-	createTransport   string
-	createAuthType    string
-	createTokenEnv    string
-	listJSON          bool
-	inspectJSON       bool
+	contextStorePath string
+	createTransport  string
+	createAuthType   string
+	createTokenEnv   string
+	listJSON         bool
+	inspectJSON      bool
 )
 
 var contextCmd = &cobra.Command{
@@ -32,7 +32,7 @@ var Command = contextCmd
 func init() {
 	cli.AddCommand(contextCmd)
 	contextCmd.PersistentFlags().StringVar(&contextStorePath, "store", "",
-		"Path to contexts.yaml (default: ~/.pi/contexts.yaml)")
+		"Path to contexts.yaml (default: ~/.pi-box/contexts.yaml)")
 
 	contextCmd.AddCommand(createCmd, useCmd, listCmd, inspectCmd, deleteCmd)
 

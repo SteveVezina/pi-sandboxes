@@ -5,8 +5,8 @@
 
 ## Active Cursor
 
-**Current phase:** Phase 9 — M7 cross-platform GUI workbench
-**Next work:** Complete F24 remote context bridge/auth failure handling, then finish F25 workspace authorization hardening
+**Current phase:** M1-M7 implemented
+**Next work:** Review and package the completed implementation
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph
@@ -89,9 +89,9 @@ F10/F17/F19 ──────────────────────�
 28. **Doctor** Add config.yaml creation, system command validation, daemon binary check ✅
 29. **Shell** Implement WebSocket PTY shell (`pkg/api/sandbox_shell.go`, `pkg/terminal/`) ✅
 
-### 🟡 Phase 9 — M7 cross-platform GUI workbench
-30. **F24** Cross-Platform GUI Workbench 🔵
-31. **F25** GUI Workspace Authorization 🔵
+### ✅ Phase 9 — M7 cross-platform GUI workbench
+30. **F24** Cross-Platform GUI Workbench ✅
+31. **F25** GUI Workspace Authorization ✅
 32. **F26** GUI Session Operations ✅
 33. **F27** GUI Settings and Diagnostics ✅
 

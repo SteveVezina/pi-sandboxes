@@ -1,4 +1,4 @@
-# F12: Secrets & Network Model
+# F11: Secrets & Network Model
 
 > Source: `SPEC.md` §6 Features F11
 > Status: 🟢 Implemented

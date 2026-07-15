@@ -1,14 +1,14 @@
 # F01: CLI Entry Point
 
 > Source: `SPEC.md` §6 Features F1
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
 
 | Feature ID | Name | Description | Milestone |
 |------------|------|-------------|-----------|
-| F1 | CLI Entry Point | `pi` binary with `box` subcommands for sandbox lifecycle management | M1 |
+| F1 | CLI Entry Point | `pi-box` binary with `box` subcommands for sandbox lifecycle management | M1 |
 
 ## Expanded Specification
 
@@ -21,7 +21,7 @@ The CLI supports the following subcommand groups:
 - `pi template` — template management (list, inspect, build, update, prune)
 
 Each subcommand maps to one or more API calls. The CLI handles:
-- Flag parsing with sensible defaults from `~/.pi/config.yaml`
+- Flag parsing with sensible defaults from `~/.pi-box/config.yaml`
 - JSON output mode (`--json`) for machine consumption
 - Error formatting that is actionable (see SPEC.md §28)
 - Context switching for future remote daemon support (Milestone 6)
@@ -55,7 +55,7 @@ Each criterion must be:
 | Component | Impact |
 |-----------|--------|
 | `cmd/pi/` | New Go module with cobra CLI |
-| `~/.pi/config.yaml` | Default config file parsed by CLI |
+| `~/.pi-box/config.yaml` | Default config file parsed by CLI |
 | `pi-sandboxd` | CLI delegates to daemon; no direct backend calls |
 | `--json` flag | Present on all box commands for machine consumption |
 
@@ -63,9 +63,9 @@ Reference `SPEC.md` §9 (Interface Contract) for API shapes the CLI consumes.
 
 ## Security Considerations
 
-- CLI reads config from `~/.pi/config.yaml` — no elevated privileges
+- CLI reads config from `~/.pi-box/config.yaml` — no elevated privileges
 - `pi system doctor` may inspect filesystem permissions
-- `pi system prune` modifies `~/.pi/` state — requires explicit confirmation
+- `pi system prune` modifies `~/.pi-box/` state — requires explicit confirmation
 - No secrets passed as CLI arguments (use flags with stdin for sensitive input)
 - Git credentials handled by daemon, never exposed to CLI process
 
@@ -83,7 +83,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 | Category | Meaning |
 |----------|---------|
 | **Service-layer** | Go CLI in `cmd/pi/` using cobra |
-| **Configuration** | Reads `~/.pi/config.yaml` for defaults |
+| **Configuration** | Reads `~/.pi-box/config.yaml` for defaults |
 
 **ADR references:** None yet.
 **ADR gaps:** None identified.
@@ -153,7 +153,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 ### T1.4: Config file parsing
 
-**Description:** Implement `~/.pi/config.yaml` parsing with defaults for runtime mode, network mode, exec timeout, max output, cache settings.
+**Description:** Implement `~/.pi-box/config.yaml` parsing with defaults for runtime mode, network mode, exec timeout, max output, cache settings.
 
 **Acceptance criteria:**
 - [x] Default config created on first `pi system doctor` run
@@ -164,7 +164,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 - [x] `go build ./cmd/pi/...`
 - [x] Unit tests for config parsing
 
-**Files:** `pkg/cli/config/config.go`, `~/.pi/config.yaml` (created by doctor)
+**Files:** `pkg/cli/config/config.go`, `~/.pi-box/config.yaml` (created by doctor)
 **Size:** S
 **Depends on:** None
 

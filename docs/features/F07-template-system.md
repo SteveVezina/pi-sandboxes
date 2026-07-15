@@ -1,7 +1,7 @@
-# F07: Template System
+# F5: Template System
 
 > Source: `SPEC.md` §6 Features F5
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -54,7 +54,7 @@ network:
   default: restricted
 ```
 
-Templates are stored under `~/.pi/templates/`. The template manager handles:
+Templates are stored under `~/.pi-box/templates/`. The template manager handles:
 - Listing available templates
 - Inspecting template details
 - Building template images (for compat backend)
@@ -89,7 +89,7 @@ Each criterion must be:
 | Component | Impact |
 |-----------|--------|
 | `pkg/template/` | Template manager |
-| `~/.pi/templates/` | Template storage |
+| `~/.pi-box/templates/` | Template storage |
 | F3: Fast Backend | Templates define what's mounted in fast mode |
 | F4: Compat Backend | Templates define Docker images for compat mode |
 
@@ -114,7 +114,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Category | Meaning |
 |----------|---------|
 | **Service-layer** | Go template manager in `pkg/template/` |
-| **Configuration** | YAML template files under `~/.pi/templates/` |
+| **Configuration** | YAML template files under `~/.pi-box/templates/` |
 
 **ADR references:** None yet.
 **ADR gaps:** None identified.
@@ -123,10 +123,10 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ### T7.1: Template metadata store
 
-**Description:** Implement template metadata store. YAML files under `~/.pi/templates/<name>/template.yaml`. CRUD for template definitions.
+**Description:** Implement template metadata store. YAML files under `~/.pi-box/templates/<name>/template.yaml`. CRUD for template definitions.
 
 **Acceptance criteria:**
-- [x] Templates stored as YAML under `~/.pi/templates/<name>/template.yaml`
+- [x] Templates stored as YAML under `~/.pi-box/templates/<name>/template.yaml`
 - [x] Template schema: name, runtime, base, tools, mounts, network
 - [x] `List()` returns all template names
 - [x] `Get(name)` returns template details
@@ -160,7 +160,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] `pi template list` shows all 7 templates
 - [x] `pi template inspect node-python` shows correct details
 
-**Files:** `~/.pi/templates/base/template.yaml`, `~/.pi/templates/node/template.yaml`, `~/.pi/templates/python/template.yaml`, `~/.pi/templates/go/template.yaml`, `~/.pi/templates/rust/template.yaml`, `~/.pi/templates/node-python/template.yaml`, `~/.pi/templates/polyglot/template.yaml`
+**Files:** `~/.pi-box/templates/base/template.yaml`, `~/.pi-box/templates/node/template.yaml`, `~/.pi-box/templates/python/template.yaml`, `~/.pi-box/templates/go/template.yaml`, `~/.pi-box/templates/rust/template.yaml`, `~/.pi-box/templates/node-python/template.yaml`, `~/.pi-box/templates/polyglot/template.yaml`
 **Size:** S
 **Depends on:** T7.1 (metadata store)
 

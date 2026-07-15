@@ -1,7 +1,7 @@
-# F04: Session Lifecycle
+# F8: Session Lifecycle
 
 > Source: `SPEC.md` §6 Features F8
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -42,7 +42,7 @@ Each sandbox session has:
 - **Artifacts** — artifacts directory path
 - **Snapshots** — list of snapshot names
 
-Metadata is stored under `~/.pi/sandboxes/<id>/meta.json`.
+Metadata is stored under `~/.pi-box/sandboxes/<id>/meta.json`.
 
 The session manager runs a background goroutine that:
 1. Checks for TTL-expired sessions every 60 seconds
@@ -57,7 +57,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-8.2: Multiple exec calls reuse the same session
 - [x] AC-8.3: TTL expiration triggers cleanup
 - [x] AC-8.4: `pi box destroy --all` cleans all sandboxes
-- [x] AC-8.5: Session state persisted in `~/.pi/sandboxes/<id>/meta.json`
+- [x] AC-8.5: Session state persisted in `~/.pi-box/sandboxes/<id>/meta.json`
 - [x] AC-8.6: Orphaned sessions cleaned up on daemon restart
 
 Each criterion must be:
@@ -70,15 +70,15 @@ Each criterion must be:
 | Component | Impact |
 |-----------|--------|
 | `pkg/session/` | Session lifecycle manager |
-| `~/.pi/sandboxes/<id>/meta.json` | Per-session metadata |
-| `~/.pi/sandboxes/` | Session directory |
+| `~/.pi-box/sandboxes/<id>/meta.json` | Per-session metadata |
+| `~/.pi-box/sandboxes/` | Session directory |
 | F2: Daemon API | Session manager is the backend for API endpoints |
 | F3: Fast Backend | Session manager dispatches to backend |
 
 ## Security Considerations
 
 - Session IDs are UUIDs — not guessable
-- Metadata stored under `~/.pi/` with restricted permissions
+- Metadata stored under `~/.pi-box/` with restricted permissions
 - TTL expiration uses daemon clock (not sandbox clock) to prevent time manipulation
 - Destroy operation is idempotent (safe to call multiple times)
 - No session data leaves the sandbox filesystem boundary
@@ -96,7 +96,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Category | Meaning |
 |----------|---------|
 | **Service-layer** | Go session manager in `pkg/session/` |
-| **Configuration** | TTL defaults from `~/.pi/config.yaml` |
+| **Configuration** | TTL defaults from `~/.pi-box/config.yaml` |
 
 **ADR references:** None yet.
 **ADR gaps:** None identified.
@@ -105,10 +105,10 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ### T4.1: Session metadata store
 
-**Description:** Implement session metadata store under `~/.pi/sandboxes/<id>/meta.json`. CRUD operations for session state.
+**Description:** Implement session metadata store under `~/.pi-box/sandboxes/<id>/meta.json`. CRUD operations for session state.
 
 **Acceptance criteria:**
-- [x] `Create(name, template, mode)` creates `~/.pi/sandboxes/<id>/meta.json`
+- [x] `Create(name, template, mode)` creates `~/.pi-box/sandboxes/<id>/meta.json`
 - [x] `Get(id)` reads and parses metadata
 - [x] `Update(id, state)` updates state and timestamp
 - [x] `List()` returns all session IDs with status
@@ -168,7 +168,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** On daemon start, scan for sessions in non-terminal states (CREATING, EXECUTING) that have no running backend process. Mark them as DESTROYED.
 
 **Acceptance criteria:**
-- [x] On startup, scan all sessions in ~/.pi/sandboxes/
+- [x] On startup, scan all sessions in ~/.pi-box/sandboxes/
 - [x] Sessions with no running process are marked DESTROYED
 - [x] Orphan cleanup is logged
 - [x] Orphan cleanup does not delete workspace/artifacts (metadata only)

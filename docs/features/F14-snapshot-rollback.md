@@ -1,7 +1,7 @@
-# F14: Snapshot & Rollback
+# F13: Snapshot & Rollback
 
 > Source: `SPEC.md` §6 Features F13
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -19,7 +19,7 @@ Initial implementation uses filesystem-level snapshots:
 - **Reflink copy** — When filesystem supports it (btrfs, xfs)
 - **tar/zstd fallback** — When reflink not available
 
-Snapshot metadata stored under `~/.pi/sandboxes/<id>/snapshots/<name>/meta.json`.
+Snapshot metadata stored under `~/.pi-box/sandboxes/<id>/snapshots/<name>/meta.json`.
 
 Operations:
 1. **Create** — Create a named snapshot of the current workspace state
@@ -49,7 +49,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-13.1: `pi box snapshot <id> <name>` creates a named snapshot
 - [x] AC-13.2: `pi box rollback <id> <name>` restores to snapshot
 - [x] AC-13.3: Snapshot creation uses overlay upperdir or reflink
-- [x] AC-13.4: Snapshot metadata stored under `~/.pi/sandboxes/<id>/snapshots/`
+- [x] AC-13.4: Snapshot metadata stored under `~/.pi-box/sandboxes/<id>/snapshots/`
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -61,14 +61,14 @@ Each criterion must be:
 | Component | Impact |
 |-----------|--------|
 | `pkg/snapshot/` | Snapshot management |
-| `~/.pi/sandboxes/<id>/snapshots/` | Snapshot storage |
+| `~/.pi-box/sandboxes/<id>/snapshots/` | Snapshot storage |
 | F8: Session Lifecycle | Snapshot lifecycle management |
 | F3: Fast Backend | Overlay upperdir snapshot |
 | F4: Compat Backend | Container snapshot (future) |
 
 ## Security Considerations
 
-- Snapshots stored under `~/.pi/` with restricted permissions
+- Snapshots stored under `~/.pi-box/` with restricted permissions
 - Rollback overwrites workspace — warn user before destructive operation
 - Snapshot size validated (prevent disk exhaustion)
 - No symbolic link following during snapshot creation
@@ -103,7 +103,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Snapshot uses overlay upperdir copy (fast mode)
 - [x] Snapshot uses reflink if filesystem supports it (btrfs, xfs)
 - [x] Snapshot falls back to tar/zstd if reflink unavailable
-- [x] Snapshot metadata stored under `~/.pi/sandboxes/<id>/snapshots/<name>/meta.json`
+- [x] Snapshot metadata stored under `~/.pi-box/sandboxes/<id>/snapshots/<name>/meta.json`
 - [x] Snapshot size validated before creation (prevent disk exhaustion)
 
 **Verification:**

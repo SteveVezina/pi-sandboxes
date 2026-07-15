@@ -1,4 +1,4 @@
-# F06: Workspace & File Operations
+# F6: Workspace & File Operations
 
 > Source: `SPEC.md` §6 Features F6
 > Status: 🟢 Implemented

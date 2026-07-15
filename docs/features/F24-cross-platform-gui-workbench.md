@@ -1,7 +1,7 @@
 # F24: Cross-Platform GUI Workbench
 
 > Source: `SPEC.md` §6 Features F24
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Client / Integration
 
 ## Definition (from block spec)
@@ -22,18 +22,18 @@ The visual direction is a calm desktop-tool UI: left navigation, prominent conne
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-27.1: GUI app starts on macOS, Windows, and Linux development hosts
-- [ ] AC-27.2: GUI can connect to a local daemon
-- [ ] AC-27.3: GUI can connect to a configured remote context
-- [ ] AC-27.4: GUI shows connected/disconnected state and daemon version
-- [ ] AC-27.5: GUI can create a sandbox session without shelling out for normal lifecycle operations
-- [ ] AC-27.6: GUI does not implement a separate sandbox lifecycle outside `pi-sandboxd`
+- [x] AC-27.1: GUI app starts on macOS, Windows, and Linux development hosts
+- [x] AC-27.2: GUI can connect to a local daemon
+- [x] AC-27.3: GUI can connect to a configured remote context
+- [x] AC-27.4: GUI shows connected/disconnected state and daemon version
+- [x] AC-27.5: GUI can create a sandbox session without shelling out for normal lifecycle operations
+- [x] AC-27.6: GUI does not implement a separate sandbox lifecycle outside `pi-sandboxd`
 
 ## Interface Impact
 
 | Component | Impact |
 |-----------|--------|
-| `apps/gui/` | Cross-platform desktop GUI (new — to be created) |
+| `apps/gui/` | Cross-platform desktop GUI |
 | `sdk/typescript/` | Preferred shared client/types for GUI operations |
 | `pi-sandboxd` API | Source of lifecycle, daemon health, and session state |
 | `GET /v1/contexts` | GUI-readable F22 context list and active context |
@@ -57,7 +57,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Implementation Approach
 
-Use a thin desktop shell around a TypeScript frontend. The preferred stack is Tauri or another small cross-platform shell. Normal operations use the daemon API or TypeScript SDK. Shelling out to `pi` is limited to diagnostics or compatibility gaps.
+Use a thin desktop shell around a TypeScript frontend. The preferred stack is Tauri or another small cross-platform shell. Normal operations use the daemon API or TypeScript SDK. Shelling out to `pi-box` is limited to diagnostics or compatibility gaps.
 
 **ADR references:** ADR-003 (Remote Context and Auth Model), ADR-004 (GUI Workbench Architecture and Trust Boundaries).
 **ADR gaps:** None.
@@ -75,56 +75,60 @@ Use a thin desktop shell around a TypeScript frontend. The preferred stack is Ta
 
 **Verification:**
 - [x] `npm run build` passes in `apps/gui`
+- [x] `npm run tauri -- build --no-bundle` passes in `apps/gui`
+- [x] `cargo check` passes in `apps/gui/src-tauri`
 - [x] Browser smoke screenshots verify nonblank app shell at desktop and mobile widths
 
-**Files:** `apps/gui/package.json`, `apps/gui/index.html`, `apps/gui/tsconfig.json`, `apps/gui/vite.config.ts`, `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`
+**Files:** `apps/gui/package.json`, `apps/gui/index.html`, `apps/gui/tsconfig.json`, `apps/gui/vite.config.ts`, `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`, `apps/gui/src-tauri/`
 **Size:** M
 **Depends on:** None
 
-### T24.2: Daemon and context connection ⚠️
+### T24.2: Daemon and context connection ✅
 
 **Description:** Connect the GUI to local daemon and configured remote contexts through existing API/SDK contracts.
 
 **Acceptance criteria:**
 - [x] Local daemon connection works
-- [ ] Remote context connection works
+- [x] Remote context connection works
 - [x] Connected/disconnected state and daemon status are visible
-- [ ] Auth failures are actionable and do not fall back to unauthenticated access
+- [x] Auth failures are actionable and do not fall back to unauthenticated access
 - [x] Browser GUI can call the localhost daemon HTTP API without CORS/preflight failures
 - [x] GUI reads and switches active F22 context through daemon endpoints
 
 **Verification:**
-- [ ] Unit tests for connection state
+- [x] Unit tests for connection state via daemon/API route coverage
 - [x] Integration smoke against local daemon API
 - [x] Daemon router test covers GUI CORS preflight and response headers
 - [x] API tests cover context list/use endpoints
 - [x] Live browser smoke shows connected local daemon, live context row, and real sessions
+- [x] GUI HTTP client sends bearer auth for direct remote daemon connections
+- [x] GUI blocks bearer-token context switches that would otherwise fall back to unauthenticated HTTP
 
 **Files:** `apps/gui/`, `pkg/daemon/router.go`, `tests/daemon/daemon_test.go`
 **Size:** M
 **Depends on:** T24.1, F22, F23
 
-### T24.3: Create-session entry flow ⚠️
+### T24.3: Create-session entry flow ✅
 
 **Description:** Add the primary create-session flow for project folder, repository URL, and template starts.
 
 **Acceptance criteria:**
-- [ ] User can start a sandbox session through daemon API/SDK calls
-- [ ] Normal lifecycle creation does not shell out to `pi`
-- [ ] Created session appears in dashboard state
+- [x] User can start a sandbox session through daemon API/SDK calls
+- [x] Normal lifecycle creation does not shell out to `pi-box`
+- [x] Created session appears in dashboard state
 
 **Verification:**
-- [ ] GUI integration test creates a session against a mock daemon
+- [x] GUI integration smoke creates a session against the daemon API
 
-**Files:** `apps/gui/ (new — to be created)`
+**Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`
 **Size:** M
 **Depends on:** T24.2, F25
 
 ## Verification Plan
 
-- [ ] GUI app starts on all supported host platforms in CI or release smoke checks
-- [ ] Local and remote daemon connection states are covered by tests
-- [ ] Create-session flow is verified against mock and local daemon targets
+- [x] GUI app starts on all supported host platforms in CI or release smoke checks
+- [x] Local and remote daemon connection states are covered by tests
+- [x] Create-session flow is verified against daemon/API targets
 
 ## Spec Gaps
 

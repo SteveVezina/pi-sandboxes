@@ -21,7 +21,7 @@ func TestStore_Create(t *testing.T) {
 	}
 
 	// Verify meta.json exists
-	metaPath := filepath.Join(tmpDir, "sandboxes", id, "meta.json")
+	metaPath := filepath.Join(tmpDir, id, "meta.json")
 	if _, err := os.Stat(metaPath); os.IsNotExist(err) {
 		t.Fatal("meta.json not created")
 	}
@@ -36,7 +36,7 @@ func TestStore_Create_DirectoryPermissions(t *testing.T) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	dir := filepath.Join(tmpDir, "sandboxes", id)
+	dir := filepath.Join(tmpDir, id)
 	info, err := os.Stat(dir)
 	if err != nil {
 		t.Fatalf("Stat failed: %v", err)
@@ -148,7 +148,7 @@ func TestStore_Delete(t *testing.T) {
 	}
 
 	// Verify directory removed
-	dir := filepath.Join(tmpDir, "sandboxes", id)
+	dir := filepath.Join(tmpDir, id)
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		t.Fatal("Session directory not removed after Delete")
 	}

@@ -1,8 +1,10 @@
 package system
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/pi-sandbox/pi/pkg/system"
 	"github.com/spf13/cobra"
@@ -77,9 +79,29 @@ func DiskUsageCmd() *cobra.Command {
 }
 
 func defaultSocketPath() string {
-	home := os.Getenv("HOME")
-	if home == "" {
-		home = "."
+	return filepath.Join(system.PiHome(), "sandboxd.sock")
+}
+
+// RuntimesCmd returns the runtimes command.
+func RuntimesCmd() *cobra.Command {
+	var jsonFlag bool
+	cmd := &cobra.Command{
+		Use:   "runtimes",
+		Short: "Show available runtime backends and their status",
+		Run: func(*cobra.Command, []string) {
+			info, err := system.GetRuntimes(socketPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			if jsonFlag {
+				data, _ := json.MarshalIndent(info, "", "  ")
+				fmt.Println(string(data))
+				return
+			}
+			system.PrintRuntimes(info)
+		},
 	}
-	return fmt.Sprintf("%s/.pi/sandboxd.sock", home)
+	cmd.Flags().BoolVar(&jsonFlag, "json", false, "Output as JSON")
+	return cmd
 }

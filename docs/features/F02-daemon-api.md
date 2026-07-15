@@ -1,7 +1,7 @@
 # F02: Daemon API
 
 > Source: `SPEC.md` §6 Features F2
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -12,7 +12,7 @@
 
 ## Expanded Specification
 
-`pi-sandboxd` is a local HTTP daemon that exposes a RESTful API over a Unix socket (`~/.pi/sandboxd.sock`) by default. An optional localhost HTTP listener (`127.0.0.1:7777`) is available for development.
+`pi-sandboxd` is a local HTTP daemon that exposes a RESTful API over a Unix socket (`~/.pi-box/sandboxd.sock`) by default. An optional localhost HTTP listener (`127.0.0.1:7777`) is available for development.
 
 The daemon exposes 14 API endpoints organized by resource:
 
@@ -36,7 +36,7 @@ The daemon exposes 14 API endpoints organized by resource:
 The daemon manages:
 - Session lifecycle (create, warm, TTL expiration, destroy)
 - Backend dispatch (delegates to fast/compat backends)
-- Metadata store (sandbox state under `~/.pi/sandboxes/<id>/`)
+- Metadata store (sandbox state under `~/.pi-box/sandboxes/<id>/`)
 - Command history and logging
 
 All responses use structured JSON. Errors include actionable messages per SPEC.md §28.
@@ -47,7 +47,7 @@ The daemon is stateless in terms of business logic — it delegates to backend i
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-2.1: `pi-sandboxd` listens on `~/.pi/sandboxd.sock`
+- [x] AC-2.1: `pi-sandboxd` listens on `~/.pi-box/sandboxd.sock`
 - [x] AC-2.2: `POST /v1/sandboxes` creates a sandbox
 - [x] AC-2.3: `GET /v1/sandboxes` lists sandboxes
 - [x] AC-2.4: `GET /v1/sandboxes/{id}` returns sandbox state
@@ -66,7 +66,7 @@ Each criterion must be:
 | Component | Impact |
 |-----------|--------|
 | `cmd/pi-sandboxd/` | New Go module for daemon |
-| `~/.pi/sandboxd.sock` | Unix socket listener |
+| `~/.pi-box/sandboxd.sock` | Unix socket listener |
 | `127.0.0.1:7777` | Optional HTTP listener (dev) |
 | `pkg/api/` | HTTP handler layer |
 | `pkg/daemon/` | Daemon lifecycle management |
@@ -95,7 +95,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 | Category | Meaning |
 |----------|---------|
 | **Service-layer** | Go daemon in `cmd/pi-sandboxd/` |
-| **Configuration** | Reads `~/.pi/sandboxd.sock` path from config |
+| **Configuration** | Reads `~/.pi-box/sandboxd.sock` path from config |
 
 **ADR references:** None yet.
 **ADR gaps:** None identified.
@@ -113,14 +113,14 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 **Description:** Create `cmd/pi-sandboxd/` with daemon lifecycle management. Unix socket listener, optional localhost HTTP, health check endpoint (`GET /health`).
 
 **Acceptance criteria:**
-- [x] Daemon starts and listens on `~/.pi/sandboxd.sock`
+- [x] Daemon starts and listens on `~/.pi-box/sandboxd.sock`
 - [x] `GET /health` returns `{"status": "ok"}`
-- [x] Daemon creates `~/.pi/` directory if missing
+- [x] Daemon creates `~/.pi-box/` directory if missing
 - [x] Optional `--http-port` flag enables `127.0.0.1:7777`
 
 **Verification:**
 - [x] `go build ./cmd/pi-sandboxd/...`
-- [x] `curl --unix ~/.pi/sandboxd.sock http://localhost/health`
+- [x] `curl --unix ~/.pi-box/sandboxd.sock http://localhost/health`
 
 **Files:** `cmd/pi-sandboxd/main.go`, `cmd/pi-sandboxd/daemon.go`, `pkg/daemon/listener.go`
 **Size:** S

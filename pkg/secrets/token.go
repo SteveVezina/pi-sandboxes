@@ -8,9 +8,9 @@ import (
 
 // TokenHelper manages token-based credentials for Git.
 type TokenHelper struct {
-	Enabled  bool
-	Scopes   []string // Which hosts this token is for
-	Helper   string   // Path to credential helper
+	Enabled bool
+	Scopes  []string // Which hosts this token is for
+	Helper  string   // Path to credential helper
 }
 
 // Setup creates the credential helper script for Git.
@@ -23,7 +23,7 @@ func (t *TokenHelper) Setup(broker *Broker) error {
 	if home == "" {
 		home = "."
 	}
-	dir := filepath.Join(home, ".pi", "secrets")
+	dir := filepath.Join(home, ".pi-box", "secrets")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}

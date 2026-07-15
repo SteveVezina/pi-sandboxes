@@ -45,8 +45,8 @@ func TestContextsListEndpoint(t *testing.T) {
 func TestContextsUseEndpoint(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	if err := os.MkdirAll(filepath.Join(home, ".pi"), 0o755); err != nil {
-		t.Fatalf("create pi home: %v", err)
+	if err := os.MkdirAll(filepath.Join(home, ".pi-box"), 0o755); err != nil {
+		t.Fatalf("create Pi Box home: %v", err)
 	}
 	contextFile := []byte(`active_context: local
 contexts:
@@ -57,7 +57,7 @@ contexts:
       type: bearer-token
       token_env: PI_TEST_TOKEN
 `)
-	if err := os.WriteFile(filepath.Join(home, ".pi", "contexts.yaml"), contextFile, 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(home, ".pi-box", "contexts.yaml"), contextFile, 0o600); err != nil {
 		t.Fatalf("write context store: %v", err)
 	}
 	store, _ := newTestStore(t)

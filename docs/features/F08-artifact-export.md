@@ -1,4 +1,4 @@
-# F08: Artifact Export
+# F9: Artifact Export
 
 > Source: `SPEC.md` §6 Features F9
 > Status: 🟢 Implemented

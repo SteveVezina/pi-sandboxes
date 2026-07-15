@@ -1,7 +1,7 @@
 # F22: Remote Daemon Contexts
 
 > Source: `SPEC.md` §6 Features F22
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -14,7 +14,7 @@
 
 Remote daemon contexts let a user switch the CLI between local and remote daemon targets. Context state is explicit, inspectable, and overrideable per command.
 
-Per ADR-003, context state is stored in `~/.pi/contexts.yaml`. Each context has `target`, `transport`, and `auth.type`. The active context may be overridden per command with `--context <name>`.
+Per ADR-003, context state is stored in `~/.pi-box/contexts.yaml`. Each context has `target`, `transport`, and `auth.type`. The active context may be overridden per command with `--context <name>`.
 
 ## Acceptance Criteria
 
@@ -25,7 +25,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-25.3: `pi context list` shows local and remote contexts
 - [x] AC-25.4: `pi box create` uses the active context
 - [x] AC-25.5: Commands can override the active context explicitly
-- [x] AC-25.6: Contexts persist in `~/.pi/contexts.yaml`
+- [x] AC-25.6: Contexts persist in `~/.pi-box/contexts.yaml`
 - [x] AC-25.7: Context schema supports `target`, `transport`, and `auth.type`
 - [x] AC-25.8: `--context <name>` overrides the active context
 
@@ -33,9 +33,9 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Component | Impact |
 |-----------|--------|
-| `cmd/pi/context/` | Context CLI group (new — to be created) |
+| `cmd/pi/context/` | Context CLI group |
 | `cmd/pi/cli` | Global context override flag |
-| `pkg/context/` | Context store (new — to be created) |
+| `pkg/context/` | Context store |
 | `cmd/pi/box` | Context-aware daemon client |
 | `docs/decisions/ADR-003-remote-context-and-auth-model.md` | Context/auth model decision |
 
@@ -68,7 +68,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Acceptance criteria:**
 - [x] Create/use/list/inspect/delete commands work
 - [x] Active context persists in user config
-- [x] Contexts persist in `~/.pi/contexts.yaml`
+- [x] Contexts persist in `~/.pi-box/contexts.yaml`
 - [x] Context schema supports `target`, `transport`, and `auth.type`
 
 **Verification:**

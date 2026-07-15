@@ -1,7 +1,7 @@
 # F17: Policy Enforcement
 
 > Source: `SPEC.md` §6 Features F17
-> Status: 🟢 Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -127,7 +127,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Description:** Implement policy engine. Default policy loading, per-session overrides, policy validation.
 
 **Acceptance criteria:**
-- [x] Default policy loaded from `~/.pi/config.yaml`
+- [x] Default policy loaded from `~/.pi-box/config.yaml`
 - [x] Filesystem defaults: hostHomeMount=false, workspace=rw, artifacts=rw, caches=scoped, root=readonly
 - [x] Process defaults: maxProcesses=256, defaultTimeout=120s, maxOutput=8MiB
 - [x] Network defaults: mode=restricted, deny list, allow list

@@ -25,7 +25,7 @@ max_output_bytes: 8388608  # 8 MiB
 # Network mode: none | restricted | open
 network_mode: none
 
-# Context store path (leave empty for default ~/.pi/contexts.yaml)
+# Context store path (leave empty for default ~/.pi-box/contexts.yaml)
 contexts_path: ""
 `
 
@@ -58,18 +58,18 @@ type DoctorResult struct {
 func RunDoctor() *DoctorResult {
 	result := &DoctorResult{}
 
-	// ── Pi home ────────────────────────────────────────────────────────────
+	// ── Pi Box home ────────────────────────────────────────────────────────────
 	piHome := PiHome()
 	if !DirExists(piHome) {
 		result.Issues = append(result.Issues, Issue{
 			Severity:       "warning",
-			Message:        fmt.Sprintf("Pi home directory does not exist: %s", piHome),
+			Message:        fmt.Sprintf("Pi Box home directory does not exist: %s", piHome),
 			Recommendation: "Initialize with 'pi system status' to create default directories",
 		})
 	} else {
 		result.Issues = append(result.Issues, Issue{
 			Severity: "info",
-			Message:  fmt.Sprintf("Pi home directory: %s", piHome),
+			Message:  fmt.Sprintf("Pi Box home directory: %s", piHome),
 		})
 	}
 
@@ -139,7 +139,7 @@ func RunDoctor() *DoctorResult {
 			if perm&0o444 == 0 {
 				result.Issues = append(result.Issues, Issue{
 					Severity:       "warning",
-					Message:        "Pi home directory is not readable",
+					Message:        "Pi Box home directory is not readable",
 					Recommendation: fmt.Sprintf("chmod 755 %s", piHome),
 				})
 			} else {

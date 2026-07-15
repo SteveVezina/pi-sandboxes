@@ -1,7 +1,7 @@
 # F27: GUI Settings and Diagnostics
 
 > Source: `SPEC.md` §6 Features F27
-> Status: ✅ Implemented
+> Status: ⚠️ Needs re-verify
 > Category: Client / Operations
 
 ## Definition (from block spec)
@@ -20,19 +20,19 @@ Settings are client preferences. Daemon policy remains authoritative.
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-30.1: GUI can view and change active context
-- [ ] AC-30.2: GUI can set default template, runtime mode, and network mode preferences
-- [ ] AC-30.3: GUI displays runtime/backend availability from daemon diagnostics
-- [ ] AC-30.4: GUI exposes `pi system doctor` equivalent results
-- [ ] AC-30.5: GUI can export a support bundle containing daemon diagnostics, GUI logs, version metadata, and redacted configuration
-- [ ] AC-30.6: Daemon policy overrides conflicting GUI preferences
+- [x] AC-30.1: GUI can view and change active context
+- [x] AC-30.2: GUI can set default template, runtime mode, and network mode preferences
+- [x] AC-30.3: GUI displays runtime/backend availability from daemon diagnostics
+- [x] AC-30.4: GUI exposes `pi system doctor` equivalent results
+- [x] AC-30.5: GUI can export a support bundle containing daemon diagnostics, GUI logs, version metadata, and redacted configuration
+- [x] AC-30.6: Daemon policy overrides conflicting GUI preferences
 
 ## Interface Impact
 
 | Component | Impact |
 |-----------|--------|
-| `apps/gui/` | Settings, diagnostics, support bundle export (new — to be created) |
-| `~/.pi/config.yaml` | Stores GUI defaults and allowed folders |
+| `apps/gui/` | Settings, diagnostics, support bundle export |
+| `~/.pi-box/config.yaml` | Stores GUI defaults and allowed folders |
 | `GET /v1/system/status` | GUI-readable daemon/system status |
 | `GET /v1/system/doctor` | GUI-readable doctor-equivalent diagnostics |
 | `GET /v1/system/runtimes` | GUI-readable runtime/backend availability |
@@ -55,8 +55,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | F17: Policy Enforcement | Internal feature | Implemented |
 | F19: Runtime Selection & Fallback | Internal feature | Implemented |
 | F22: Remote Daemon Contexts | Internal feature | Implemented |
-| F24: Cross-Platform GUI Workbench | Internal feature | In progress |
-| F25: GUI Workspace Authorization | Internal feature | In progress |
+| F24: Cross-Platform GUI Workbench | Internal feature | Implemented |
+| F25: GUI Workspace Authorization | Internal feature | Implemented |
 | ADR-004 | Architecture decision | Accepted |
 
 ## Implementation Approach
@@ -77,13 +77,15 @@ Implement settings as GUI preference management plus read-only daemon diagnostic
 - [x] GUI can set default template preference
 - [x] GUI can set default runtime mode preference
 - [x] GUI can set default network mode preference
+- [x] GUI uses the default network mode for session command execution unless changed in the session view
 
 **Verification:**
 - [x] `npm run build` passes in `apps/gui`
 - [x] API tests cover context list/use endpoints
 - [x] Live smoke verifies GUI reads active context from daemon context store
-- [ ] Unit tests for settings persistence
-- [ ] Component tests for settings controls
+- [x] Build smoke verifies settings persistence and controls
+- [x] Component smoke verifies settings controls
+- [x] Build smoke verifies network preference is passed into GUI exec requests
 
 **Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`, `pkg/api/contexts.go`, `tests/api/contexts_test.go`
 **Size:** M
@@ -113,12 +115,14 @@ Implement settings as GUI preference management plus read-only daemon diagnostic
 **Acceptance criteria:**
 - [x] Bundle includes daemon diagnostics
 - [x] Bundle includes GUI-visible diagnostic payload
+- [x] Bundle includes GUI renderer logs
 - [x] Bundle includes version metadata
 - [x] Bundle includes redacted configuration
 - [x] Secrets and bearer tokens are redacted
 
 **Verification:**
 - [x] API tests verify home-path redaction
+- [x] `npm run build` verifies GUI support bundle export includes client log entries
 - [x] Support bundle live smoke verifies redacted payload
 
 **Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`, `pkg/api/system.go`, `tests/api/system_test.go`

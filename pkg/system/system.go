@@ -1,19 +1,24 @@
 package system
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 )
 
-// PiHome returns the ~/.pi/ directory path.
+// PiHome returns the ~/.pi-box/ directory path.
 func PiHome() string {
 	home := os.Getenv("HOME")
 	if home == "" {
 		home = "."
 	}
-	return filepath.Join(home, ".pi")
+	return filepath.Join(home, ".pi-box")
 }
 
 // DirExists checks if a directory exists.
@@ -56,9 +61,9 @@ func FormatSize(bytes int64) string {
 
 // DiskInfo holds disk space information.
 type DiskInfo struct {
-	Total   int64
-	Free    int64
-	Used    int64
+	Total int64
+	Free  int64
+	Used  int64
 }
 
 // GetDiskInfo returns disk space info for the given path.
@@ -90,3 +95,86 @@ func TimeAgo(t time.Time) string {
 	}
 	return fmt.Sprintf("%dd ago", d/(24*time.Hour))
 }
+
+// RuntimeBackend holds detailed info about a single runtime backend.
+type RuntimeBackend struct {
+	Name          string `json:"name"`
+	Available     bool   `json:"available"`
+	SecurityLevel int    `json:"security_level"`
+	Description   string `json:"description"`
+}
+
+// RuntimeInfo holds runtime backend information from the daemon.
+type RuntimeInfo struct {
+	Available []RuntimeBackend `json:"available"`
+	Best      string           `json:"best"`
+}
+
+// GetRuntimes fetches runtime backend information from the daemon.
+func GetRuntimes(socketPath string) (*RuntimeInfo, error) {
+	url := "http://localhost/v1/system/runtimes"
+	if socketPath != "" {
+		// Use curl via exec for unix socket access
+		cmdStr := fmt.Sprintf("curl -s -H 'Content-Type: application/json' --unix-socket %s %s", socketPath, url)
+		output, err := exec.CommandContext(context.Background(), "sh", "-c", cmdStr).Output()
+		if err != nil {
+			return nil, fmt.Errorf("runtimes: %w", err)
+		}
+		var result struct {
+			Available []string         `json:"available"`
+			Best      string           `json:"best"`
+			Backends  []RuntimeBackend `json:"backends"`
+		}
+		if err := json.Unmarshal(output, &result); err != nil {
+			return nil, fmt.Errorf("parse runtimes: %w", err)
+		}
+		return &RuntimeInfo{
+			Available: result.Backends,
+			Best:      result.Best,
+		}, nil
+	}
+	// Fallback: HTTP request
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("runtimes: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("runtimes: HTTP %d: %s", resp.StatusCode, string(body))
+	}
+	var result struct {
+		Available []string         `json:"available"`
+		Best      string           `json:"best"`
+		Backends  []RuntimeBackend `json:"backends"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("parse runtimes: %w", err)
+	}
+	return &RuntimeInfo{
+		Available: result.Backends,
+		Best:      result.Best,
+	}, nil
+}
+
+// PrintRuntimes prints runtime backend information to stdout.
+func PrintRuntimes(info *RuntimeInfo) {
+	fmt.Println("Runtime backends:")
+	fmt.Println("────────────────────────────────────────────────────────────────")
+	for _, rt := range info.Available {
+		status := "✗ unavailable"
+		if rt.Available {
+			status = "✓ available"
+			if rt.Name == info.Best {
+				status += " (best)"
+			}
+		}
+		fmt.Printf("  %-12s %s  (security level %d)\n", rt.Name, status, rt.SecurityLevel)
+		fmt.Printf("             %s\n", rt.Description)
+	}
+	fmt.Println("────────────────────────────────────────────────────────────────")
+	fmt.Printf("Best available mode: %s\n", info.Best)
+}
+
+// execCommand is a wrapper around exec.Command for testing.
+var execCommand = exec.CommandContext

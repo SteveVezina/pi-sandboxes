@@ -1,9 +1,9 @@
 package box
 
 import (
-	gocontext "context"
 	"bufio"
 	"bytes"
+	gocontext "context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,12 +11,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	gorillaws "github.com/gorilla/websocket"
 	"github.com/pi-sandbox/pi/cmd/pi/cli"
 	pictx "github.com/pi-sandbox/pi/pkg/context"
 	"github.com/pi-sandbox/pi/pkg/remote"
+	pisystem "github.com/pi-sandbox/pi/pkg/system"
 	"github.com/pi-sandbox/pi/pkg/terminal"
 	"github.com/spf13/cobra"
 )
@@ -53,11 +55,7 @@ func init() {
 
 // getSocketPath returns the daemon socket path.
 func getSocketPath() string {
-	home, _ := os.UserHomeDir()
-	if home == "" {
-		home = "."
-	}
-	return fmt.Sprintf("%s/.pi/sandboxd.sock", home)
+	return filepath.Join(pisystem.PiHome(), "sandboxd.sock")
 }
 
 // resolveContext returns the context to use, honoring --context override (F22).
@@ -77,7 +75,7 @@ func callAPI(method, endpoint string, body io.Reader) (map[string]interface{}, e
 	if err != nil {
 		return nil, fmt.Errorf("context: %w", err)
 	}
-	if ctx.Transport == pictx.TransportUnix && cli.ContextOverride == "" {
+	if ctx.Transport == pictx.TransportUnix {
 		return callAPIUnix(method, endpoint, body)
 	}
 	return callAPIRemote(ctx, method, endpoint, body)
@@ -85,7 +83,7 @@ func callAPI(method, endpoint string, body io.Reader) (map[string]interface{}, e
 
 func callAPIUnix(method, endpoint string, body io.Reader) (map[string]interface{}, error) {
 	args := []string{"-s", "-X", method, "-H", "Content-Type: application/json",
-		"--unix-socket", getSocketPath(), endpoint}
+		"--unix-socket", getSocketPath(), "http://localhost" + endpoint}
 	if body != nil {
 		args = append(args, "-d", "@-")
 	}
@@ -144,7 +142,7 @@ func callAPIList(method, endpoint string) ([]interface{}, error) {
 		return nil, fmt.Errorf("context: %w", err)
 	}
 	var data []byte
-	if ctx.Transport == pictx.TransportUnix && cli.ContextOverride == "" {
+	if ctx.Transport == pictx.TransportUnix {
 		data, err = curlList(method, endpoint)
 	} else {
 		data, err = remoteList(ctx, method, endpoint)
@@ -163,8 +161,9 @@ func callAPIList(method, endpoint string) ([]interface{}, error) {
 }
 
 func curlList(method, endpoint string) ([]byte, error) {
+	socket := getSocketPath()
 	args := []string{"-s", "-X", method, "-H", "Content-Type: application/json",
-		"--unix-socket", getSocketPath(), endpoint}
+		"--unix-socket", socket, "http://localhost" + endpoint}
 	return exec.Command("curl", args...).Output()
 }
 

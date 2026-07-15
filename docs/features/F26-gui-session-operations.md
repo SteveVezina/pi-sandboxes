@@ -1,7 +1,7 @@
 # F26: GUI Session Operations
 
 > Source: `SPEC.md` §6 Features F26
-> Status: 🟡 Spec written
+> Status: 🟢 Implemented
 > Category: Client / Integration
 
 ## Definition (from block spec)
@@ -20,19 +20,20 @@ These operations use existing daemon API operations. The GUI displays feature av
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-29.1: Dashboard lists recent and active sandbox sessions
-- [ ] AC-29.2: GUI can create, inspect, and destroy sessions
-- [ ] AC-29.3: GUI can run commands with streaming stdout/stderr
-- [ ] AC-29.4: GUI displays command history, logs, exit code, duration, timeout status, and truncation status
-- [ ] AC-29.5: GUI can display workspace diff and export patch
-- [ ] AC-29.6: GUI can list and pull artifacts
-- [ ] AC-29.7: GUI can create and rollback snapshots when the daemon reports snapshot support
+- [x] AC-29.1: Dashboard lists recent and active sandbox sessions
+- [x] AC-29.2: GUI can create, inspect, and destroy sessions
+- [x] AC-29.3: GUI can run commands with streaming stdout/stderr
+- [x] AC-29.4: GUI displays command history, logs, exit code, duration, timeout status, and truncation status
+- [x] AC-29.5: GUI can display workspace diff and export patch
+- [x] AC-29.6: GUI can list and pull artifacts
+- [x] AC-29.7: GUI can create and rollback snapshots when the daemon reports snapshot support
+- [x] AC-29.8: GUI command execution sends the selected network mode through the daemon exec API
 
 ## Interface Impact
 
 | Component | Impact |
 |-----------|--------|
-| `apps/gui/` | Dashboard, session detail, command runner, logs, diff, artifacts, snapshots (new — to be created) |
+| `apps/gui/` | Dashboard, session detail, command runner, logs, diff, artifacts, snapshots |
 | `pi-sandboxd` API | Source of session operations and streaming exec |
 | `sdk/typescript/` | Shared client/types for session operations |
 
@@ -51,7 +52,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | F8: Artifact Export | Internal feature | Implemented |
 | F9: Logs & Command History | Internal feature | Implemented |
 | F14: Snapshot & Rollback | Internal feature | Implemented |
-| F24: Cross-Platform GUI Workbench | Internal feature | Spec written |
+| F24: Cross-Platform GUI Workbench | Internal feature | Implemented |
 | ADR-004 | Architecture decision | Accepted |
 
 ## Implementation Approach
@@ -63,7 +64,7 @@ Build GUI session state around daemon API responses and streaming channels. The 
 
 ## Tasks
 
-### T26.1: Dashboard session list ⚠️
+### T26.1: Dashboard session list ✅
 
 **Description:** Show recent and active sessions with lifecycle state, template, mode, workspace source, created time, TTL, and last command summary where available.
 
@@ -88,10 +89,12 @@ Build GUI session state around daemon API responses and streaming channels. The 
 - [x] GUI can run commands in a selected session
 - [x] stdout/stderr stream while command runs
 - [x] Exit code, duration, timeout, and truncation state are visible
+- [x] Selected network mode is included in streaming exec requests
 
 **Verification:**
 - [x] `npm run build` passes in `apps/gui`
 - [x] Live daemon NDJSON smoke verifies stdout and final done event
+- [x] API tests verify exec accepts valid network modes and rejects invalid network modes
 
 **Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`
 **Size:** M

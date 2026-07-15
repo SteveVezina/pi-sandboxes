@@ -1,10 +1,10 @@
 package template
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/pi-sandbox/pi/cmd/pi/cli"
+	"github.com/pi-sandbox/pi/pkg/system"
 	"github.com/spf13/cobra"
 )
 
@@ -32,9 +32,5 @@ func init() {
 }
 
 func defaultTemplatesDir() string {
-	home := os.Getenv("HOME")
-	if home == "" {
-		home = "."
-	}
-	return filepath.Join(home, ".pi", "templates")
+	return filepath.Join(system.PiHome(), "templates")
 }

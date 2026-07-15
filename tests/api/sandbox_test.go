@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
@@ -116,6 +118,64 @@ func TestCreateSandbox_WorkspaceMetadata(t *testing.T) {
 	}
 	if meta.WorkspaceMode != "bind" {
 		t.Errorf("Expected workspace mode bind, got %q", meta.WorkspaceMode)
+	}
+}
+
+func TestCreateSandbox_OmittedWorkspaceDoesNotPersistSource(t *testing.T) {
+	store, _ := newTestStore(t)
+
+	reqBody := `{"name":"template-only","template":"node-python","mode":"fast"}`
+	req := httptest.NewRequest("POST", "/v1/sandboxes", bytes.NewBufferString(reqBody))
+	w := httptest.NewRecorder()
+
+	api.CreateSandbox(store)(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Expected 201, got %d", w.Code)
+	}
+
+	var resp map[string]string
+	json.NewDecoder(w.Body).Decode(&resp)
+	meta, err := store.Get(resp["id"])
+	if err != nil {
+		t.Fatalf("Get failed: %v", err)
+	}
+	if meta.Workspace != "" {
+		t.Errorf("Expected no workspace source, got %q", meta.Workspace)
+	}
+	if meta.WorkspaceMode != "copy" {
+		t.Errorf("Expected default workspace mode copy, got %q", meta.WorkspaceMode)
+	}
+}
+
+func TestCreateSandbox_RejectsUnsafeBindWorkspaceSources(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	cases := []string{
+		home,
+		filepath.Join(home, ".ssh", "id_ed25519"),
+		filepath.Join(home, ".kube", "config"),
+		filepath.Join(home, ".config", "gcloud", "credentials.db"),
+		"/var/run/docker.sock",
+	}
+
+	for _, source := range cases {
+		t.Run(source, func(t *testing.T) {
+			store, _ := newTestStore(t)
+			body := `{"name":"unsafe","workspace":{"mode":"bind","source":` + strconv.Quote(source) + `}}`
+			req := httptest.NewRequest("POST", "/v1/sandboxes", bytes.NewBufferString(body))
+			w := httptest.NewRecorder()
+
+			api.CreateSandbox(store)(w, req)
+
+			if w.Code != http.StatusBadRequest {
+				t.Fatalf("Expected 400 for unsafe bind source %q, got %d", source, w.Code)
+			}
+			if !strings.Contains(w.Body.String(), "unsafe workspace source") {
+				t.Fatalf("response = %s, want unsafe workspace source error", w.Body.String())
+			}
+		})
 	}
 }
 

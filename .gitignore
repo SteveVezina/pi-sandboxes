@@ -16,7 +16,11 @@ build/
 *~
 .DS_Store
 
-# pi internal cache (commented out — uncomment to hide)
+# Claude / agent configs
+.claude/
+.agents/
+
+# pi internal cache (uncomment to hide)
 # .pi/cache/
 # .pi/plugins/
 
@@ -33,4 +37,20 @@ tmp/
 
 # OS
 Thumbs.db
+
+# Go test coverage
+coverage.out
+coverage.html
+
+# GUI screenshots and test artifacts
+output/
+
+# Temporary gap analysis (moved to docs/features/ as proper specs)
+docs/gaps/
+
+# Go build binaries
+pi
 pi-sandboxd
+pi-agentd
+pi-init
+pi-vmm-manager

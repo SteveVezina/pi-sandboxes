@@ -149,21 +149,21 @@ func TestCLI_RemoteContextOverrideRoutesToRemote(t *testing.T) {
 	// Now run `pi --context ws box list` and check the remote was hit.
 	// We must point the store at our temp file via PI_CONTEXTS_PATH if the
 	// box command uses DefaultPath. Since we cannot inject the store path
-	// into box subcommands today, copy the temp store to ~/.pi/contexts.yaml
+	// into box subcommands today, copy the temp store to ~/.pi-box/contexts.yaml
 	// for the duration of this test.
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("PI_OVERRIDE_TOKEN", "hello-token")
-	if err := os.MkdirAll(filepath.Join(home, ".pi"), 0o755); err != nil {
-		t.Fatalf("mkdir ~/.pi: %v", err)
+	if err := os.MkdirAll(filepath.Join(home, ".pi-box"), 0o755); err != nil {
+		t.Fatalf("mkdir ~/.pi-box: %v", err)
 	}
 	// Copy the temp store to the test HOME.
 	data, err := os.ReadFile(store)
 	if err != nil {
 		t.Fatalf("read temp store: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(home, ".pi", "contexts.yaml"), data, 0o600); err != nil {
-		t.Fatalf("write ~/.pi/contexts.yaml: %v", err)
+	if err := os.WriteFile(filepath.Join(home, ".pi-box", "contexts.yaml"), data, 0o600); err != nil {
+		t.Fatalf("write ~/.pi-box/contexts.yaml: %v", err)
 	}
 
 	cmd := exec.Command(bin, "--context", "ws", "box", "list")

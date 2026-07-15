@@ -33,7 +33,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Component | Impact |
 |-----------|--------|
-| `pkg/remote/` | Remote daemon transport/auth (new — to be created) |
+| `pkg/remote/` | Remote daemon transport/auth |
 | `cmd/pi/context/` | Contexts reference remote transport settings |
 | `sdk/typescript/` | Remote daemon connection support |
 | `sdk/python/` | Remote daemon connection support |

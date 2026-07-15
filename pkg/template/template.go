@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -23,13 +22,13 @@ type Template struct {
 // DefaultTemplates returns the built-in templates.
 func DefaultTemplates() map[string]string {
 	return map[string]string{
-		"base":       baseTemplate,
-		"node":       nodeTemplate,
-		"python":     pythonTemplate,
-		"go":         goTemplate,
-		"rust":       rustTemplate,
+		"base":        baseTemplate,
+		"node":        nodeTemplate,
+		"python":      pythonTemplate,
+		"go":          goTemplate,
+		"rust":        rustTemplate,
 		"node-python": nodePythonTemplate,
-		"polyglot":   polyglotTemplate,
+		"polyglot":    polyglotTemplate,
 	}
 }
 
@@ -41,7 +40,7 @@ type Store struct {
 // NewStore creates a new template store.
 func NewStore(templatesDir string) *Store {
 	if templatesDir == "" {
-		templatesDir = filepath.Join(os.Getenv("HOME"), ".pi", "templates")
+		templatesDir = filepath.Join(os.Getenv("HOME"), ".pi-box", "templates")
 	}
 	return &Store{templatesDir: templatesDir}
 }
@@ -115,15 +114,18 @@ func (s *Store) Delete(name string) error {
 func (s *Store) InstallDefaults() error {
 	defaults := DefaultTemplates()
 	for name, yamlData := range defaults {
+		yamlPath := filepath.Join(s.templatesDir, name, "template.yaml")
+		if _, err := os.Stat(yamlPath); err == nil {
+			continue
+		} else if err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("stat template %s: %w", name, err)
+		}
+
 		var t Template
 		if err := yaml.Unmarshal([]byte(yamlData), &t); err != nil {
 			return fmt.Errorf("parse default template %s: %w", name, err)
 		}
 		if err := s.Create(name, &t); err != nil {
-			// Skip if already exists
-			if strings.Contains(err.Error(), "file exists") {
-				continue
-			}
 			return fmt.Errorf("install template %s: %w", name, err)
 		}
 	}

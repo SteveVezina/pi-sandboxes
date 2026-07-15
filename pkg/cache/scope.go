@@ -9,15 +9,15 @@ import (
 type Type string
 
 const (
-	TypeNPM      Type = "npm"
-	TypePNPM     Type = "pnpm"
-	TypeYarn     Type = "yarn"
-	TypePip      Type = "pip"
-	TypeUV       Type = "uv"
-	TypeGoMod    Type = "go-mod"
-	TypeGoBuild  Type = "go-build"
-	TypeCargo    Type = "cargo"
-	TypeSCCache  Type = "sccache"
+	TypeNPM     Type = "npm"
+	TypePNPM    Type = "pnpm"
+	TypeYarn    Type = "yarn"
+	TypePip     Type = "pip"
+	TypeUV      Type = "uv"
+	TypeGoMod   Type = "go-mod"
+	TypeGoBuild Type = "go-build"
+	TypeCargo   Type = "cargo"
+	TypeSCCache Type = "sccache"
 )
 
 // AllCacheTypes returns all known cache types.
@@ -43,7 +43,7 @@ func (s Scope) Dir(t Type) string {
 	if home == "" {
 		home = "."
 	}
-	return filepath.Join(home, ".pi", "caches", s.String(), string(t))
+	return filepath.Join(home, ".pi-box", "caches", s.String(), string(t))
 }
 
 // String returns the scope string.

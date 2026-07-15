@@ -36,8 +36,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Component | Impact |
 |-----------|--------|
-| `cmd/pi-vmm-manager/` | MicroVM manager binary (new — to be created) |
-| `pkg/runtime/microvm/` | MicroVM backend (new — to be created) |
+| `cmd/pi-vmm-manager/` | MicroVM manager binary |
+| `pkg/runtime/microvm/` | MicroVM backend |
 | `pkg/bench/` | MicroVM benchmark comparison |
 | `docs/features/F21-microvm-guest-control-plane.md` | Guest control dependency |
 | `docs/decisions/ADR-001-microvm-backend-architecture.md` | Backend architecture decision |

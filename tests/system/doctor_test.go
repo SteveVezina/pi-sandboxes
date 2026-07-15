@@ -13,7 +13,7 @@ import (
 // in a temp HOME when it doesn't exist (AC-16 / F10).
 func TestDoctor_ConfigCreatedWhenMissing(t *testing.T) {
 	home := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(home, ".pi"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(home, ".pi-box"), 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
 	t.Setenv("HOME", home)
@@ -21,7 +21,7 @@ func TestDoctor_ConfigCreatedWhenMissing(t *testing.T) {
 	result := system.RunDoctor()
 
 	// Config should now exist.
-	configPath := filepath.Join(home, ".pi", "config.yaml")
+	configPath := filepath.Join(home, ".pi-box", "config.yaml")
 	if _, err := os.Stat(configPath); err != nil {
 		t.Errorf("config.yaml was not created: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestDoctor_ConfigCreatedWhenMissing(t *testing.T) {
 // valid config.yaml (AC-16 / F10).
 func TestDoctor_ConfigOKWhenPresent(t *testing.T) {
 	home := t.TempDir()
-	piDir := filepath.Join(home, ".pi")
+	piDir := filepath.Join(home, ".pi-box")
 	if err := os.MkdirAll(piDir, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestDoctor_ConfigOKWhenPresent(t *testing.T) {
 func TestDoctor_SystemCommandsValidated(t *testing.T) {
 	// 'find' is universally available; we just need at least one command check.
 	home := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(home, ".pi"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(home, ".pi-box"), 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
 	t.Setenv("HOME", home)
@@ -95,7 +95,7 @@ func TestDoctor_SystemCommandsValidated(t *testing.T) {
 // TestDoctor_DaemonBinaryCheck verifies RunDoctor checks pi-sandboxd (AC-16).
 func TestDoctor_DaemonBinaryCheck(t *testing.T) {
 	home := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(home, ".pi"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(home, ".pi-box"), 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
 	t.Setenv("HOME", home)

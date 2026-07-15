@@ -1,8 +1,6 @@
-# AGENTS.md — Development Agent Instructions
+# AGENTS.md — PI Agent Sandbox Runtime
 
-> **Per-project config:** `.pi/block.yaml` defines the slug, spec path, code layout, verify commands, security egress allowlist, and lifecycle events for this project. All `pi-*` skills are project-agnostic and read from that file. To bootstrap a new project, copy `.pi/skills/`, copy `.pi/block.yaml`, edit its values, and write the project-specific `AGENTS.md`.
-
-
+> **Per-project config:** `.pi/block.yaml` defines the slug, spec path, code layout, verify commands, security egress allowlist, and lifecycle events for this project. All `pi-*` skills are project-agnostic and read from that file.
 
 ## The One Rule
 
@@ -13,7 +11,7 @@ If code and spec disagree → spec wins. If spec is ambiguous → propose a spec
 
 **NEVER directly modify `SPEC.md` — UNLESS applying an accepted PROP.**
 
-This file is an upstream-controlled contract. When you find gaps, ambiguities, or errors:
+This file is the upstream-controlled contract. When you find gaps, ambiguities, or errors:
 
 1. **Document the gap** in `docs/proposals/PROP-{NNN}-{slug}.md`
 2. **Flag it for human review** — human says "accept PROP-{NNN}" to approve
@@ -50,18 +48,17 @@ This prevents proposal pile-up and ensures each gap gets proper human attention 
 **NEVER create a PROP with a number that already exists or creates a gap.**
 
 Before writing `PROP-{NNN}`:
-1. List all existing PROP files: `ls docs/proposals/PROP-*.md | xargs -I{} basename {} | sort`
-2. Extract the highest number: e.g., `PROP-012-*` → next is `013`
-3. **NEVER** skip numbers (e.g., if last is 012, do NOT write 014)
-4. **NEVER** reuse a number that already exists (e.g., two PROP-010 entries)
+1. List existing PROPs: `ls docs/proposals/PROP-*.md | xargs -I{} basename {} | sort`
+2. Extract the highest number: e.g., `PROP-004-*` → next is `005`
+3. **NEVER** skip numbers
+4. **NEVER** reuse a number that already exists
 5. If a number was withdrawn (file deleted), reuse it only if the withdrawal was recent (< 7 days) and document the reuse
 
 **INDEX sync guard:**
-- After writing a new PROP, update `docs/proposals/INDEX.md` with the new entry
+- After writing a new PROP, update `docs/proposals/INDEX.md`
 - After withdrawing a PROP, remove its entry from the INDEX
 - After accepting a PROP, update its status in the INDEX
 - **NEVER** leave the INDEX out of sync with actual files
-- Run `pi-tools proposals` to validate before committing
 
 ## Context Loading Protocol
 
@@ -71,21 +68,22 @@ Before any implementation work:
 2. Read `SPEC.md` § relevant feature
 3. Read `docs/features/F{N}-*.md` for the feature spec + plan
 4. Read `docs/contracts/*.md` for upstream interfaces you touch
-5. **Cross-check upstream implementations** in the paths listed in `.pi/block.yaml` § `upstream` — real OpenAPI specs and DAT.md files are the source of truth for endpoint shapes, not just the block spec prose.
-6. If anything conflicts with a design principle → **stop and raise it** — either the principle needs updating (write a PROP) or the work is wrong
-7. If anything is unclear → **stop and propose a spec amendment** (never modify the block spec directly)
+5. Read `ARCHITECTURE.md` for the architectural overview
+6. **Cross-check upstream implementations** in the paths listed in `.pi/block.yaml` § `upstream` — real OpenAPI specs and DAT.md files are the source of truth for endpoint shapes
+7. If anything conflicts with a design principle → **stop and raise it**
+8. If anything is unclear → **stop and propose a spec amendment**
 
 ## Spec-Driven Development
 
 ```
-docs/design-principles.md (INVARIANTS — platform facts, non-negotiable constraints)
+docs/design-principles.md (INVARIANTS — non-negotiable constraints)
     │
     ├── must be respected by ALL decisions and specs
     │       └── when changed: recalibrate all Dependents listed in the principle
     │
 SPEC.md (WHAT + WHY — master source of truth)
     │
-    ├── defines Features F1-F13
+    ├── defines Features F1–F27
     │       │
     │       └── docs/features/F{N}-{slug}.md
     │               ├── Feature spec (extracted from block spec)
@@ -95,9 +93,9 @@ SPEC.md (WHAT + WHY — master source of truth)
     │
     ├── implies architectural questions (HOW)
     │       │
-    │       └── docs/decisions/ADR-{N}.md
+    │       └── docs/decisions/ADR-{N}-{slug}.md
     │               ├── Block-level (cross-cutting, affects multiple features)
-    │               ├── Authored using template in /skill:pi-feature-spec § Surfacing an ADR need
+    │               ├── Authored using template in /skill:pi-feature-spec
     │               └── Feature specs REFERENCE these, never own them
     │
     ├── defines Interface Contract (inputs/outputs)
@@ -106,7 +104,7 @@ SPEC.md (WHAT + WHY — master source of truth)
     ├── defines Security Model
     │       └── verified by: tests/security/
     │
-    └── defines Acceptance Criteria (15 items)
+    └── defines Acceptance Criteria (15+ items)
             └── each traced to a feature + test
 ```
 
@@ -116,7 +114,7 @@ SPEC.md (WHAT + WHY — master source of truth)
 - **Triggered by:** the block spec (ambiguity, cross-cutting concern) or feature spec gaps.
 - **Feature specs *reference* ADRs** (in "Implementation Approach") but never own/create them.
 - **Feature specs *surface* ADR needs** (in "Spec Gaps") and the ADR is authored using the template in `/skill:pi-feature-spec` § Surfacing an ADR need.
-- **One ADR may serve many features.** ADR-002 (Pod-per-session) serves F1, F8, F9, F12.
+- **One ADR may serve many features.**
 
 ## Core Design Principle
 
@@ -128,21 +126,64 @@ If an agent, subagent, skill, tool, or spec introduces issues:
 3. **Fix at the source** — update the skill, agent, or tool (for spec issues → propose amendment)
 4. **Verify** — confirm it works without workarounds
 
+## Project Structure
+
+```
+├── cmd/                      # Entry points
+│   ├── pi/                   # CLI binary (Cobra-based)
+│   ├── pi-sandboxd/          # Daemon binary
+│   ├── pi-agentd/            # Agent-side daemon (MicroVM guest)
+│   ├── pi-init/              # MicroVM guest init
+│   └── pi-vmm-manager/       # MicroVM lifecycle manager
+├── pkg/                      # Core library packages
+│   ├── api/                  # REST / WebSocket API handlers
+│   ├── daemon/               # Daemon lifecycle & management
+│   ├── exec/                 # Command execution engine
+│   ├── runtime/              # Runtime backends (fast, compat, secure, microvm)
+│   ├── session/              # Session lifecycle management
+│   ├── workspace/            # File system operations
+│   ├── template/             # Template system
+│   ├── policy/               # Policy enforcement
+│   ├── snapshot/             # Snapshot & rollback
+│   ├── cache/                # Dependency cache management
+│   ├── secrets/              # Secrets management
+│   ├── network/              # Network policy
+│   ├── logs/                 # Log collection & history
+│   ├── artifacts/            # Artifact export
+│   ├── git/                  # Git operations
+│   ├── context/              # Execution context
+│   ├── system/               # System commands
+│   ├── terminal/             # Terminal emulation
+│   ├── mcp/                  # MCP protocol support
+│   ├── remote/               # Remote daemon support
+│   ├── gui/                  # GUI workbench
+│   ├── types/                # Shared types
+│   ├── python/               # Python SDK
+│   └── typescript/           # TypeScript SDK
+├── tests/                    # Integration & unit tests
+├── docs/                     # Specs, features, contracts, decisions
+├── examples/                 # Usage examples
+├── mocks/                    # Mock services
+├── specs/                    # Block spec & design docs
+├── go.mod / go.sum           # Go module definition
+├── Makefile                  # Build & test automation
+├── Dockerfile                # Container build
+└── SPEC.md                   # Master spec (READ-ONLY)
+```
+
 ## Document Placement Rules (mandatory)
 
-Every document in `docs/` belongs to exactly one category. Before creating or moving any file,
-check this table:
+Every document in `docs/` belongs to exactly one category. Before creating or moving any file, check this table:
 
 | Document type | Correct location | Rule |
 |---------------|-----------------|------|
-| Active task list, phases, checkpoints | `docs/plan.md` | **Navigation only** — active cursor + cross-feature dependency graph. Task lists and task status live in the feature spec. |
-| Feature contract (what + ACs + tasks + task status) | `docs/features/F{N}-*.md` | One file per feature. Tasks and status live here, not in plan.md. |
-| Feature index / dashboard | `docs/features/INDEX.md` | Single file. |
-| Architecture decision (permanent HOW) | `docs/decisions/ADR-{N}-*.md` | Immutable once accepted. |
-| Spec change needing human approval | `docs/proposals/PROP-{NNN}-*.md` | Required before any code. |
-| Upstream API digest | `docs/contracts/{service}.md` | One per upstream service. |
-| Platform invariants | `docs/design-principles.md` | Single file. |
-| Developer setup | `docs/dev-setup.md` | Single file. |
+| Feature contract (what + ACs + tasks + status) | `docs/features/F{N}-*.md` | One file per feature |
+| Feature index / dashboard | `docs/features/INDEX.md` | Single file |
+| Architecture decision (permanent HOW) | `docs/decisions/ADR-{N}-{slug}.md` | Immutable once accepted |
+| Spec change needing human approval | `docs/proposals/PROP-{NNN}-{slug}.md` | Required before any code |
+| Upstream API digest | `docs/contracts/{service}.md` | One per upstream service |
+| Platform invariants | `docs/design-principles.md` | Single file |
+| Developer setup | `docs/dev-setup.md` | Single file |
 
 **Nothing else belongs in `docs/`.** In particular:
 - ❌ No `docs/plans/` subdirectory (migration plans, phased plans, concept maps)
@@ -155,27 +196,23 @@ check this table:
 ## Spec-First Discipline (mandatory)
 
 The following categories of change MUST be specified before they are coded.
-"Specified" means a `docs/features/F{N}-*.md` edit (or `docs/proposals/PROP-{NNN}-*.md`
+"Specified" means a `docs/features/F{N}-*.md` edit (or `docs/proposals/PROP-{NNN}-{slug}.md`
 if the block spec is the right home and you can't edit it). Code follows
 spec, never the other way around.
 
 | Category | Examples | Lives in |
 |----------|----------|----------|
-| **Public API surface** | function signatures on classes used across modules, HTTP route shapes, CLI flags, env vars consumed by the service, RPC commands sent to/from `pi-adapter` | feature spec § Interface Impact + task acceptance criteria |
+| **Public API surface** | function signatures on classes used across modules, HTTP route shapes, CLI flags, env vars consumed by the service | feature spec § Interface Impact + task acceptance criteria |
 | **Acceptance criteria** | any new condition the code must satisfy or any change to an existing one | feature spec § Acceptance Criteria |
-| **Configurable defaults that ship in the repo** | Pod resource requests/limits, timeouts, retry counts, batch sizes, TTLs, max iterations | feature spec § Implementation Approach (or a referenced ADR) |
+| **Configurable defaults that ship in the repo** | timeouts, retry counts, batch sizes, TTLs, max iterations | feature spec § Implementation Approach (or a referenced ADR) |
 | **Error-handling contracts** | what gets cleaned up on failure, what gets retried, how partial state is reported, exit-code interpretations | feature spec § Acceptance Criteria + relevant task |
 | **Verification workflows** | new make targets, smoke scripts, test categories, env vars that gate tests | feature spec § Verification Plan + relevant task |
-| **Cross-cutting envelope/event shapes** | adding fields to events, changing event schema | F6 spec (note: Pi Runtime relays raw SSE — no envelope schema owned here) |
-| **Design principle changes** | any change to a DP-NNN entry in `docs/design-principles.md` | update the principle first, then recalibrate all listed Dependents before any code change |
+| **Cross-cutting envelope/event shapes** | adding fields to events, changing event schema | relevant feature spec |
+| **Design principle changes** | any change to a DP-NNN entry in `docs/design-principles.md` | update the principle first, then recalibrate all listed Dependents |
 
 **Defensive test before any code edit:** *"If the spec author reviewed my
 next commit tomorrow, would they say 'I'd have written that into the
 spec'? If yes, the spec needs the change first."*
-
-The `pi-execute-plan` skill enforces this via its **Step 3a
-Spec-First Gate**. The `pi-execute-plan` skill enforces it at every
-checkpoint via the spec-drift check.
 
 ## Skills (`.pi/skills/`)
 
@@ -186,7 +223,7 @@ checkpoint via the spec-drift check.
 | **Spec** | `/skill:pi-feature-spec` | Author / revise a feature spec; surface ADR needs (with template) |
 | **Spec** | `/skill:pi-review-spec` | Validate spec completeness, traceability, testability |
 | **Plan** | `/skill:pi-review-plan` | Validate task list coverage, ordering, feasibility |
-| **Execute** | `/skill:pi-execute-plan` | Pick task → spec-first gate → TDD → pre-completion review (Step 8a) — single end-to-end skill |
+| **Execute** | `/skill:pi-execute-plan` | Pick task → spec-first gate → TDD → pre-completion review (Step 8a) |
 | **Execute** | `/skill:pi-runtime-sre` | Infrastructure / deploy / security work |
 
 ### Proposal Lifecycle (block spec changes only)
@@ -224,9 +261,46 @@ Block-spec amendment path (parallel):
     PROP written  ──▶  pi-review-prop  ──▶  human accepts  ──▶  pi-apply-prop (cascade)
 
 At ANY point if spec is ambiguous:
-    → Write docs/proposals/PROP-{NNN}.md
+    → Write docs/proposals/PROP-{NNN}-{slug}.md
     → Flag for human review
 ```
+
+## Build & Test
+
+```bash
+# Build all binaries
+make build
+
+# Build individual binaries
+make build-sandboxd   # pi-sandboxd
+make build-pi         # pi
+
+# Install to GOPATH
+make install
+
+# Run tests
+make test             # with race detector
+make test-short       # without race detector
+make test-coverage    # with coverage report
+
+# Lint & format
+make lint
+make format
+
+# Mock services
+make mock-up          # Start mock services
+make mock-down        # Stop mock services
+```
+
+### Binary Reference
+
+| Binary | Path | Purpose |
+|--------|------|---------|
+| `pi-box` | `cmd/pi/main.go` | CLI entry point |
+| `pi-sandboxd` | `cmd/pi-sandboxd/main.go` | Sandbox daemon |
+| `pi-agentd` | `cmd/pi-agentd/` | Agent-side daemon (MicroVM guest) |
+| `pi-init` | `cmd/pi-init/` | MicroVM guest init |
+| `pi-vmm-manager` | `cmd/pi-vmm-manager/` | MicroVM lifecycle manager |
 
 ## Mock Services
 
@@ -234,22 +308,6 @@ At ANY point if spec is ambiguous:
 docker compose -f mocks/docker-compose.mocks.yml up -d
 # Orchestrator:9001, Gateway:9002, Session Manager:9003, Secret Manager:9004
 ```
-
-## Cross-Cutting Requirements
-
-Run-level traceability (workspace_id, actor_id, run_id, session_id) is carried in the dispatch payload and completion report. Pi Runtime relays raw Pi agent SSE messages to the Orchestrator without adding or prescribing an event envelope schema.
-
-## Event Types (Pi RPC → Lifecycle Events)
-
-Pi Runtime emits these **service-level lifecycle events** to the Orchestrator.
-They are distinct from the raw SSE agent stream (which is forwarded verbatim).
-
-| Lifecycle Event | Source |
-|-----------------|--------|
-| `pi.sandbox.created` | Service emits on Pod creation |
-| `pi.run.started` | Pi `agent_start` event |
-| `pi.run.completed` | Pi `agent_end` event |
-| `pi.sandbox.destroyed` | Service emits on Pod destruction |
 
 ## Security Constraints (non-negotiable)
 
@@ -259,6 +317,26 @@ They are distinct from the raw SSE agent stream (which is forwarded verbatim).
 - cgroups enforce CPU/memory/disk limits
 - Run as unprivileged user inside container
 - Git credentials injected just-in-time, never persisted
+- Host home directory not mounted by default
+- Docker socket not mounted by default
+- Cloud metadata credentials (169.254.169.254) blocked by default
+
+## Cross-Cutting Requirements
+
+Run-level traceability (`workspace_id`, `actor_id`, `run_id`, `session_id`) is carried in the dispatch payload and completion report.
+
+### Lifecycle Events
+
+Pi Runtime emits these **service-level lifecycle events** to the Orchestrator.
+They are distinct from the raw SSE agent stream (which is forwarded verbatim).
+
+| Lifecycle Event | Source |
+|-----------------|--------|
+| `pi.sandbox.created` | Service emits on Pod creation |
+| `pi.run.started` | Pi `agent_start` event |
+| `pi.run.completed` | Pi `agent_end` event |
+| `pi.sandbox.destroyed` | Service emits on Pod destruction (TTL or explicit) |
+| `pi.artifact.delivered` | After successful Workspaces POST /output |
 
 ## Quality Gates
 

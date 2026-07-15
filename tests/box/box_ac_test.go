@@ -15,14 +15,14 @@ import (
 func buildPIBinary(t *testing.T) string {
 	t.Helper()
 	root := findRepoRoot(t)
-	out := filepath.Join(t.TempDir(), "pi")
+	out := filepath.Join(t.TempDir(), "pi-box")
 	if runtime.GOOS == "windows" {
 		out += ".exe"
 	}
 	cmd := exec.Command("go", "build", "-o", out, "./cmd/pi")
 	cmd.Dir = root
 	if b, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("build pi: %v\n%s", err, b)
+		t.Fatalf("build pi-box: %v\n%s", err, b)
 	}
 	return out
 }
@@ -80,7 +80,7 @@ func TestBoxDestroyAll_CleansAllSandboxes(t *testing.T) {
 
 	// Wire up a remote context pointing at the test server.
 	home := t.TempDir()
-	piDir := filepath.Join(home, ".pi")
+	piDir := filepath.Join(home, ".pi-box")
 	if err := os.MkdirAll(piDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestBoxList_JSONFlag(t *testing.T) {
 	defer srv.Close()
 
 	home := t.TempDir()
-	piDir := filepath.Join(home, ".pi")
+	piDir := filepath.Join(home, ".pi-box")
 	os.MkdirAll(piDir, 0o755)
 	t.Setenv("PI_LIST_TEST_TOKEN", "tk-list")
 	ctxYAML := []byte(`active_context: test
@@ -178,7 +178,7 @@ func TestBoxCreate_JSONFlag(t *testing.T) {
 	defer srv.Close()
 
 	home := t.TempDir()
-	piDir := filepath.Join(home, ".pi")
+	piDir := filepath.Join(home, ".pi-box")
 	os.MkdirAll(piDir, 0o755)
 	t.Setenv("PI_CREATE_TEST_TOKEN", "tk-create")
 	ctxYAML := []byte(`active_context: test

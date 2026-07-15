@@ -1,4 +1,4 @@
-# F15: Compat Backend
+# F4: Compat Backend
 
 > Source: `SPEC.md` §6 Features F4
 > Status: 🟢 Implemented
@@ -30,6 +30,8 @@ The compat backend creates containers that:
 4. Starts the container with the given command
 5. Streams stdout/stderr back to the daemon
 6. Collects exit code, duration on completion
+
+Runtime CLI operations used for container lifecycle are bounded to avoid wedging the daemon or test suite when a local OCI runtime stalls while pulling or starting an image.
 
 OCI runtime selection (first available):
 1. containerd (preferred)
@@ -123,6 +125,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Acceptance criteria:**
 - [x] Container created from template OCI image
+- [x] Runtime CLI creation fails instead of hanging indefinitely when the OCI runtime stalls
 - [x] No privileged mode
 - [x] No host network (bridge network)
 - [x] No Docker socket mount
@@ -134,6 +137,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Verification:**
 - [x] `go build ./pkg/runtime/compat/...`
 - [x] Integration test: container created with hardened defaults
+- [x] Unit test: stalled runtime CLI creation times out
 - [x] Integration test: container cannot access host filesystem
 
 **Files:** `pkg/runtime/compat/create.go`

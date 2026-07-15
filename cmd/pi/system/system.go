@@ -20,4 +20,5 @@ func init() {
 	systemCmd.AddCommand(DoctorCmd())
 	systemCmd.AddCommand(PruneCmd())
 	systemCmd.AddCommand(DiskUsageCmd())
+	systemCmd.AddCommand(RuntimesCmd())
 }

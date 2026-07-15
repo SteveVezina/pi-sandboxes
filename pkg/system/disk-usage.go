@@ -21,15 +21,34 @@ func GetDiskUsage() (*DiskUsageInfo, error) {
 	piHome := PiHome()
 	info := &DiskUsageInfo{}
 
-	dirs := map[string]*int64{
-		"sandboxes": &info.Sandboxes,
+	// Sandboxes are now at piHome directly (not under a "sandboxes" subdir)
+
+	// Sandboxes are now at piHome directly (not under a "sandboxes" subdir)
+	// Only count directories that contain meta.json (actual sandboxes)
+	if DirExists(piHome) {
+		entries, err := os.ReadDir(piHome)
+		if err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					metaPath := filepath.Join(piHome, entry.Name(), "meta.json")
+					if _, err := os.Stat(metaPath); err == nil {
+						size, err := DirSize(filepath.Join(piHome, entry.Name()))
+						if err == nil {
+							info.Sandboxes += size
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Templates, caches, images, logs are still under piHome/{name}
+	for name, sizePtr := range map[string]*int64{
 		"templates": &info.Templates,
 		"caches":    &info.Caches,
 		"images":    &info.Images,
 		"logs":      &info.Logs,
-	}
-
-	for name, sizePtr := range dirs {
+	} {
 		path := filepath.Join(piHome, name)
 		if DirExists(path) {
 			size, err := DirSize(path)

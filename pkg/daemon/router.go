@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/pi-sandbox/pi/pkg/api"
@@ -98,10 +99,12 @@ func guiCORSMiddleware(next http.Handler) http.Handler {
 }
 
 func isAllowedGUIOrigin(origin string) bool {
-	switch origin {
-	case "http://127.0.0.1:5174", "http://localhost:5174":
-		return true
-	default:
+	if origin == "" {
 		return false
 	}
+	// Accept any localhost/127.0.0.1 origin (Vite dev server may use any port).
+	if strings.HasPrefix(origin, "http://127.0.0.1:") || strings.HasPrefix(origin, "http://localhost:") {
+		return true
+	}
+	return false
 }

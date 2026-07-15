@@ -3,7 +3,10 @@ package template
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/pi-sandbox/pi/pkg/template"
@@ -20,6 +23,10 @@ func List() *cobra.Command {
 		Short: "List available templates",
 		Run: func(*cobra.Command, []string) {
 			store := template.NewStore(tmplDir)
+			if err := store.InstallDefaults(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
 			names, err := store.List()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -56,6 +63,10 @@ func Inspect() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			name = args[0]
 			store := template.NewStore(tmplDir)
+			if err := store.InstallDefaults(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
 			tmpl, err := store.Get(name)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -94,29 +105,72 @@ func Inspect() *cobra.Command {
 
 // Build returns the build command.
 func Build() *cobra.Command {
+	var socketPath string
 	cmd := &cobra.Command{
 		Use:   "build [name]",
-		Short: "Build a template image (stub for compat backend)",
+		Short: "Build a template OCI image",
 		Args:  cobra.ExactArgs(1),
-		Run: func(*cobra.Command, []string) {
-			fmt.Fprintf(os.Stderr, "Note: Template build is a stub. Implement in compat backend.\n")
-			os.Exit(0)
+		Run: func(cmd *cobra.Command, args []string) {
+			name := args[0]
+			// Call daemon API to build template
+			url := fmt.Sprintf("http://localhost/v1/templates/%s/build", name)
+			if socketPath != "" {
+				// Use curl with unix socket
+				cmd := fmt.Sprintf("curl -s -X POST -H 'Content-Type: application/json' --unix-socket %s %s", socketPath, url)
+				output, err := exec.Command("sh", "-c", cmd).Output()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error building template: %v\n", err)
+					os.Exit(1)
+				}
+				fmt.Println(string(output))
+				return
+			}
+			// Fallback: HTTP request
+			resp, err := http.Post(url, "application/json", nil)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error building template: %v\n", err)
+				os.Exit(1)
+			}
+			defer resp.Body.Close()
+			body, _ := io.ReadAll(resp.Body)
+			fmt.Println(string(body))
 		},
 	}
+	cmd.Flags().StringVar(&socketPath, "socket", "", "Daemon socket path")
 	return cmd
 }
 
 // Update returns the update command.
 func Update() *cobra.Command {
+	var socketPath string
 	cmd := &cobra.Command{
 		Use:   "update [name]",
-		Short: "Update a template from remote (stub)",
+		Short: "Update a template from remote",
 		Args:  cobra.ExactArgs(1),
-		Run: func(*cobra.Command, []string) {
-			fmt.Fprintf(os.Stderr, "Note: Remote template update is not yet implemented.\n")
-			os.Exit(0)
+		Run: func(cmd *cobra.Command, args []string) {
+			name := args[0]
+			url := fmt.Sprintf("http://localhost/v1/templates/%s/update", name)
+			if socketPath != "" {
+				cmd := fmt.Sprintf("curl -s -X POST -H 'Content-Type: application/json' --unix-socket %s %s", socketPath, url)
+				output, err := exec.Command("sh", "-c", cmd).Output()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error updating template: %v\n", err)
+					os.Exit(1)
+				}
+				fmt.Println(string(output))
+				return
+			}
+			resp, err := http.Post(url, "application/json", nil)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error updating template: %v\n", err)
+				os.Exit(1)
+			}
+			defer resp.Body.Close()
+			body, _ := io.ReadAll(resp.Body)
+			fmt.Println(string(body))
 		},
 	}
+	cmd.Flags().StringVar(&socketPath, "socket", "", "Daemon socket path")
 	return cmd
 }
 

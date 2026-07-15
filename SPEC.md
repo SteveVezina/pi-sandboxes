@@ -107,7 +107,7 @@ repeat
 
 | Feature ID | Name | Description | Milestone |
 |------------|------|-------------|-----------|
-| F1 | CLI Entry Point | `pi` binary with `box` subcommands for sandbox lifecycle management | M1 |
+| F1 | CLI Entry Point | `pi-box` binary with `box` subcommands for sandbox lifecycle management | M1 |
 | F2 | Daemon API | `pi-sandboxd` local daemon exposing Unix socket HTTP API for sandbox operations | M1 |
 | F3 | Fast Backend | Native Linux sandbox using namespaces, cgroups, seccomp, Landlock isolation | M1 |
 | F4 | Compat Backend | OCI container backend (runc/containerd/Podman) for maximum compatibility | M1 |
@@ -144,7 +144,7 @@ repeat
 - [ ] `pi box destroy demo` cleans up sandbox
 
 ### AC-2: Daemon API Responds (F2)
-- [ ] `pi-sandboxd` listens on `~/.pi/sandboxd.sock`
+- [ ] `pi-sandboxd` listens on `~/.pi-box/sandboxd.sock`
 - [ ] `POST /v1/sandboxes` creates a sandbox
 - [ ] `GET /v1/sandboxes` lists sandboxes
 - [ ] `GET /v1/sandboxes/{id}` returns sandbox state
@@ -216,7 +216,7 @@ repeat
 - [ ] `pi box snapshot <id> <name>` creates a named snapshot
 - [ ] `pi box rollback <id> <name>` restores to snapshot
 - [ ] Snapshot creation uses overlay upperdir or reflink
-- [ ] Snapshot metadata stored under `~/.pi/sandboxes/<id>/snapshots/`
+- [ ] Snapshot metadata stored under `~/.pi-box/sandboxes/<id>/snapshots/`
 
 ### AC-14: Benchmarks Run (F14)
 - [ ] `pi bench run` executes full benchmark suite
@@ -312,7 +312,7 @@ repeat
 - [ ] `pi context list` shows local and remote contexts
 - [ ] `pi box create` uses the active context
 - [ ] Commands can override the active context explicitly
-- [ ] Contexts persist in `~/.pi/contexts.yaml`
+- [ ] Contexts persist in `~/.pi-box/contexts.yaml`
 - [ ] Context schema supports `target`, `transport`, and `auth.type`
 - [ ] `--context <name>` overrides the active context
 
@@ -398,7 +398,7 @@ repeat
 
 ## 9. Interface Contract
 
-### Daemon API (Unix socket: `~/.pi/sandboxd.sock`, optional HTTP: `127.0.0.1:7777`)
+### Daemon API (Unix socket: `~/.pi-box/sandboxd.sock`, optional HTTP: `127.0.0.1:7777`)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -535,7 +535,7 @@ PI Agent / CLI / IDE / SDK
 
 The CLI is thin. PI Agent, SDKs, IDE integrations, and the GUI workbench should talk directly to `pi-sandboxd` over a local Unix socket, localhost API, or the remote context transport.
 
-The GUI workbench is a client surface, not a second runtime. It must not run sandbox workloads in the UI process or implement a separate sandbox lifecycle. Normal GUI operations use the daemon API or SDK. Shelling out to the `pi` CLI is reserved for diagnostics or compatibility gaps.
+The GUI workbench is a client surface, not a second runtime. It must not run sandbox workloads in the UI process or implement a separate sandbox lifecycle. Normal GUI operations use the daemon API or SDK. Shelling out to the `pi-box` CLI is reserved for diagnostics or compatibility gaps.
 
 ## 13. User-facing runtime modes
 
@@ -681,10 +681,12 @@ MicroVM guest control protocol:
 
 ## 15. Local filesystem layout
 
-Use predictable state under `~/.pi` by default.
+Use predictable state under `~/.pi-box` by default for host-side Pi sandbox runtime state.
+
+Legacy `~/.pi` data is not automatically migrated or pruned by default; Pi Box leaves that directory untouched unless a future migration command is explicitly specified.
 
 ```text
-~/.pi/
+~/.pi-box/
   config.yaml
   sandboxd.sock
 
@@ -902,7 +904,7 @@ pi template prune
 
 ## 19. CLI requirements
 
-The CLI binary should be named `pi` initially, with `box` as the sandbox subcommand.
+The CLI binary should be named `pi-box`, with `box` as the sandbox subcommand.
 
 ### 12.1 Create sandbox
 
@@ -1017,7 +1019,7 @@ pi box destroy --all
 Default socket:
 
 ```text
-~/.pi/sandboxd.sock
+~/.pi-box/sandboxd.sock
 ```
 
 Optional localhost HTTP for development:
@@ -1462,7 +1464,7 @@ pibox/
 
 Deliver:
 
-- `pi` CLI
+- `pi-box` CLI
 - `pi-sandboxd` daemon
 - local Unix socket API
 - `fast` backend prototype
@@ -1560,7 +1562,7 @@ pi box create node-python
 
 Remote daemon context contract:
 
-- Context state is stored in `~/.pi/contexts.yaml`.
+- Context state is stored in `~/.pi-box/contexts.yaml`.
 - Required context fields are `target`, `transport`, and `auth.type`.
 - `target` is the daemon endpoint URI.
 - `transport` is one of `unix`, `http`, or `ssh`.
@@ -1703,7 +1705,7 @@ contexts:
   active: local
   entries:
     local:
-      target: unix://~/.pi/sandboxd.sock
+      target: unix://~/.pi-box/sandboxd.sock
       transport: unix
       auth:
         type: none
@@ -1715,7 +1717,7 @@ runtime:
     - compat
 
 storage:
-  root: ~/.pi
+  root: ~/.pi-box
   maxTotalSize: 100Gi
 
 network:
@@ -1765,7 +1767,7 @@ Good:
 Command timed out after 60s.
 Sandbox: app1
 Command: pnpm test
-Last output saved to: ~/.pi/sandboxes/app1/logs/exec-42.log
+Last output saved to: ~/.pi-box/sandboxes/app1/logs/exec-42.log
 Try: pi box logs app1 --exec 42
 ```
 
@@ -1822,9 +1824,9 @@ The north star is:
 A coding agent implementing this project should start with the following tasks in order:
 
 1. Create the repository skeleton.
-2. Implement `pi` CLI with `box` subcommands using stubbed daemon calls.
+2. Implement `pi-box` CLI with `box` subcommands using stubbed daemon calls.
 3. Implement `pi-sandboxd` local daemon with Unix socket API.
-4. Implement sandbox metadata store under `~/.pi/sandboxes`.
+4. Implement sandbox metadata store under `~/.pi-box/sandboxes`.
 5. Implement `box create/list/inspect/destroy` for a simple local directory-backed sandbox.
 6. Implement `box exec` in dev mode.
 7. Add fast backend isolation incrementally: cwd isolation, env isolation, process limits, then namespaces/cgroups/seccomp.

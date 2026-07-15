@@ -19,13 +19,13 @@ func DefaultPolicy() *Policy {
 		},
 		Process: ProcessPolicy{
 			MaxProcesses:   256,
-			DefaultTimeout: 120, // 120 seconds
+			DefaultTimeout: 120,             // 120 seconds
 			MaxOutput:      8 * 1024 * 1024, // 8 MiB
 		},
 		Network: NetworkPolicy{
 			Mode: "restricted",
 			Deny: []string{
-				"169.254.169.254",  // Cloud metadata
+				"169.254.169.254", // Cloud metadata
 				"host-localhost",
 				"private-lans",
 				"cluster-local",
@@ -50,7 +50,7 @@ func DefaultPolicy() *Policy {
 
 // LoadPolicy loads policy from the config file.
 func LoadPolicy() (*Policy, error) {
-	piHome := filepath.Join(os.Getenv("HOME"), ".pi")
+	piHome := filepath.Join(os.Getenv("HOME"), ".pi-box")
 	configPath := filepath.Join(piHome, "config.yaml")
 
 	data, err := os.ReadFile(configPath)

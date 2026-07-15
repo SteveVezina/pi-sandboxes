@@ -12,11 +12,11 @@ import (
 
 // StatusInfo holds the system status information.
 type StatusInfo struct {
-	DaemonConnected   bool
-	ActiveSandboxes   int
-	TotalSandboxes    int
-	PiHomeExists      bool
-	PiHomePath        string
+	DaemonConnected bool
+	ActiveSandboxes int
+	TotalSandboxes  int
+	PiHomeExists    bool
+	PiHomePath      string
 }
 
 // GetStatus collects system status information.
@@ -26,28 +26,24 @@ func GetStatus(socketPath string) (*StatusInfo, error) {
 	// Check daemon connection
 	info.DaemonConnected = checkDaemonConnected(socketPath)
 
-	// Check pi home
+	// Check Pi Box home
 	info.PiHomePath = PiHome()
 	info.PiHomeExists = DirExists(info.PiHomePath)
 
 	// Count sandboxes
 	if info.PiHomeExists {
-		sandboxesDir := filepath.Join(info.PiHomePath, "sandboxes")
-		if DirExists(sandboxesDir) {
-			entries, err := os.ReadDir(sandboxesDir)
-			if err == nil {
-				info.TotalSandboxes = len(entries)
-				// Count active sandboxes (warm + executing)
-				for _, entry := range entries {
-					if entry.IsDir() {
-						metaPath := filepath.Join(sandboxesDir, entry.Name(), "meta.json")
-						if _, err := os.Stat(metaPath); err == nil {
-							store := session.NewStore(info.PiHomePath)
-							meta, err := store.Get(entry.Name())
-							if err == nil {
-								if meta.State == session.StateWarm || meta.State == session.StateExecuting {
-									info.ActiveSandboxes++
-								}
+		entries, err := os.ReadDir(info.PiHomePath)
+		if err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					metaPath := filepath.Join(info.PiHomePath, entry.Name(), "meta.json")
+					if _, err := os.Stat(metaPath); err == nil {
+						store := session.NewStore(info.PiHomePath)
+						meta, err := store.Get(entry.Name())
+						if err == nil {
+							info.TotalSandboxes++
+							if meta.State == session.StateWarm || meta.State == session.StateExecuting {
+								info.ActiveSandboxes++
 							}
 						}
 					}
@@ -74,11 +70,11 @@ func PrintStatus(info *StatusInfo) {
 	// Sandboxes
 	fmt.Printf("Sandboxes:  %d total, %d active\n", info.TotalSandboxes, info.ActiveSandboxes)
 
-	// Pi home
+	// Pi Box home
 	if info.PiHomeExists {
-		fmt.Printf("Pi Home:    %s (exists)\n", info.PiHomePath)
+		fmt.Printf("Pi Box Home:    %s (exists)\n", info.PiHomePath)
 	} else {
-		fmt.Printf("Pi Home:    %s (not found)\n", info.PiHomePath)
+		fmt.Printf("Pi Box Home:    %s (not found)\n", info.PiHomePath)
 	}
 }
 

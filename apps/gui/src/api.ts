@@ -1,3 +1,5 @@
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 export type ConnectionState = "checking" | "connected" | "disconnected";
 
 export type SandboxInfo = {
@@ -23,6 +25,11 @@ export type CreateSandboxInput = {
     source: string;
     maxSize?: string;
   };
+  ttlSeconds?: number;
+};
+
+export type ExecOptions = {
+  network?: string;
 };
 
 export type ExecResult = {
@@ -56,11 +63,44 @@ export type SystemStatus = {
   total_sandboxes: number;
   pi_home: string;
   config_path: string;
+  support_redacted?: boolean;
+};
+
+export type DoctorIssue = {
+  category: string;
+  message: string;
+  recommendation: string;
+  level: "error" | "warning" | "info";
+};
+
+export type DoctorResult = {
+  passed: boolean;
+  issues: DoctorIssue[];
+};
+
+// Raw daemon doctor response uses PascalCase.
+export type DoctorIssueRaw = {
+  Severity: string;
+  Message: string;
+  Recommendation: string;
+};
+
+export type DoctorResultRaw = {
+  Passed: boolean;
+  Issues: DoctorIssueRaw[];
+};
+
+export type RuntimeBackend = {
+  name: string;
+  available: boolean;
+  security_level: number;
+  description: string;
 };
 
 export type RuntimeInfo = {
   available: string[];
   best: string;
+  backends: RuntimeBackend[];
 };
 
 export type ContextInfo = {
@@ -75,11 +115,95 @@ export type ContextsResponse = {
   contexts: ContextInfo[];
 };
 
+export type LogEntry = {
+  sequence: number;
+  timestamp: string;
+  command: string;
+  exitCode: number;
+  durationMs: number;
+  timedOut: boolean;
+  truncated: boolean;
+  stdoutPath: string;
+  stderrPath: string;
+};
+
+export type LogsResponse = {
+  id: string;
+  count: number;
+  entries: LogEntry[];
+};
+
+export type DiffResult = {
+  id: string;
+  name: string;
+  diff: string;
+  timed_out: boolean;
+  duration_ms: number;
+};
+
+export type PatchResult = {
+  id: string;
+  name: string;
+  patch: string;
+  timed_out: boolean;
+  duration_ms: number;
+};
+
+export type ArtifactsResponse = {
+  id: string;
+  files: string[];
+};
+
+export type SnapshotMeta = {
+  name: string;
+  sandboxId: string;
+  createdAt: string;
+  sizeBytes: number;
+  method: string;
+  workspaceId: string;
+};
+
+// Raw daemon snapshot meta uses PascalCase.
+export type SnapshotMetaRaw = {
+  Name?: string;
+  SandboxID?: string;
+  CreatedAt?: string;
+  SizeBytes?: number;
+  Method?: string;
+  WorkspaceID?: string;
+};
+
+export type SnapshotsResponse = {
+  id: string;
+  action: string;
+  snapshots: SnapshotMeta[];
+};
+
+export type GuiLogEntry = {
+  timestamp: string;
+  level: "info" | "warning" | "error";
+  message: string;
+};
+
+export type SupportBundle = {
+  version: { component: string };
+  diagnostics: DoctorResult;
+  runtimes: { available: string[]; best: string };
+  sessions: { count: number; ids: string[] };
+  config: { path: string; pi_home: string };
+  gui_logs?: GuiLogEntry[];
+  redacted: boolean;
+};
+
+// ─── API Client ──────────────────────────────────────────────────────────────
+
 export class PiDaemonClient {
   readonly baseUrl: string;
+  readonly bearerToken: string;
 
-  constructor(baseUrl: string) {
+  constructor(baseUrl: string, bearerToken = "") {
     this.baseUrl = baseUrl.replace(/\/$/, "");
+    this.bearerToken = bearerToken;
   }
 
   async health(): Promise<DaemonHealth> {
@@ -90,16 +214,27 @@ export class PiDaemonClient {
     return this.request<SystemStatus>("GET", "/v1/system/status");
   }
 
-  async doctor(): Promise<unknown> {
-    return this.request("GET", "/v1/system/doctor");
+  async doctor(): Promise<DoctorResult> {
+    const raw = await this.request<DoctorResultRaw>("GET", "/v1/system/doctor");
+    // Transform PascalCase daemon response to camelCase.
+    const issues: DoctorIssue[] = (raw.Issues || []).map((i) => ({
+      category: i.Severity,
+      message: i.Message,
+      recommendation: i.Recommendation,
+      level: (i.Severity === "error" ? "error" : i.Severity === "warning" ? "warning" : "info") as "error" | "warning" | "info"
+    }));
+    return {
+      passed: raw.Passed ?? issues.filter((i) => i.level === "error").length === 0,
+      issues
+    };
   }
 
   async runtimes(): Promise<RuntimeInfo> {
     return this.request<RuntimeInfo>("GET", "/v1/system/runtimes");
   }
 
-  async supportBundle(): Promise<unknown> {
-    return this.request("GET", "/v1/support-bundle");
+  async supportBundle(): Promise<SupportBundle> {
+    return this.request<SupportBundle>("GET", "/v1/support-bundle");
   }
 
   async contexts(): Promise<ContextsResponse> {
@@ -110,18 +245,9 @@ export class PiDaemonClient {
     return this.request<{ active: string }>("POST", "/v1/contexts/use", { name });
   }
 
+  // List returns the full list — the daemon already hydrates every field.
   async listSandboxes(): Promise<SandboxInfo[]> {
-    const shallow = await this.request<Array<Pick<SandboxInfo, "id" | "name" | "state">>>("GET", "/v1/sandboxes");
-    const hydrated = await Promise.all(
-      shallow.map(async (sandbox) => {
-        try {
-          return await this.getSandbox(sandbox.id);
-        } catch {
-          return sandbox as SandboxInfo;
-        }
-      })
-    );
-    return hydrated;
+    return this.request<SandboxInfo[]>("GET", "/v1/sandboxes");
   }
 
   async getSandbox(id: string): Promise<SandboxInfo> {
@@ -137,21 +263,36 @@ export class PiDaemonClient {
     await this.request("DELETE", `/v1/sandboxes/${encodeURIComponent(id)}`);
   }
 
-  async exec(id: string, command: string): Promise<ExecResult> {
-    return this.request<ExecResult>("POST", `/v1/sandboxes/${encodeURIComponent(id)}/exec`, {
-      command
+  async cloneSandbox(id: string, url: string): Promise<{ id: string }> {
+    return this.request<{ id: string }>("POST", `/v1/sandboxes/${encodeURIComponent(id)}/clone`, {
+      url
     });
   }
 
-  async *execStream(id: string, command: string): AsyncGenerator<ExecStreamEvent> {
-    const response = await fetch(`${this.baseUrl}/v1/sandboxes/${encodeURIComponent(id)}/exec?stream=true`, {
-      method: "POST",
-      headers: {
-        "Accept": "application/x-ndjson",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ command })
+  async exec(id: string, command: string, options: ExecOptions = {}): Promise<ExecResult> {
+    return this.request<ExecResult>("POST", `/v1/sandboxes/${encodeURIComponent(id)}/exec`, {
+      command,
+      network: options.network
     });
+  }
+
+  async *execStream(id: string, command: string, options: ExecOptions = {}): AsyncGenerator<ExecStreamEvent> {
+    const headers: Record<string, string> = {
+      Accept: "application/x-ndjson",
+      "Content-Type": "application/json"
+    };
+    if (this.bearerToken) {
+      headers.Authorization = `Bearer ${this.bearerToken}`;
+    }
+
+    const response = await fetch(
+      `${this.baseUrl}/v1/sandboxes/${encodeURIComponent(id)}/exec?stream=true`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ command, network: options.network })
+      }
+    );
 
     if (!response.ok || !response.body) {
       const message = await response.text();
@@ -174,56 +315,121 @@ export class PiDaemonClient {
       }
     }
 
+    // Flush any remaining buffered data (final done event).
     if (buffer.trim()) {
       yield JSON.parse(buffer) as ExecStreamEvent;
     }
   }
 
-  async logs(id: string): Promise<unknown> {
-    return this.request("GET", `/v1/sandboxes/${encodeURIComponent(id)}/logs`);
+  // logs returns the raw list endpoint response.
+  async logs(id: string): Promise<LogsResponse> {
+    const raw = await this.request<LogsResponse>("GET", `/v1/sandboxes/${encodeURIComponent(id)}/logs/list`);
+    // Daemon may return null for empty arrays.
+    return { ...raw, entries: raw.entries || [] };
   }
 
-  async diff(id: string): Promise<unknown> {
-    return this.request("GET", `/v1/sandboxes/${encodeURIComponent(id)}/diff`);
+  // logsHistory returns command history summaries.
+  async logsHistory(id: string): Promise<LogsResponse> {
+    const raw = await this.request<LogsResponse>("GET", `/v1/sandboxes/${encodeURIComponent(id)}/logs/history`);
+    // Daemon may return null for empty arrays.
+    return { ...raw, entries: raw.entries || [] };
   }
 
-  async patch(id: string): Promise<unknown> {
-    return this.request("GET", `/v1/sandboxes/${encodeURIComponent(id)}/patch`);
+  async diff(id: string): Promise<DiffResult> {
+    return this.request<DiffResult>("GET", `/v1/sandboxes/${encodeURIComponent(id)}/diff`);
   }
 
-  async artifacts(id: string): Promise<unknown> {
-    return this.request("GET", `/v1/sandboxes/${encodeURIComponent(id)}/artifacts/list`);
+  async patch(id: string): Promise<PatchResult> {
+    return this.request<PatchResult>("GET", `/v1/sandboxes/${encodeURIComponent(id)}/patch`);
   }
 
-  async artifactPull(id: string, destination: string): Promise<unknown> {
-    return this.request("POST", `/v1/sandboxes/${encodeURIComponent(id)}/artifacts/pull`, { destination });
+  async artifacts(id: string): Promise<ArtifactsResponse> {
+    const raw = await this.request<ArtifactsResponse>("GET", `/v1/sandboxes/${encodeURIComponent(id)}/artifacts/list`);
+    // Daemon may return null for empty arrays.
+    return { ...raw, files: raw.files || [] };
   }
 
-  async snapshots(id: string): Promise<unknown> {
-    return this.request("GET", `/v1/sandboxes/${encodeURIComponent(id)}/snapshot/list`);
+  async artifactPull(id: string, destination: string): Promise<{ action: string; destination: string }> {
+    return this.request<{ action: string; destination: string }>(
+      "POST",
+      `/v1/sandboxes/${encodeURIComponent(id)}/artifacts/pull`,
+      { destination }
+    );
   }
 
-  async snapshotCreate(id: string, name: string): Promise<unknown> {
-    return this.request("POST", `/v1/sandboxes/${encodeURIComponent(id)}/snapshot/create`, { name });
+  async artifactPack(id: string, output: string): Promise<{ action: string; output: string; bytes: number }> {
+    return this.request<{ action: string; output: string; bytes: number }>(
+      "POST",
+      `/v1/sandboxes/${encodeURIComponent(id)}/artifacts/pack`,
+      { output }
+    );
   }
 
-  async snapshotRollback(id: string, name: string): Promise<unknown> {
-    return this.request("POST", `/v1/sandboxes/${encodeURIComponent(id)}/snapshot/rollback`, { name });
+  async snapshots(id: string): Promise<SnapshotsResponse> {
+    // Daemon returns PascalCase snapshot meta; transform to camelCase.
+    const raw = await this.request<{ id: string; action: string; snapshots: SnapshotMetaRaw[] | null }>(
+      "GET",
+      `/v1/sandboxes/${encodeURIComponent(id)}/snapshot/list`
+    );
+    const snapshots = (raw.snapshots || []).map((s) => ({
+      name: s.Name || "",
+      sandboxId: s.SandboxID || "",
+      createdAt: s.CreatedAt || "",
+      sizeBytes: s.SizeBytes ?? 0,
+      method: s.Method || "",
+      workspaceId: s.WorkspaceID || ""
+    }));
+    return { id: raw.id, action: raw.action, snapshots };
+  }
+
+  async snapshotCreate(id: string, name: string): Promise<{ action: string; name: string }> {
+    return this.request<{ action: string; name: string }>(
+      "POST",
+      `/v1/sandboxes/${encodeURIComponent(id)}/snapshot/create`,
+      { name }
+    );
+  }
+
+  async snapshotRollback(id: string, name: string): Promise<{ action: string; name: string }> {
+    return this.request<{ action: string; name: string }>(
+      "POST",
+      `/v1/sandboxes/${encodeURIComponent(id)}/snapshot/rollback`,
+      { name }
+    );
+  }
+
+  async snapshotDelete(id: string, name: string): Promise<{ action: string; name: string }> {
+    return this.request<{ action: string; name: string }>(
+      "POST",
+      `/v1/sandboxes/${encodeURIComponent(id)}/snapshot/delete`,
+      { name }
+    );
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      "Content-Type": "application/json"
+    };
+    if (this.bearerToken) {
+      headers.Authorization = `Bearer ${this.bearerToken}`;
+    }
+
     const response = await fetch(`${this.baseUrl}${path}`, {
       method,
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-      },
+      headers,
       body: body === undefined ? undefined : JSON.stringify(body)
     });
 
     if (!response.ok) {
-      const message = await response.text();
-      throw new Error(message || `${method} ${path} failed with HTTP ${response.status}`);
+      let message: string;
+      try {
+        const errBody = await response.json();
+        message = errBody.error || `${method} ${path} failed with HTTP ${response.status}`;
+      } catch {
+        message = `${method} ${path} failed with HTTP ${response.status}`;
+      }
+      throw new Error(message);
     }
 
     if (response.status === 204) {

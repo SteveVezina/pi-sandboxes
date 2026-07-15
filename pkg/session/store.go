@@ -22,7 +22,7 @@ func NewStore(root string) *Store {
 
 // sandboxDir returns the path for a session's metadata directory.
 func (s *Store) sandboxDir(id string) string {
-	return filepath.Join(s.root, "sandboxes", id)
+	return filepath.Join(s.root, id)
 }
 
 // metaPath returns the path to meta.json for a session.
@@ -153,8 +153,7 @@ func (s *Store) List() ([]string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	sandboxesDir := filepath.Join(s.root, "sandboxes")
-	entries, err := os.ReadDir(sandboxesDir)
+	entries, err := os.ReadDir(s.root)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []string{}, nil
@@ -167,10 +166,14 @@ func (s *Store) List() ([]string, error) {
 		if !entry.IsDir() {
 			continue
 		}
-		metaPath := filepath.Join(sandboxesDir, entry.Name(), "meta.json")
+		metaPath := filepath.Join(s.root, entry.Name(), "meta.json")
 		if _, err := os.Stat(metaPath); err == nil {
 			ids = append(ids, entry.Name())
 		}
+	}
+
+	if ids == nil {
+		ids = []string{}
 	}
 
 	return ids, nil

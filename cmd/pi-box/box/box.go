@@ -26,7 +26,7 @@ import (
 var boxCmd = &cobra.Command{
 	Use:   "box",
 	Short: "Sandbox lifecycle management",
-	Long:  `Manage sandbox sessions: create, exec, clone, files, artifacts, etc.`,
+	Long:  `Manage sandboxs: create, exec, clone, files, artifacts, etc.`,
 }
 
 // Command is exported for initialization.
@@ -223,10 +223,10 @@ func remoteList(ctx pictx.Context, method, endpoint string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-// createCmd creates a new sandbox session.
+// createCmd creates a new sandbox.
 var createCmd = &cobra.Command{
 	Use:   "create [name] [template]",
-	Short: "Create a new sandbox session",
+	Short: "Create a new sandbox",
 	Args:  cobra.MaximumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		name := "default"
@@ -288,10 +288,10 @@ func init() {
 	createCmd.Flags().StringP("mode", "m", "fast", "Runtime mode: fast, compat, secure")
 }
 
-// listCmd lists sandbox sessions.
+// listCmd lists sandboxs.
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List sandbox sessions",
+	Short: "List sandboxs",
 	Run: func(cmd *cobra.Command, args []string) {
 		sandboxes, err := callAPIList("GET", "/v1/sandboxes")
 		if err != nil {
@@ -304,10 +304,10 @@ var listCmd = &cobra.Command{
 	},
 }
 
-// inspectCmd inspects a sandbox session.
+// inspectCmd inspects a sandbox.
 var inspectCmd = &cobra.Command{
 	Use:   "inspect <name>",
-	Short: "Inspect a sandbox session",
+	Short: "Inspect a sandbox",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		result, err := callAPI("GET", "/v1/sandboxes/"+args[0], nil)
@@ -320,10 +320,10 @@ var inspectCmd = &cobra.Command{
 	},
 }
 
-// destroyCmd destroys a sandbox session.
+// destroyCmd destroys a sandbox.
 var destroyCmd = &cobra.Command{
 	Use:   "destroy [<name>]",
-	Short: "Destroy a sandbox session",
+	Short: "Destroy a sandbox",
 	Args:  cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
 		all, _ := cmd.Flags().GetBool("all")

@@ -520,10 +520,10 @@ select:focus-visible {
 .onboarding-panel,
 .authorization-panel,
 .create-panel,
-.sessions-panel,
+.Sandboxs-panel,
 .operations-panel,
 .diagnostics-panel,
-.recent-sessions-panel {
+.recent-Sandboxs-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(14, 15, 17, 0.92);
@@ -620,10 +620,10 @@ select:focus-visible {
 .onboarding-panel,
 .authorization-panel,
 .create-panel,
-.sessions-panel,
+.Sandboxs-panel,
 .operations-panel,
 .diagnostics-panel,
-.recent-sessions-panel {
+.recent-Sandboxs-panel {
   padding: 18px;
 }
 
@@ -636,7 +636,7 @@ select:focus-visible {
   padding: 14px 18px;
 }
 
-.sessions-panel {
+.Sandboxs-panel {
   grid-row: auto;
 }
 
@@ -660,7 +660,7 @@ select:focus-visible {
 }
 
 .choice-row,
-.session-row,
+.Sandbox-row,
 .metric-row {
   width: 100%;
   border-radius: 7px;
@@ -828,19 +828,19 @@ select:focus-visible {
   margin-top: 16px;
 }
 
-.session-list {
+.Sandbox-list {
   display: grid;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
 }
 
-.dashboard-sessions-panel .session-list {
+.dashboard-Sandboxs-panel .Sandbox-list {
   max-height: 286px;
   overflow-y: auto;
 }
 
-.session-row {
+.Sandbox-row {
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr) auto 18px;
   align-items: center;
@@ -852,19 +852,19 @@ select:focus-visible {
   text-align: left;
 }
 
-.session-row:last-child {
+.Sandbox-row:last-child {
   border-bottom: 0;
 }
 
-.session-row.selected {
+.Sandbox-row.selected {
   background: var(--blue-soft);
 }
 
-.session-row.active {
+.Sandbox-row.active {
   background: #12151a;
 }
 
-.session-row > svg {
+.Sandbox-row > svg {
   color: var(--quiet);
 }
 
@@ -873,7 +873,7 @@ select:focus-visible {
   color: var(--muted);
 }
 
-.session-icon {
+.Sandbox-icon {
   display: grid;
   place-items: center;
   width: 36px;
@@ -883,19 +883,19 @@ select:focus-visible {
   color: var(--blue);
 }
 
-.session-main {
+.Sandbox-main {
   min-width: 0;
 }
 
-.session-main strong,
-.session-main span {
+.Sandbox-main strong,
+.Sandbox-main span {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.session-main span {
+.Sandbox-main span {
   margin-top: 4px;
   color: var(--muted);
   font-size: 12px;
@@ -1346,20 +1346,20 @@ select:focus-visible {
     grid-column: auto;
   }
 
-  .session-row {
+  .Sandbox-row {
     grid-template-columns: 42px minmax(0, 1fr);
   }
 
-  .session-row > svg,
+  .Sandbox-row > svg,
   .state-pill {
     grid-column: 2;
     justify-self: start;
   }
 }
 
-/* ─── Session Detail View ─────────────────────────────────────────────────── */
+/* ─── Sandbox Detail View ─────────────────────────────────────────────────── */
 
-.session-detail {
+.Sandbox-detail {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -1369,7 +1369,7 @@ select:focus-visible {
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
 }
 
-.session-detail-header {
+.Sandbox-detail-header {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -1377,7 +1377,7 @@ select:focus-visible {
   border-bottom: 1px solid var(--line);
 }
 
-.session-detail-header h2 {
+.Sandbox-detail-header h2 {
   margin: 0;
   font-size: 20px;
   display: flex;
@@ -1385,20 +1385,20 @@ select:focus-visible {
   gap: 10px;
 }
 
-.session-id {
+.Sandbox-id {
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: 13px;
   color: var(--quiet);
   font-weight: 400;
 }
 
-.session-detail-header p {
+.Sandbox-detail-header p {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 13px;
 }
 
-.session-detail-actions {
+.Sandbox-detail-actions {
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -1420,7 +1420,7 @@ select:focus-visible {
   color: var(--text);
 }
 
-.session-tabs {
+.Sandbox-tabs {
   display: flex;
   gap: 2px;
   padding: 0 16px;
@@ -1428,7 +1428,7 @@ select:focus-visible {
   overflow-x: auto;
 }
 
-.session-tab {
+.Sandbox-tab {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1442,16 +1442,16 @@ select:focus-visible {
   white-space: nowrap;
 }
 
-.session-tab.active {
+.Sandbox-tab.active {
   color: var(--text);
   border-bottom-color: var(--blue);
 }
 
-.session-tab:hover {
+.Sandbox-tab:hover {
   color: var(--text);
 }
 
-.session-tab-content {
+.Sandbox-tab-content {
   padding: 22px;
   overflow-y: auto;
   flex: 1;
@@ -2345,28 +2345,28 @@ select:focus-visible {
     grid-column: auto;
   }
 
-  .session-row {
+  .Sandbox-row {
     grid-template-columns: 42px minmax(0, 1fr);
   }
 
-  .session-row > svg,
+  .Sandbox-row > svg,
   .state-pill {
     grid-column: 2;
     justify-self: start;
   }
 
-  .session-detail-header {
+  .Sandbox-detail-header {
     flex-wrap: wrap;
   }
 
-  .session-detail-actions {
+  .Sandbox-detail-actions {
     width: 100%;
     justify-content: flex-end;
     margin-left: 0;
     margin-top: 8px;
   }
 
-  .session-tabs {
+  .Sandbox-tabs {
     flex-wrap: wrap;
   }
 
@@ -2500,14 +2500,14 @@ body {
 .onboarding-panel,
 .authorization-panel,
 .create-panel,
-.sessions-panel,
+.Sandboxs-panel,
 .operations-panel,
 .diagnostics-panel,
-.recent-sessions-panel,
+.recent-Sandboxs-panel,
 .policy-summary-card,
 .policy-card,
 .settings-section,
-.session-detail {
+.Sandbox-detail {
   box-shadow: var(--shadow-soft);
 }
 
@@ -2544,7 +2544,7 @@ body {
 }
 
 .dashboard-lower-grid,
-.sessions-workbench {
+.Sandboxs-workbench {
   display: grid;
   grid-template-columns: minmax(280px, 0.46fr) minmax(0, 1fr);
   gap: 16px;
@@ -2552,16 +2552,16 @@ body {
   padding: 0 30px 30px;
 }
 
-.sessions-workbench {
+.Sandboxs-workbench {
   padding-top: 24px;
 }
 
-.session-row {
+.Sandbox-row {
   grid-template-columns: 38px minmax(0, 1fr) auto 18px;
   gap: 12px;
 }
 
-.session-icon {
+.Sandbox-icon {
   width: 36px;
   height: 36px;
 }
@@ -2572,17 +2572,17 @@ body {
   font-size: 11px;
 }
 
-.session-detail-header {
+.Sandbox-detail-header {
   padding: 14px 18px;
 }
 
-.session-detail-header h2 {
+.Sandbox-detail-header h2 {
   max-width: 420px;
   overflow-wrap: anywhere;
   font-size: 17px;
 }
 
-.session-tab-content {
+.Sandbox-tab-content {
   padding: 18px;
 }
 
@@ -2662,7 +2662,7 @@ body {
   }
 
   .dashboard-lower-grid,
-  .sessions-workbench {
+  .Sandboxs-workbench {
     grid-template-columns: 1fr;
     padding: 0 24px 24px;
   }
@@ -2678,7 +2678,7 @@ body {
   }
 
   .dashboard-lower-grid,
-  .sessions-workbench {
+  .Sandboxs-workbench {
     padding: 0 16px 16px;
   }
 }
@@ -2690,7 +2690,7 @@ body {
   grid-template-areas:
     "command command"
     "status status"
-    "sessions pulse"
+    "Sandboxs pulse"
     "recent diagnostics";
   align-items: start;
   max-width: 1240px;
@@ -2746,29 +2746,29 @@ body {
   grid-area: pulse;
 }
 
-.dashboard-grid .dashboard-sessions-panel {
-  grid-area: sessions;
+.dashboard-grid .dashboard-Sandboxs-panel {
+  grid-area: Sandboxs;
 }
 
 .dashboard-grid .diagnostics-panel {
   grid-area: diagnostics;
 }
 
-.dashboard-grid .recent-sessions-panel {
+.dashboard-grid .recent-Sandboxs-panel {
   grid-area: recent;
 }
 
 .dashboard-grid .onboarding-panel,
-.dashboard-grid .dashboard-sessions-panel,
+.dashboard-grid .dashboard-Sandboxs-panel,
 .dashboard-grid .diagnostics-panel,
-.dashboard-grid .recent-sessions-panel {
+.dashboard-grid .recent-Sandboxs-panel {
   border-color: #20242a;
   background: rgba(10, 11, 12, 0.86);
   box-shadow: none;
   padding: 16px;
 }
 
-.dashboard-grid .dashboard-sessions-panel {
+.dashboard-grid .dashboard-Sandboxs-panel {
   min-height: 0;
 }
 
@@ -2799,33 +2799,33 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.055);
 }
 
-.dashboard-grid .session-list {
+.dashboard-grid .Sandbox-list {
   border-color: #20242a;
   background: #0b0c0d;
 }
 
-.dashboard-grid .dashboard-sessions-panel .session-list {
+.dashboard-grid .dashboard-Sandboxs-panel .Sandbox-list {
   max-height: 420px;
 }
 
-.dashboard-grid .session-row {
+.dashboard-grid .Sandbox-row {
   grid-template-columns: 36px minmax(0, 1fr) auto 18px;
   min-height: 58px;
   background: #101216;
   padding: 11px;
 }
 
-.dashboard-grid .session-row.active {
+.dashboard-grid .Sandbox-row.active {
   background:
     linear-gradient(90deg, rgba(217, 163, 74, 0.08), transparent 34%),
     #101216;
 }
 
-.dashboard-grid .session-row:hover {
+.dashboard-grid .Sandbox-row:hover {
   background: #151820;
 }
 
-.dashboard-grid .session-icon {
+.dashboard-grid .Sandbox-icon {
   width: 32px;
   height: 32px;
 }
@@ -2862,7 +2862,7 @@ body {
     grid-template-areas:
       "command"
       "status"
-      "sessions"
+      "Sandboxs"
       "pulse"
       "diagnostics"
       "recent";
@@ -2884,7 +2884,7 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .dashboard-grid .session-row {
+  .dashboard-grid .Sandbox-row {
     grid-template-columns: 34px minmax(0, 1fr);
   }
 }
@@ -3394,13 +3394,13 @@ body {
   border: 0;
 }
 
-.dashboard-grid .session-row.active {
+.dashboard-grid .Sandbox-row.active {
   background:
     linear-gradient(90deg, rgba(217, 163, 74, 0.08), transparent 30%),
     #101216;
 }
 
-.session-state-gate {
+.Sandbox-state-gate {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3413,18 +3413,18 @@ body {
   font-weight: 700;
 }
 
-.session-state-gate.ready {
+.Sandbox-state-gate.ready {
   border-color: rgba(52, 211, 153, 0.24);
   color: var(--green);
 }
 
-.session-state-gate.locked {
+.Sandbox-state-gate.locked {
   border-color: rgba(217, 163, 74, 0.28);
   color: var(--amber);
 }
 
-.session-tab-content input:disabled,
-.session-tab-content select:disabled {
+.Sandbox-tab-content input:disabled,
+.Sandbox-tab-content select:disabled {
   cursor: not-allowed;
   opacity: 0.58;
 }
@@ -3668,10 +3668,10 @@ button:not(:disabled):active {
 .onboarding-panel,
 .authorization-panel,
 .create-panel,
-.sessions-panel,
+.Sandboxs-panel,
 .operations-panel,
 .diagnostics-panel,
-.recent-sessions-panel,
+.recent-Sandboxs-panel,
 .policy-summary-card,
 .policy-card,
 .settings-section,
@@ -3679,7 +3679,7 @@ button:not(:disabled):active {
 .context-card,
 .contexts-list-panel,
 .context-editor-panel,
-.session-detail {
+.Sandbox-detail {
   border-color: #23272d;
   background: rgba(12, 13, 15, 0.94);
   box-shadow: none;
@@ -3730,32 +3730,32 @@ button:not(:disabled):active {
   font-size: 14px;
 }
 
-.session-list,
+.Sandbox-list,
 .policy-table,
 .doctor-signal-list {
   border-color: #23272d;
 }
 
-.session-row {
+.Sandbox-row {
   min-height: 54px;
   background: #0f1114;
   padding: 10px;
 }
 
-.session-row:hover {
+.Sandbox-row:hover {
   background: #141821;
 }
 
-.session-icon {
+.Sandbox-icon {
   width: 32px;
   height: 32px;
 }
 
-.session-main strong {
+.Sandbox-main strong {
   font-size: 13px;
 }
 
-.session-main span {
+.Sandbox-main span {
   font-size: 11px;
 }
 
@@ -3886,37 +3886,37 @@ button:not(:disabled):active {
   font-size: 11px;
 }
 
-.session-detail {
+.Sandbox-detail {
   min-height: calc(100vh - 112px);
 }
 
-.session-detail-header {
+.Sandbox-detail-header {
   min-height: 58px;
   padding: 12px 16px;
 }
 
-.session-detail-header h2 {
+.Sandbox-detail-header h2 {
   font-size: 15px;
 }
 
-.session-id {
+.Sandbox-id {
   font-size: 11px;
 }
 
-.session-tabs {
+.Sandbox-tabs {
   padding: 0 10px;
 }
 
-.session-tab {
+.Sandbox-tab {
   padding: 10px 12px;
   font-size: 12px;
 }
 
-.session-tab-content {
+.Sandbox-tab-content {
   padding: 16px;
 }
 
-.session-state-gate {
+.Sandbox-state-gate {
   margin: 10px 16px 0;
   border-radius: 6px;
   padding: 8px 10px;
@@ -4022,11 +4022,11 @@ button:not(:disabled):active {
     grid-template-columns: 1fr;
   }
 
-  .session-detail {
+  .Sandbox-detail {
     min-height: 0;
   }
 
-  .session-detail-actions {
+  .Sandbox-detail-actions {
     justify-content: flex-start;
   }
 

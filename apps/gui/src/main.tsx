@@ -74,7 +74,7 @@ const NETWORK_MODES = ["restricted", "none", "open"];
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: Command, view: "dashboard" },
-  { label: "Sessions", icon: MonitorPlay, view: "sessions" },
+  { label: "Sandboxes", icon: MonitorPlay, view: "sandboxes" },
   { label: "Templates", icon: Layers3, view: "templates" },
   { label: "Contexts", icon: Network, view: "contexts" },
   { label: "Policies", icon: ShieldCheck, view: "policies" },
@@ -494,11 +494,11 @@ function DashboardView({
   runtimeInfo: RuntimeInfo | null;
   onSelectSession: (id: string) => void;
 }) {
-  const readySessions = sessions.filter((s) => s.state === "WARM" || s.state === "EXECUTING");
-  const warmSessions = sessions.filter((s) => s.state === "WARM");
-  const executingSessions = sessions.filter((s) => s.state === "EXECUTING");
+  const readySandboxes = sessions.filter((s) => s.state === "WARM" || s.state === "EXECUTING");
+  const warmSandboxes = sessions.filter((s) => s.state === "WARM");
+  const executingSandboxes = sessions.filter((s) => s.state === "EXECUTING");
   const availableBackends = runtimeInfo?.available.length ?? 0;
-  const recentSessions = [...sessions].sort((a, b) => {
+  const recentSandboxes = [...sessions].sort((a, b) => {
     const aTime = new Date(a.last_used || a.updated_at || a.created_at || 0).getTime();
     const bTime = new Date(b.last_used || b.updated_at || b.created_at || 0).getTime();
     return bTime - aTime;
@@ -511,7 +511,7 @@ function DashboardView({
           <span className="eyebrow">Dashboard</span>
           <h2>Sandbox control</h2>
           <p>
-            {warmSessions.length} ready · {executingSessions.length} executing · {sessions.length} total · best runtime {runtimeInfo?.best || "unknown"}
+            {warmSandboxes.length} ready · {executingSandboxes.length} executing · {sessions.length} total · best runtime {runtimeInfo?.best || "unknown"}
           </p>
         </div>
       </section>
@@ -534,8 +534,8 @@ function DashboardView({
         </div>
         <div>
           <MonitorPlay size={17} />
-          <span>Sessions</span>
-          <strong>{systemStatus?.active_sandboxes ?? readySessions.length}</strong>
+          <span>Sandboxes</span>
+          <strong>{systemStatus?.active_sandboxes ?? readySandboxes.length}</strong>
         </div>
       </section>
 
@@ -552,7 +552,7 @@ function DashboardView({
         <div className="metric-row">
           <MonitorPlay size={18} />
           <span>Ready sessions</span>
-          <strong>{readySessions.length}</strong>
+          <strong>{readySandboxes.length}</strong>
         </div>
         <div className="metric-row">
           <Gauge size={18} />
@@ -564,16 +564,16 @@ function DashboardView({
       <section className="sessions-panel dashboard-sessions-panel">
         <div className="section-heading">
           <h3>Ready sessions</h3>
-          <span>{warmSessions.length} warm · {executingSessions.length} executing · {sessions.length} total</span>
+          <span>{warmSandboxes.length} warm · {executingSandboxes.length} executing · {sessions.length} total</span>
         </div>
         <div className="session-list">
-          {readySessions.length === 0 ? (
+          {readySandboxes.length === 0 ? (
             <div className="empty-state dashboard-empty">
               <MonitorPlay size={22} />
               <strong>No live sessions</strong>
               <span>Create a sandbox to start a warm workbench session.</span>
             </div>
-          ) : readySessions.map((session) => (
+          ) : readySandboxes.map((session) => (
             <button
               className="session-row active"
               key={session.id}
@@ -633,14 +633,14 @@ function DashboardView({
         </div>
       </section>
 
-      {recentSessions.length > 0 && (
+      {recentSandboxes.length > 0 && (
         <section className="recent-sessions-panel">
           <div className="section-heading">
             <h3>Recent sessions</h3>
             <span>Last activity</span>
           </div>
           <div className="session-list">
-            {recentSessions.map((session) => (
+            {recentSandboxes.map((session) => (
               <button
                 className="session-row"
                 key={session.id}
@@ -1889,7 +1889,7 @@ function PoliciesView({
   activeContext,
   sessions,
   onOpenSettings,
-  onOpenSessions
+  onOpenSandboxes
 }: {
   defaults: GUIDefaults;
   allowedFolders: string[];
@@ -1900,9 +1900,9 @@ function PoliciesView({
   activeContext: string;
   sessions: SandboxInfo[];
   onOpenSettings: () => void;
-  onOpenSessions: () => void;
+  onOpenSandboxes: () => void;
 }) {
-  const activeSessions = sessions.filter((s) => s.state === "WARM" || s.state === "EXECUTING");
+  const activeSandboxes = sessions.filter((s) => s.state === "WARM" || s.state === "EXECUTING");
   const doctorErrors = doctorResult?.issues.filter((issue) => issue.level === "error").length ?? 0;
   const doctorWarnings = doctorResult?.issues.filter((issue) => issue.level === "warning").length ?? 0;
 
@@ -1944,7 +1944,7 @@ function PoliciesView({
     {
       group: "Session lifecycle",
       wired: "create, list, inspect, destroy",
-      surface: "Dashboard, Sessions",
+      surface: "Dashboard, Sandboxes",
       status: "wired"
     },
     {
@@ -1992,9 +1992,9 @@ function PoliciesView({
             <Settings size={15} />
             Settings
           </button>
-          <button onClick={onOpenSessions}>
+          <button onClick={onOpenSandboxes}>
             <MonitorPlay size={15} />
-            Sessions
+            Sandboxes
           </button>
         </div>
       </section>
@@ -2018,7 +2018,7 @@ function PoliciesView({
         </div>
         <div>
           <span>Active</span>
-          <strong>{systemStatus?.active_sandboxes ?? activeSessions.length} sandbox(es)</strong>
+          <strong>{systemStatus?.active_sandboxes ?? activeSandboxes.length} sandbox(es)</strong>
         </div>
       </section>
 
@@ -2362,7 +2362,7 @@ function App() {
   const [daemonBearerToken, setDaemonBearerToken] = useState("");
   const [connection, setConnection] = useState<ConnectionState>("checking");
   const [health, setHealth] = useState<string>("checking");
-  const [sessions, setSessions] = useState<SandboxInfo[]>([]);
+  const [sessions, setSandboxes] = useState<SandboxInfo[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [isBusy, setIsBusy] = useState(false);
@@ -2447,7 +2447,7 @@ function App() {
       ]);
 
       if (sandboxList.status === "fulfilled") {
-        setSessions(sandboxList.value);
+        setSandboxes(sandboxList.value);
         if (!selectedId && sandboxList.value.length > 0) {
           setSelectedId(sandboxList.value[0].id);
         }
@@ -2476,7 +2476,7 @@ function App() {
       }
       lastConnectionRef.current = "disconnected";
       setHealth("offline");
-      setSessions([]);
+      setSandboxes([]);
       const msg = err instanceof Error ? err.message : "Unable to connect to daemon";
       setError(msg);
       setLastError(msg);
@@ -2714,12 +2714,12 @@ function App() {
           />
         )}
 
-        {/* ── Sessions view ──────────────────────────────────────────────── */}
+        {/* ── Sandboxes view ──────────────────────────────────────────────── */}
         {activeView === "sessions" && (
           <div className="sessions-workbench">
             <section className="sessions-panel">
               <div className="section-heading">
-                <h3>Sessions</h3>
+                <h3>Sandboxes</h3>
                 <button onClick={refresh}>Refresh</button>
               </div>
               <div className="session-list">
@@ -2802,7 +2802,7 @@ function App() {
             activeContext={activeContext}
             sessions={sessions}
             onOpenSettings={() => setActiveView("settings")}
-            onOpenSessions={() => setActiveView("sessions")}
+            onOpenSandboxes={() => setActiveView("sessions")}
           />
         )}
 

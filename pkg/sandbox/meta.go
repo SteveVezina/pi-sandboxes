@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// State represents the lifecycle state of a sandbox session.
+// State represents the lifecycle state of a sandbox.
 type State string
 
 const (
@@ -17,7 +17,7 @@ const (
 	StateDestroyed  State = "DESTROYED"
 )
 
-// Meta is the persistent metadata for a sandbox session.
+// Meta is the persistent metadata for a sandbox.
 type Meta struct {
 	ID             string    `json:"id"`
 	Name           string    `json:"name"`
@@ -36,7 +36,7 @@ type Meta struct {
 	Snapshots      []string  `json:"snapshots"`
 }
 
-// NewMeta creates a new session metadata with default values.
+// NewMeta creates a new sandbox metadata with default values.
 func NewMeta(name, template, mode string) *Meta {
 	return &Meta{
 		ID:            uuid.New().String(),
@@ -46,6 +46,7 @@ func NewMeta(name, template, mode string) *Meta {
 		State:         StateCreating,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
+		LastUsedAt:    time.Now(),
 		TTL:           7200, // default 2 hours
 		WorkspaceMode: "copy",
 		Snapshots:     []string{},

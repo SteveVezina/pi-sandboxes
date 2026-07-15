@@ -117,7 +117,7 @@ func TestStore_List(t *testing.T) {
 		t.Fatalf("List failed: %v", err)
 	}
 	if len(ids) != 2 {
-		t.Errorf("Expected 2 sessions, got %d", len(ids))
+		t.Errorf("Expected 2 sandboxes, got %d", len(ids))
 	}
 
 	// Verify both IDs are in the list
@@ -150,13 +150,13 @@ func TestStore_Delete(t *testing.T) {
 	// Verify directory removed
 	dir := filepath.Join(tmpDir, id)
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
-		t.Fatal("Session directory not removed after Delete")
+		t.Fatal("Sandbox directory not removed after Delete")
 	}
 
 	// Verify Get fails
 	_, err = store.Get(id)
 	if err == nil {
-		t.Fatal("Expected error for deleted session, got nil")
+		t.Fatal("Expected error for deleted sandbox, got nil")
 	}
 }
 

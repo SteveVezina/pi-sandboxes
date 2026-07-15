@@ -7,7 +7,7 @@ import (
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
-func TestTTLChecker_ExpiresSession(t *testing.T) {
+func TestTTLChecker_ExpiresSandbox(t *testing.T) {
 	tmpDir := t.TempDir()
 	store := sandbox.NewStore(tmpDir)
 
@@ -18,7 +18,7 @@ func TestTTLChecker_ExpiresSession(t *testing.T) {
 	// Let the checker tick once so it's settled
 	time.Sleep(600 * time.Millisecond)
 
-	// Create session with 1s TTL
+	// Create sandbox with 1s TTL
 	id, err := store.Create("test-box", "node-python", "fast")
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
@@ -32,7 +32,7 @@ func TestTTLChecker_ExpiresSession(t *testing.T) {
 	// Wait for TTL check to run (1s TTL + buffer)
 	time.Sleep(2 * time.Second)
 
-	// Session should be transitioning to destroying
+	// Sandbox should be transitioning to destroying
 	meta, err := store.Get(id)
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)

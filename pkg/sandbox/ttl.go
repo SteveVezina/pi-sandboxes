@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// TTLChecker runs a background goroutine that checks for expired sessions.
+// TTLChecker runs a background goroutine that checks for expired sandboxes.
 type TTLChecker struct {
 	store    *Store
 	interval time.Duration
@@ -52,14 +52,14 @@ func (c *TTLChecker) run() {
 func (c *TTLChecker) check() {
 	ids, err := c.store.List()
 	if err != nil {
-		log.Printf("session: list sessions for TTL check: %v", err)
+		log.Printf("sandbox: list sandboxes for TTL check: %v", err)
 		return
 	}
 
 	for _, id := range ids {
 		meta, err := c.store.Get(id)
 		if err != nil {
-			log.Printf("session: get session %s for TTL check: %v", id, err)
+			log.Printf("sandbox: get sandbox %s for TTL check: %v", id, err)
 			continue
 		}
 
@@ -70,7 +70,7 @@ func (c *TTLChecker) check() {
 
 		expiry := meta.LastUsedAt.Add(time.Duration(meta.TTL) * time.Second)
 		if time.Now().After(expiry) {
-			log.Printf("session: TTL expired for %s (last used: %s)", id, meta.LastUsedAt.Format(time.RFC3339))
+			log.Printf("sandbox: TTL expired for %s (last used: %s)", id, meta.LastUsedAt.Format(time.RFC3339))
 			// Transition to destroying (idempotent from any state)
 			_ = c.store.UpdateState(id, StateDestroying)
 		}

@@ -9,13 +9,13 @@ import (
 	"time"
 )
 
-// Store manages session metadata persistence.
+// Store manages sandbox metadata persistence.
 type Store struct {
 	root string
 	mu   sync.RWMutex
 }
 
-// NewStore creates a new session store at the given root directory.
+// NewStore creates a new sandbox store at the given root directory.
 func NewStore(root string) *Store {
 	return &Store{root: root}
 }
@@ -30,20 +30,20 @@ func (s *Store) sandboxDir(id string) string {
 	return filepath.Join(s.root, id)
 }
 
-// metaPath returns the path to meta.json for a session.
+// metaPath returns the path to meta.json for a sandbox.
 func (s *Store) metaPath(id string) string {
 	return filepath.Join(s.sandboxDir(id), "meta.json")
 }
 
-// Create creates a new session and persists its metadata.
-// Returns the session ID.
+// Create creates a new sandbox and persists its metadata.
+// Returns the sandbox ID.
 func (s *Store) Create(name, template, mode string) (string, error) {
 	return s.CreateWithOptions(CreateOptions{
 		Name: name, Template: template, Mode: mode,
 	})
 }
 
-// CreateOptions contains optional metadata persisted at session creation.
+// CreateOptions contains optional metadata persisted at sandbox creation.
 type CreateOptions struct {
 	Name          string
 	Template      string
@@ -57,7 +57,7 @@ type CreateOptions struct {
 	TTL            int
 }
 
-// CreateWithOptions creates a new session and persists its metadata.
+// CreateWithOptions creates a new sandbox and persists its metadata.
 func (s *Store) CreateWithOptions(opts CreateOptions) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -77,7 +77,7 @@ func (s *Store) CreateWithOptions(opts CreateOptions) (string, error) {
 
 	dir := s.sandboxDir(meta.ID)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("create session dir: %w", err)
+		return "", fmt.Errorf("create sandbox dir: %w", err)
 	}
 
 	data, err := json.Marshal(meta)
@@ -92,7 +92,7 @@ func (s *Store) CreateWithOptions(opts CreateOptions) (string, error) {
 	return meta.ID, nil
 }
 
-// Get retrieves session metadata by ID.
+// Get retrieves sandbox metadata by ID.
 func (s *Store) Get(id string) (*Meta, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -100,7 +100,7 @@ func (s *Store) Get(id string) (*Meta, error) {
 	metaPath := s.metaPath(id)
 	data, err := os.ReadFile(metaPath)
 	if err != nil {
-		return nil, fmt.Errorf("session %s not found: %w", id, err)
+		return nil, fmt.Errorf("sandbox %s not found: %w", id, err)
 	}
 
 	var meta Meta
@@ -111,7 +111,7 @@ func (s *Store) Get(id string) (*Meta, error) {
 	return &meta, nil
 }
 
-// UpdateState updates the state of a session.
+// UpdateState updates the state of a sandbox.
 func (s *Store) UpdateState(id string, state State) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -127,7 +127,7 @@ func (s *Store) UpdateState(id string, state State) error {
 	return s.save(id, meta)
 }
 
-// UpdateTTL updates the TTL for a session.
+// UpdateTTL updates the TTL for a sandbox.
 func (s *Store) UpdateTTL(id string, ttl int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -159,7 +159,7 @@ func (s *Store) UpdateLastUsed(id string) error {
 	return s.save(id, meta)
 }
 
-// List returns all session IDs.
+// List returns all sandbox IDs.
 func (s *Store) List() ([]string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -190,8 +190,8 @@ func (s *Store) List() ([]string, error) {
 	return ids, nil
 }
 
-// Delete removes a session's metadata directory.
-// This is idempotent — calling on a non-existent session returns nil.
+// Delete removes a sandbox's metadata directory.
+// This is idempotent — calling on a non-existent sandbox returns nil.
 func (s *Store) Delete(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -204,11 +204,11 @@ func (s *Store) Delete(id string) error {
 	return os.RemoveAll(dir)
 }
 
-// load reads and parses metadata for a session. Caller must hold lock.
+// load reads and parses metadata for a sandbox. Caller must hold lock.
 func (s *Store) load(id string) (*Meta, error) {
 	data, err := os.ReadFile(s.metaPath(id))
 	if err != nil {
-		return nil, fmt.Errorf("session %s not found: %w", id, err)
+		return nil, fmt.Errorf("sandbox %s not found: %w", id, err)
 	}
 
 	var meta Meta

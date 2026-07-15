@@ -7,10 +7,10 @@ import (
 	"regexp"
 )
 
-// sessionIDRegex matches UUID-style session IDs.
-var sessionIDRegex = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+// sandboxIDRegex matches UUID-style sandbox IDs.
+var sandboxIDRegex = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
-// OrphanCleanup scans for sessions in non-terminal states with no
+// OrphanCleanup scans for sandboxes in non-terminal states with no
 // corresponding backend process and marks them as DESTROYED.
 func OrphanCleanup(store *Store, baseDir string) {
 	entries, err := os.ReadDir(baseDir)
@@ -18,7 +18,7 @@ func OrphanCleanup(store *Store, baseDir string) {
 		if os.IsNotExist(err) {
 			return
 		}
-		log.Printf("session: orphan cleanup: read base dir: %v", err)
+		log.Printf("sandbox: orphan cleanup: read base dir: %v", err)
 		return
 	}
 
@@ -29,8 +29,8 @@ func OrphanCleanup(store *Store, baseDir string) {
 
 		id := entry.Name()
 
-		// Skip non-session directories (e.g., var, temp, etc.)
-		if !sessionIDRegex.MatchString(id) {
+		// Skip non-sandbox directories (e.g., var, temp, etc.)
+		if !sandboxIDRegex.MatchString(id) {
 			continue
 		}
 
@@ -41,7 +41,7 @@ func OrphanCleanup(store *Store, baseDir string) {
 				// Skip missing metadata
 				continue
 			}
-			log.Printf("session: orphan cleanup: get session %s: %v", id, err)
+			log.Printf("sandbox: orphan cleanup: get sandbox %s: %v", id, err)
 			continue
 		}
 
@@ -51,9 +51,9 @@ func OrphanCleanup(store *Store, baseDir string) {
 		}
 
 		// Mark as destroyed (workspace/artifacts preserved)
-		log.Printf("session: orphan cleanup: marking %s (%s) as DESTROYED", id, meta.Name)
+		log.Printf("sandbox: orphan cleanup: marking %s (%s) as DESTROYED", id, meta.Name)
 		if err := store.UpdateState(id, StateDestroyed); err != nil {
-			log.Printf("session: orphan cleanup: update state for %s: %v", id, err)
+			log.Printf("sandbox: orphan cleanup: update state for %s: %v", id, err)
 		}
 	}
 }

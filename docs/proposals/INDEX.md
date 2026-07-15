@@ -23,6 +23,7 @@ Track all PROP (spec amendment proposals) for this project.
 | [PROP-005](PROP-005-pi-box-home.md) | Move Pi Box Home Out of `~/.pi` | ✅ Applied to block spec | Moves sandbox runtime default state root to `~/.pi-box` to avoid Pi coding agent collisions | 2026-07-15 |
 | [PROP-006](PROP-006-local-template-library.md) | Add Local Template Library and Lifecycle | 🟡 Proposed | Adds later F28/AC-31 for rich template metadata, local fork/snapshot/import/export/history/diff/rollback/promote workflows, and GUI template management | 2026-07-15 |
 | [PROP-007](PROP-007-image-resolution.md) | Resolve Template `base` Field to OCI Image Name | ✅ Applied to block spec (2026-07-15) | Fixes compat mode sandbox creation — template `base: debian-slim` must resolve to `docker.io/library/debian:bookworm-slim` before container creation | 2026-07-15 |
+| [PROP-008](PROP-008-runtime-driver-contract.md) | Formal Runtime Driver Contract and Shared OCI Engine | 🟡 Proposed | Replaces metadata-only runtime interface with lifecycle driver contract, capability reports, shared OCI engine for compat/secure, explicit no-downgrade fallback policy; fixes 13 verified backend defects | 2026-07-14 |
 
 ## Rules
 

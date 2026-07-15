@@ -13,25 +13,14 @@ import (
 
 func TestExecSandboxDebug(t *testing.T) {
 	store, _ := newTestStore(t)
-
-	// Create a sandbox
-	reqBody := `{"name":"exec-test","template":"base","mode":"fast"}`
-	req := httptest.NewRequest("POST", "/v1/sandboxes", bytes.NewBufferString(reqBody))
-	w := httptest.NewRecorder()
-	api.CreateSandbox(store)(w, req)
-
-	t.Logf("Create response: %d %s", w.Code, w.Body.String())
-
-	var createResp map[string]string
-	json.NewDecoder(w.Body).Decode(&createResp)
-	id := createResp["id"]
+	id := makeWarmExecSandbox(t, store, "exec-test")
 	t.Logf("Sandbox ID: %s", id)
 
 	// Execute via router - use /tmp as working directory
 	execBody := `{"command":"echo hello world","cwd":"/tmp","timeoutMs":5000}`
-	req = httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(execBody))
+	req := httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(execBody))
 	router := daemon.NewRouter(store)
-	w = httptest.NewRecorder()
+	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
 	t.Logf("Exec response: %d %s", w.Code, w.Body.String())

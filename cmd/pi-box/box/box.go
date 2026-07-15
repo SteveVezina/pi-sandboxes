@@ -263,8 +263,17 @@ var createCmd = &cobra.Command{
 			if strings.Contains(errMsg, "container creation failed") {
 				fmt.Fprintf(os.Stderr, "error: %s\n", errMsg)
 				if strings.Contains(errMsg, "mounts denied") || strings.Contains(errMsg, "not shared") {
-					fmt.Fprintln(os.Stderr, "\nDocker Desktop on macOS needs /workspace in File Sharing:")
-					fmt.Fprintln(os.Stderr, "  Docker → Preferences → Resources → File Sharing → add /workspace")
+					// Extract the failing path from the error message
+					failingPath := "/workspace"
+					if idx := strings.Index(errMsg, "The path "); idx >= 0 {
+						start := idx + len("The path ")
+						end := strings.Index(errMsg[start:], " is not shared")
+						if end > 0 {
+							failingPath = errMsg[start : start+end]
+						}
+					}
+					fmt.Fprintf(os.Stderr, "\nDocker Desktop on macOS needs %s in File Sharing:\n", failingPath)
+					fmt.Fprintf(os.Stderr, "  Docker → Preferences → Resources → File Sharing → add %s\n", failingPath)
 				}
 				os.Exit(1)
 			}

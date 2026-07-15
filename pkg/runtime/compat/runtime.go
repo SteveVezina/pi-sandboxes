@@ -92,6 +92,13 @@ func Best() *DetectedRuntime {
 	return bestRuntime
 }
 
+// ResetDetection clears the cached runtime detection so tests can swap
+// PATH-provided runtimes.
+func ResetDetection() {
+	bestRuntimeOnce = sync.Once{}
+	bestRuntime = nil
+}
+
 // RuntimeStatus holds runtime availability and version info.
 type RuntimeStatus struct {
 	Name      string `json:"name"`

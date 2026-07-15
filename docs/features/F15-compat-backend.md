@@ -1,7 +1,7 @@
 # F4: Compat Backend
 
 > Source: `SPEC.md` §6 Features F4
-> Status: ⚠️ Needs re-verify *(2026-07-14: PROP-008 changes mount policy, lifecycle, limits, and engine layering — see ADR-005)*
+> Status: 🟡 Partially implemented (T15.2b, T15.2c remaining) *(2026-07-14: PROP-008 cascade — T15.2a shared OCI engine done)*
 > Category: Infrastructure
 
 ## Definition (from block spec)
@@ -129,23 +129,24 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Size:** S
 **Depends on:** None
 
-### T15.2a: Shared OCI engine extraction ⚠️ *(2026-07-14: split from T15.2 per PROP-008 — L task split before execution)*
+### T15.2a: Shared OCI engine extraction ✅ *(2026-07-14: done per PROP-008 — Docker/Podman share one CLIEngine)*
 
-**Description:** Extract the duplicated Docker/Podman CLI construction into a shared `pkg/runtime/oci` engine (EnsureImage/Create/Start/Exec/Inspect/Stop/Remove). Behavior-preserving refactor; compat becomes a thin driver over the engine.
+**Description:** Extract the duplicated Docker/Podman CLI construction into a shared `pkg/runtime/oci` engine. Behavior-preserving refactor; compat delegates to the engine.
 
 **Acceptance criteria:**
-- [ ] `oci.Engine` interface with `PodmanEngine` and `DockerEngine` implementations
-- [ ] Container created from template OCI image via `oci.Engine`
-- [ ] Runtime CLI creation fails instead of hanging indefinitely when the OCI runtime stalls
-- [ ] Docker/Podman argument construction exists in exactly one place per engine
-- [ ] Session ID never overwritten with runtime container ID (`Handle.RuntimeObjectID` carries the container ID)
+- [x] `oci.Engine` interface with Docker/Podman implementations (`oci.CLIEngine` — the two CLIs are argument-compatible; runtime-specific flags hang off `extraCreateArgs` for T15.2b)
+- [x] Container created from template OCI image via `oci.Engine`
+- [x] Runtime CLI creation fails instead of hanging indefinitely when the OCI runtime stalls
+- [x] Docker/Podman argument construction exists in exactly one place per operation (`oci/cli.go`)
+- [x] Session ID never overwritten with runtime container ID (`Container.RuntimeObjectID` carries the container ID)
 
 **Verification:**
-- [ ] `go build ./pkg/runtime/...`
-- [ ] Unit test: stalled runtime CLI creation times out
-- [ ] Existing compat integration tests pass unchanged
+- [x] `go build ./pkg/runtime/...` (darwin + GOOS=linux)
+- [x] Unit test: stalled runtime CLI creation times out (`tests/runtime/oci/engine_test.go`)
+- [x] Unit test: session ID preserved after creation (`tests/runtime/compat/identity_test.go`)
+- [x] Existing compat integration tests pass unchanged
 
-**Files:** `pkg/runtime/oci/engine.go`, `pkg/runtime/oci/podman.go`, `pkg/runtime/oci/docker.go`, `pkg/runtime/compat/create.go`
+**Files:** `pkg/runtime/oci/engine.go`, `pkg/runtime/oci/cli.go`, `pkg/runtime/compat/create.go`, `pkg/runtime/compat/exec.go`, `pkg/runtime/compat/lifecycle.go`
 **Size:** M
 **Depends on:** T15.1, T19.1 (driver contract)
 

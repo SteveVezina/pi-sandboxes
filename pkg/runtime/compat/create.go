@@ -5,11 +5,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
-	"strings"
 	"time"
+
+	"github.com/pi-sandbox/pi/pkg/runtime/oci"
 )
 
 var containerCommandTimeout = 2 * time.Minute
@@ -29,18 +28,45 @@ type ContainerSpec struct {
 }
 
 // Container represents a running OCI container.
+// ID is the stable session identity; RuntimeObjectID is the engine-owned
+// container ID. The session ID is never mutated after creation.
 type Container struct {
-	ID    string
-	Spec  *ContainerSpec
-	Ready bool
-	Host  string // host workspace dir (for bind mounts)
+	ID              string
+	RuntimeObjectID string
+	Spec            *ContainerSpec
+	Ready           bool
+	Host            string // host workspace dir (for bind mounts)
+}
+
+// Engine returns the shared OCI engine for the detected runtime.
+func Engine() (oci.Engine, error) {
+	rt := Best()
+	if rt == nil {
+		return nil, fmt.Errorf("no OCI runtime found (try installing Docker, Podman, runc)")
+	}
+	return engineFor(rt)
+}
+
+func engineFor(rt *DetectedRuntime) (oci.Engine, error) {
+	switch rt.Name {
+	case RuntimeDocker:
+		e := oci.NewDockerEngine(rt.Path)
+		e.Timeout = containerCommandTimeout
+		return e, nil
+	case RuntimePodman:
+		e := oci.NewPodmanEngine(rt.Path)
+		e.Timeout = containerCommandTimeout
+		return e, nil
+	default:
+		return nil, fmt.Errorf("unsupported runtime: %s", rt.Name)
+	}
 }
 
 // CreateContainer creates a hardened OCI container from the spec.
 func CreateContainer(spec *ContainerSpec) (*Container, error) {
-	rt := Best()
-	if rt == nil {
-		return nil, fmt.Errorf("no OCI runtime found (try installing Docker, Podman, runc)")
+	eng, err := Engine()
+	if err != nil {
+		return nil, err
 	}
 
 	// Validate spec
@@ -65,144 +91,25 @@ func CreateContainer(spec *ContainerSpec) (*Container, error) {
 		return nil, fmt.Errorf("cannot mount docker socket as workspace")
 	}
 
-	// Create the container using Docker/Podman CLI
-	if err := createContainerWithCLI(rt, spec); err != nil {
+	containerID, err := eng.Create(context.Background(), &oci.ContainerSpec{
+		Name:        spec.Name,
+		Image:       spec.Image,
+		Workspace:   spec.Workspace,
+		Artifacts:   spec.Artifacts,
+		Caches:      spec.Caches,
+		NetworkMode: spec.NetworkMode,
+	})
+	if err != nil {
 		return nil, fmt.Errorf("create container: %w", err)
 	}
 
 	return &Container{
-		ID:    spec.ID,
-		Spec:  spec,
-		Ready: true,
-		Host:  spec.Workspace,
+		ID:              spec.ID,
+		RuntimeObjectID: containerID,
+		Spec:            spec,
+		Ready:           true,
+		Host:            spec.Workspace,
 	}, nil
-}
-
-// createContainerWithCLI creates a container using the Docker/Podman CLI.
-func createContainerWithCLI(rt *DetectedRuntime, spec *ContainerSpec) error {
-	switch rt.Name {
-	case RuntimeDocker:
-		return createDockerContainer(spec)
-	case RuntimePodman:
-		return createPodmanContainer(spec)
-	default:
-		return fmt.Errorf("unsupported runtime: %s", rt.Name)
-	}
-}
-
-// createDockerContainer creates a container using Docker CLI.
-func createDockerContainer(spec *ContainerSpec) error {
-	// Platform-specific mount options
-	// Docker Desktop on macOS/Windows doesn't support noexec
-	mountOpts := "rw"
-	if runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
-		mountOpts = "rw,nosuid,noexec,nodev"
-	}
-
-	args := []string{
-		"run", "-d",
-		"--name", spec.Name,
-		"--rm",
-		"--label", "pi-sandbox=true",
-		"--network", spec.NetworkMode,
-		"--cap-drop", "ALL",
-		"--security-opt", "no-new-privileges",
-		"--read-only",
-		"--tmpfs", "/tmp:rw,nosuid,noexec",
-		"--tmpfs", "/home/agent:rw,nosuid,noexec",
-	}
-
-	// Add workspace mount
-	if spec.Workspace != "" {
-		args = append(args, "-v", fmt.Sprintf("%s:/workspace:%s", spec.Workspace, mountOpts))
-	}
-
-	// Add artifacts mount
-	if spec.Artifacts != "" {
-		args = append(args, "-v", fmt.Sprintf("%s:/artifacts:%s", spec.Artifacts, mountOpts))
-	}
-
-	// Add cache mounts
-	for name, hostPath := range spec.Caches {
-		args = append(args, "-v", fmt.Sprintf("%s:/cache/%s:%s", hostPath, name, mountOpts))
-	}
-
-	// Add image and command
-	args = append(args, spec.Image, "/bin/sh", "-c", "sleep infinity")
-
-	ctx, cancel := context.WithTimeout(context.Background(), containerCommandTimeout)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return fmt.Errorf("docker run timed out: %w: %s", ctx.Err(), string(output))
-		}
-		return fmt.Errorf("docker run: %w: %s", err, string(output))
-	}
-
-	// Extract container ID from output
-	containerID := strings.TrimSpace(string(output))
-	spec.ID = containerID[:min(12, len(containerID))]
-	return nil
-}
-
-// createPodmanContainer creates a container using Podman CLI.
-func createPodmanContainer(spec *ContainerSpec) error {
-	// Platform-specific mount options
-	mountOpts := "rw"
-	if runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
-		mountOpts = "rw,nosuid,noexec,nodev"
-	}
-
-	args := []string{
-		"run", "-d",
-		"--name", spec.Name,
-		"--rm",
-		"--label", "pi-sandbox=true",
-		"--network", spec.NetworkMode,
-		"--cap-drop", "ALL",
-		"--security-opt", "no-new-privileges",
-		"--read-only",
-		"--tmpfs", "/tmp:rw,nosuid,noexec",
-		"--tmpfs", "/home/agent:rw,nosuid,noexec",
-	}
-
-	// Add workspace mount
-	if spec.Workspace != "" {
-		args = append(args, "-v", fmt.Sprintf("%s:/workspace:%s", spec.Workspace, mountOpts))
-	}
-
-	// Add artifacts mount
-	if spec.Artifacts != "" {
-		args = append(args, "-v", fmt.Sprintf("%s:/artifacts:%s", spec.Artifacts, mountOpts))
-	}
-
-	// Add cache mounts
-	for name, hostPath := range spec.Caches {
-		args = append(args, "-v", fmt.Sprintf("%s:/cache/%s:%s", hostPath, name, mountOpts))
-	}
-
-	// Add image and command
-	args = append(args, spec.Image, "/bin/sh", "-c", "sleep infinity")
-
-	ctx, cancel := context.WithTimeout(context.Background(), containerCommandTimeout)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "podman", args...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return fmt.Errorf("podman run timed out: %w: %s", ctx.Err(), string(output))
-		}
-		return fmt.Errorf("podman run: %w: %s", err, string(output))
-	}
-
-	// Extract container ID from output
-	containerID := strings.TrimSpace(string(output))
-	spec.ID = containerID[:min(12, len(containerID))]
-	return nil
 }
 
 // min returns the minimum of two integers.

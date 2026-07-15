@@ -43,16 +43,14 @@ func Setup(cfg *NamespaceConfig) (*exec.Cmd, error) {
 	if cfg.UserNS {
 		cmd.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUSER
 		// Write UID/GID mappings: map container root (0) to host uid/gid
-		cmd.SysProcAttr.UidMappings = []syscall.SysProcIDRange{
+		cmd.SysProcAttr.UidMappings = []syscall.SysProcIDMap{
 			{ContainerID: 0, HostID: cfg.HostUID, Size: 1},
+			{ContainerID: 1, HostID: cfg.HostUID + 1, Size: 65535},
 		}
-		cmd.SysProcAttr.GidMappings = []syscall.SysProcIDRange{
+		cmd.SysProcAttr.GidMappings = []syscall.SysProcIDMap{
 			{ContainerID: 0, HostID: cfg.HostGID, Size: 1},
+			{ContainerID: 1, HostID: cfg.HostGID + 1, Size: 65535},
 		}
-		cmd.SysProcAttr.UidMappings = append(cmd.SysProcAttr.UidMappings,
-			syscall.SysProcIDRange{ContainerID: 1, HostID: cfg.HostUID + 1, Size: 65535})
-		cmd.SysProcAttr.GidMappings = append(cmd.SysProcAttr.GidMappings,
-			syscall.SysProcIDRange{ContainerID: 1, HostID: cfg.HostGID + 1, Size: 65535})
 	}
 
 	if cfg.MountNS {
@@ -67,14 +65,22 @@ func Setup(cfg *NamespaceConfig) (*exec.Cmd, error) {
 }
 
 // Validate checks if namespace operations are supported on this system.
+// It runs a real probe: hosts with unprivileged user namespaces disabled
+// must report unavailable, not succeed silently.
 func Validate() error {
-	// Test if we can create a namespace (non-destructive)
 	cmd := exec.Command("true")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWNS | syscall.CLONE_NEWPID | syscall.CLONE_NEWUSER,
+		UidMappings: []syscall.SysProcIDMap{
+			{ContainerID: 0, HostID: os.Getuid(), Size: 1},
+		},
+		GidMappings: []syscall.SysProcIDMap{
+			{ContainerID: 0, HostID: os.Getgid(), Size: 1},
+		},
 	}
-	// Don't actually run it, just check the syscall is available
-	// On systems without namespace support, this will fail at exec time
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("namespace probe failed (user/mount/PID namespaces unavailable): %w", err)
+	}
 	return nil
 }
 

@@ -19,7 +19,7 @@ pi-box box create node-python
 pi-box box clone <repo>
 pi-box box exec -- pnpm test
 pi-box box diff
-pi-box box artifacts pull ./out
+pi-box box output pull ./out
 ```
 
 ## 2. Primary goals
@@ -27,11 +27,11 @@ pi-box box artifacts pull ./out
 1. Provide the fastest practical local coding-agent sandbox loop.
 2. Keep footprint small enough to run many sandboxes on a developer workstation.
 3. Support real coding workloads in Node.js, Python, Go, and Rust.
-4. Keep sandbox sessions warm and long-lived.
-5. Make command execution inside existing sessions extremely fast.
+4. Keep sandboxes warm and long-lived.
+5. Make command execution inside existing sandboxes extremely fast.
 6. Provide selectable isolation levels instead of forcing one runtime.
 7. Provide a clean local CLI and daemon API usable by PI Agent and other coding agents.
-8. Support workspace snapshots, rollback, diffs, logs, and artifact export.
+8. Support workspace snapshots, rollback, diffs, logs, and one deliverable output channel.
 9. Avoid mounting the developer home directory or secrets by default.
 10. Be benchmark-driven from day one.
 
@@ -66,13 +66,13 @@ agent tool call -> create container or VM -> run command -> destroy sandbox
 Correct pattern:
 
 ```text
-create sandbox session once
+create sandbox once
   -> keep workspace mounted
   -> keep process or guest agent alive
-  -> keep dependency caches mounted
-  -> run many exec calls through the same session
+  -> keep dependency caches available through daemon-managed layers or volumes
+  -> run many exec calls through the same sandbox
   -> snapshot or rollback when needed
-  -> destroy when the session expires
+  -> destroy when the sandbox expires
 ```
 
 The runtime optimizes the AI coding-agent inner loop:
@@ -86,7 +86,7 @@ read output
 fix errors
 run app
 collect logs
-export patch/artifacts
+deliver patch/artifacts through the output channel
 repeat
 ```
 
@@ -94,13 +94,13 @@ repeat
 
 | Concept | Description |
 |---------|-------------|
-| **Sandbox session** | An isolated execution environment with a unique ID, workspace, and lifecycle. Created once, kept warm, destroyed on TTL or explicit close. |
+| **Sandbox** | An isolated execution environment with a unique ID, workspace, and lifecycle. Created once, kept warm, destroyed on TTL or explicit close. |
 | **Template** | A declarative definition of the language/toolchain environment (base OS, installed tools, cache mounts, network policy). |
-| **Runtime mode** | The isolation backend used for a session: `fast` (namespaces), `compat` (OCI container), `secure` (gVisor), `isolated` (Kata), `microvm` (Firecracker/CH). |
+| **Runtime mode** | The isolation backend used for a sandbox: `fast` (namespaces), `compat` (OCI container), `secure` (gVisor), `isolated` (Kata), `microvm` (Firecracker/CH). |
 | **Workspace** | The editable filesystem inside a sandbox: `/workspace` (repo checkout), `/artifacts` (build outputs), `/cache` (dependency caches), `/tmp` (ephemeral). |
 | **Snapshot** | A point-in-time copy of a sandbox's filesystem state, enabling rollback. Implemented via overlay upperdir, reflink, or tar/zstd. |
-| **Artifact** | Files intentionally exported from a sandbox (build outputs, test reports, patches). |
-| **Cache** | Scoped dependency caches (npm, pnpm, pip, uv, go-mod, cargo) mounted into sandboxes to avoid redundant downloads. |
+| **Output** | The single deliverable channel used to move intentional deliverables out of a sandbox, including artifacts and coding-agent patches. |
+| **Cache** | Scoped dependency caches (npm, pnpm, pip, uv, go-mod, cargo) provided through daemon-managed runtime volumes or template snapshot layers to avoid redundant downloads without writable host bind mounts. |
 | **Policy** | The security configuration for a sandbox: filesystem mounts, process limits, network mode, secret exposure. |
 
 ## 6. Features
@@ -112,10 +112,10 @@ repeat
 | F3 | Fast Backend | Native Linux sandbox using namespaces, cgroups, seccomp, Landlock isolation | M1 |
 | F4 | Compat Backend | OCI container backend (runc/containerd/Podman) for maximum compatibility | M1 |
 | F5 | Template System | Declarative template definition, build, and management (base, node, python, go, rust, node-python, polyglot) | M1 |
-| F6 | Workspace & File Operations | Clone, file read/write, diff, patch, pull/push within sandbox sessions | M1 |
+| F6 | Workspace & File Operations | Clone, file read/write, diff, patch views, and controlled workspace transfer inside sandboxes | M1 |
 | F7 | Command Execution | Streaming stdout/stderr exec with timeout, output limits, exit code, and truncation metadata | M1 |
-| F8 | Session Lifecycle | Create, list, inspect, destroy, TTL expiration, warm session reuse | M1 |
-| F9 | Artifact Export | List, pull, and pack artifacts from sandbox sessions | M1 |
+| F8 | Sandbox Lifecycle | Create, list, inspect, destroy, TTL expiration, warm sandbox reuse | M1 |
+| F9 | Output Delivery | Single deliverable channel for artifacts and patches from sandboxes | M1 |
 | F10 | Logs & Command History | Command history, stdout/stderr logs, exit codes, duration, timeout status | M1 |
 | F11 | Secrets & Network Model | Configurable network modes (none/restricted/open), domain allowlist, secret broker for Git credentials | M2 |
 | F12 | Cache Model | Scoped dependency cache mounts, cache pruning, cache promotion | M2 |
@@ -130,10 +130,12 @@ repeat
 | F21 | MicroVM Guest Control Plane | Guest-side `pi-init` and `pi-agentd` over virtio-vsock for command execution, lifecycle coordination, file/artifact transfer, and sandbox readiness reporting | M5 |
 | F22 | Remote Daemon Contexts | CLI context management for local and remote daemons, including `pi-box context create/use/list/inspect/delete` and context-aware `pi-box box` commands | M6 |
 | F23 | Remote Daemon Transport & Auth | SSH/Tailscale/WireGuard-friendly remote daemon access with secure local-to-remote API authentication and remote workstation support | M6 |
-| F24 | Cross-Platform GUI Workbench | Desktop application for macOS, Windows, and Linux that connects to local or remote PI daemons, creates and manages sandbox sessions, and exposes common sandbox workflows without replacing the CLI | M7 |
-| F25 | GUI Workspace Authorization | Explicit project-folder selection, allowed folder management, and safe bind/copy workspace setup for GUI-launched sessions | M7 |
-| F26 | GUI Session Operations | Dashboard and session views for create/list/inspect/exec/logs/diff/patch/artifacts/snapshots/destroy using existing daemon API operations | M7 |
+| F24 | Cross-Platform GUI Workbench | Desktop application for macOS, Windows, and Linux that connects to local or remote PI daemons, creates and manages sandboxes, and exposes common sandbox workflows without replacing the CLI | M7 |
+| F25 | GUI Workspace Authorization | Explicit project-folder selection, allowed folder management, and safe bind/copy workspace setup for GUI-launched sandboxes | M7 |
+| F26 | GUI Sandbox Operations | Dashboard and sandbox views for create/list/inspect/exec/logs/diff/patch/output/snapshots/destroy using existing daemon API operations | M7 |
 | F27 | GUI Settings and Diagnostics | GUI controls for daemon connection, active context, default template/runtime mode/network policy, engine health, doctor output, and support bundle export | M7 |
+| F29 | Agent Run | `pi-box run <agent>` starts the autonomous agent loop inside the sandbox and streams lifecycle and agent events to the host supervisor | M8 |
+| F30 | Egress Proxy | Daemon-owned egress proxy enforces allowlists and injects scoped credentials into approved outbound requests without exposing tokens inside the sandbox | M8 |
 
 ## 7. Acceptance Criteria
 
@@ -176,7 +178,8 @@ repeat
 - [ ] `pi-box box files read <id> <path>` reads a file from sandbox
 - [ ] `pi-box box files write <id> <path>` writes a file to sandbox
 - [ ] `pi-box box diff <id>` shows workspace diff
-- [ ] `pi-box box patch <id>` exports workspace as patch
+- [ ] `pi-box box patch <id>` shows the workspace patch as a read-only view
+- [ ] `POST /v1/sandboxes/{id}/output` delivers patches and artifacts through the single output channel
 
 ### AC-7: Exec Streams Output (F7)
 - [ ] `pi-box box exec <id> -- <cmd>` runs command with streaming stdout/stderr
@@ -185,16 +188,17 @@ repeat
 - [ ] Output truncated when exceeding maxOutput, with `truncated` flag
 - [ ] `--cwd`, `--timeout`, `--max-output`, `--memory`, `--cpu`, `--json` options honored
 
-### AC-8: Session Lifecycle (F8)
+### AC-8: Sandbox Lifecycle (F8)
 - [ ] Sandbox created once and kept warm
-- [ ] Multiple exec calls reuse the same session
+- [ ] Multiple exec calls reuse the same sandbox
 - [ ] TTL expiration triggers cleanup
 - [ ] `pi-box box destroy --all` cleans all sandboxes
 
-### AC-9: Artifacts Export (F9)
-- [ ] `pi-box box artifacts list <id>` lists available artifacts
-- [ ] `pi-box box artifacts pull <id> <dest>` pulls artifacts to host
-- [ ] `pi-box box artifacts pack <id> --output <file>` creates archive
+### AC-9: Output Delivery (F9)
+- [ ] `pi-box box output list <id>` lists available deliverables
+- [ ] `pi-box box output pull <id> <dest>` delivers artifacts or patches to host through `POST /v1/sandboxes/{id}/output`
+- [ ] `pi-box box output pack <id> --output <file>` creates archive
+- [ ] `pi.artifact.delivered` is emitted only after successful output-channel delivery
 
 ### AC-10: Logs Available (F10)
 - [ ] `pi-box box logs <id>` shows command logs
@@ -211,12 +215,15 @@ repeat
 - [ ] `/cache/npm`, `/cache/pnpm`, `/cache/pip`, `/cache/uv`, `/cache/go-mod`, `/cache/go-build`, `/cache/cargo` mounted
 - [ ] Caches scoped by template/runtime/user
 - [ ] `pi-box system prune` can clean caches
+- [ ] No sandbox receives a writable bind mount of a host cache directory
+- [ ] Cache reuse works via read-only shared layer plus per-sandbox writable overlay or runtime-managed volume
 
 ### AC-13: Snapshots Work (F13)
 - [ ] `pi-box box snapshot <id> <name>` creates a named snapshot
 - [ ] `pi-box box rollback <id> <name>` restores to snapshot
 - [ ] Snapshot creation uses overlay upperdir or reflink
-- [ ] Snapshot metadata stored under `~/.pi-box/sandboxes/<id>/snapshots/`
+- [ ] Snapshot metadata stored in a daemon-owned content-addressed store under `~/.pi-box/snapshots/`
+- [ ] Snapshots are warm-start and rollback inputs only, not an export channel
 
 ### AC-14: Benchmarks Run (F14)
 - [ ] `pi-box bench run` executes full benchmark suite
@@ -240,7 +247,7 @@ repeat
 - [ ] Docker socket not mounted by default
 - [ ] Cloud metadata credentials not accessible
 - [ ] SSH private keys not mounted by default
-- [ ] Git credentials brokered (not dumped into environment)
+- [ ] Git credentials brokered through the egress proxy (not dumped into environment)
 - [ ] Exec output limited to 8MiB by default
 - [ ] Exec timeout 120s by default
 - [ ] Max processes 256 by default
@@ -251,14 +258,14 @@ repeat
 - [ ] `pi-box box exec demo -- pnpm install`
 - [ ] `pi-box box exec demo -- pnpm test`
 - [ ] `pi-box box diff demo`
-- [ ] `pi-box box artifacts pull demo ./out`
+- [ ] `pi-box box output pull demo ./out`
 - [ ] `pi-box box destroy demo`
 - [ ] All steps succeed without direct host filesystem access
 
 ### AC-19: Warm Exec Performance (F3, F4, F14)
 - [ ] Fast mode warm exec p50 < 10ms
 - [ ] Compat mode warm exec p50 < 100ms
-- [ ] New warm session assignment < 100ms
+- [ ] New warm sandbox assignment < 100ms
 - [ ] Artifact export 20MB < 500ms local
 - [ ] Idle fast sandbox memory < 64 MiB
 
@@ -331,24 +338,24 @@ repeat
 - [ ] GUI can connect to a local daemon
 - [ ] GUI can connect to a configured remote context
 - [ ] GUI shows connected/disconnected state and daemon version
-- [ ] GUI can create a sandbox session without shelling out for normal lifecycle operations
+- [ ] GUI can create a sandbox without shelling out for normal lifecycle operations
 - [ ] GUI does not implement a separate sandbox lifecycle outside `pi-sandboxd`
 
 ### AC-28: GUI Workspace Authorization Works (F25)
 - [ ] User must explicitly select a project folder before GUI-launched local workspace access
-- [ ] Selected project folder is displayed before session creation
+- [ ] Selected project folder is displayed before sandbox creation
 - [ ] Default workspace mode is `copy`
 - [ ] `bind` mode requires explicit opt-in
 - [ ] Allowed folders can be listed and removed from GUI settings
 - [ ] Host home directory, SSH keys, cloud config, Kubernetes config, and Docker socket are not mounted by default
 
-### AC-29: GUI Session Operations Work (F26)
-- [ ] Dashboard lists recent and active sandbox sessions
-- [ ] GUI can create, inspect, and destroy sessions
+### AC-29: GUI Sandbox Operations Work (F26)
+- [ ] Dashboard lists recent and active sandboxes
+- [ ] GUI can create, inspect, and destroy sandboxes
 - [ ] GUI can run commands with streaming stdout/stderr
 - [ ] GUI displays command history, logs, exit code, duration, timeout status, and truncation status
 - [ ] GUI can display workspace diff and export patch
-- [ ] GUI can list and pull artifacts
+- [ ] GUI can list and pull output deliverables
 - [ ] GUI can create and rollback snapshots when the daemon reports snapshot support
 
 ### AC-30: GUI Settings and Diagnostics Work (F27)
@@ -358,6 +365,29 @@ repeat
 - [ ] GUI exposes `pi-box system doctor` equivalent results
 - [ ] GUI can export a support bundle containing daemon diagnostics, GUI logs, version metadata, and redacted configuration
 - [ ] Daemon policy overrides conflicting GUI preferences
+
+### AC-31: Agent Run Works (F29)
+- [ ] `pi-box run <agent> [--repo <url>] [--prompt ...]` starts the autonomous agent loop inside the sandbox
+- [ ] The host receives `pi.run.started` and `pi.run.completed` lifecycle events without driving the loop exec-by-exec
+- [ ] `exec` remains available for setup, debugging, and non-agent use
+
+### AC-32: Egress Proxy Enforces Policy and Injects Credentials (F30)
+- [ ] Outbound requests from a sandbox route through the daemon-owned egress proxy in restricted mode
+- [ ] Allowlisted outbound Git or registry requests succeed with scoped injected credentials
+- [ ] Injected credentials are not readable from inside the sandbox
+- [ ] Non-allowlisted egress is denied and recorded in logs/history
+
+### AC-33: Single Output Channel (F6, F9, F29)
+- [ ] Artifacts and patches leave the sandbox only through `POST /v1/sandboxes/{id}/output`
+- [ ] `diff` and `patch` endpoints are read-only workspace views; export uses the output channel
+- [ ] `files read` remains a debug/inspection API, not a deliverable export path
+- [ ] Snapshot export is absent
+
+### AC-34: Host Filesystem Decoupling (F12, F13, F17, F30)
+- [ ] No sandbox has a writable bind mount of any host directory by default
+- [ ] Shared caches are read-only layers with per-sandbox writable overlays, or daemon-managed runtime volumes
+- [ ] Secrets are represented as egress-proxy injection rules and are not stored as plaintext files under `~/.pi-box`
+- [ ] `~/.pi-box` contains control-plane state, templates, sandbox metadata, daemon-managed snapshots, and runtime-managed cache state only
 
 ## 8. Security Model
 
@@ -387,8 +417,8 @@ repeat
 ### Secrets Model
 - Environment variables: deny-by-default
 - SSH agent: opt-in only
-- Git credentials: brokered (not dumped into environment)
-- Long-term: per-secret `exposeTo` policy (e.g., github-token → git only, never to shell)
+- Git credentials: injected by the egress proxy into approved outbound requests (not dumped into environment)
+- Per-secret `exposeTo` policy (e.g., github-token → git only, never to shell)
 
 ### Runtime Mode Security
 - `fast`: Linux namespaces, cgroups, seccomp, Landlock — suitable for trusted local use
@@ -402,17 +432,17 @@ repeat
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/v1/sandboxes` | Create sandbox session |
-| GET | `/v1/sandboxes` | List sandbox sessions |
+| POST | `/v1/sandboxes` | Create sandbox |
+| GET | `/v1/sandboxes` | List sandboxes |
 | GET | `/v1/sandboxes/{id}` | Inspect sandbox state |
-| DELETE | `/v1/sandboxes/{id}` | Destroy sandbox session |
+| DELETE | `/v1/sandboxes/{id}` | Destroy sandbox |
 | POST | `/v1/sandboxes/{id}/clone` | Clone repository into workspace |
 | POST | `/v1/sandboxes/{id}/exec` | Execute command (streaming) |
 | POST | `/v1/sandboxes/{id}/files/write` | Write file to workspace |
 | GET | `/v1/sandboxes/{id}/files/read` | Read file from workspace |
 | GET | `/v1/sandboxes/{id}/diff` | Get workspace diff |
 | GET | `/v1/sandboxes/{id}/patch` | Get workspace patch |
-| POST | `/v1/sandboxes/{id}/artifacts/export` | Export artifacts |
+| POST | `/v1/sandboxes/{id}/output` | Deliver artifact or patch output |
 | POST | `/v1/sandboxes/{id}/snapshot` | Create snapshot |
 | POST | `/v1/sandboxes/{id}/rollback` | Rollback to snapshot |
 | GET | `/v1/sandboxes/{id}/logs` | Get command logs |
@@ -513,7 +543,7 @@ PI Agent / CLI / IDE / SDK
         v
   pi-sandboxd local daemon
         |
-        +-- session manager
+        +-- sandbox manager
         +-- runtime manager
         +-- template manager
         +-- workspace manager
@@ -667,14 +697,14 @@ First microVM implementation contract:
 - Each sandbox receives a writable ext4 workspace disk.
 - Template restore starts from a read-only template snapshot plus a fresh writable workspace disk.
 - The reseed-on-restore hook runs after the workspace disk is attached and before the guest reports ready.
-- Artifact export copies data through the guest control plane, not by directly mounting host paths inside the guest.
+- Output delivery copies data through the guest control plane, not by directly mounting host paths inside the guest.
 
 MicroVM guest control protocol:
 
 - The host and guest communicate over virtio-vsock using newline-delimited JSON control frames.
-- Each frame has `type`, `id`, `session_id`, `method`, `payload`, and optional `error` fields.
+- Each frame has `type`, `id`, `sandbox_id`, `method`, `payload`, and optional `error` fields.
 - `type` is one of `request`, `response`, `event`, or `stream`.
-- `method` is one of `hello`, `ready`, `exec`, `file.read`, `file.write`, `artifact.list`, `artifact.pull`, or `shutdown`.
+- `method` is one of `hello`, `ready`, `exec`, `file.read`, `file.write`, `output.list`, `output.pull`, or `shutdown`.
 - Exec streaming uses `stream` frames whose payload includes `stream: stdout|stderr` and `data: base64-bytes`.
 - The final exec response includes `exit_code`, `duration_ms`, `timed_out`, and `truncated`.
 - Guest readiness is explicit: `pi-init` starts `pi-agentd`, `pi-agentd` sends a `ready` event, and only then may the host mark the sandbox warm.
@@ -686,9 +716,9 @@ MicroVM guest control protocol:
 All isolation backends implement one internal lifecycle driver contract owned by `pkg/runtime`:
 
 - A driver exposes: `Probe`, `Create`, `Start`, `Exec`, `Inspect`, `Stop`, `Destroy`, and `Stats`.
-- Files, artifacts, logs, metadata, policy evaluation, and API semantics live **above** the driver layer. Drivers own only isolation, process creation, mounts, network attachment, resource controls, and termination.
+- Files, output delivery, logs, metadata, policy evaluation, and API semantics live **above** the driver layer. Drivers own only isolation, process creation, mounts, network attachment, resource controls, and termination.
 - Workspace snapshots are runtime-independent; drivers never gate snapshot semantics.
-- A sandbox handle carries the stable session ID and the driver-owned runtime object ID as **distinct** fields. The session ID is never mutated after creation.
+- A sandbox handle carries the stable sandbox ID and the driver-owned runtime object ID as **distinct** fields. The sandbox ID is never mutated after creation.
 - `Probe` returns a structured capability report (availability, missing prerequisites, per-capability flags, isolation tier, compatibility tier). Availability probes must actually execute; a probe that always succeeds is a defect. A runtime is never summarized by a single security integer.
 - Compat and secure modes share one OCI engine layer (image ensure, create, start, exec, inspect, stop, remove) with pluggable engine implementations (Podman, Docker, later containerd). Secure mode is the same OCI lifecycle with a `runsc` runtime handler, not a parallel implementation.
 - Compat/secure mount policy: `/workspace`, `/artifacts`, and `/cache` are `rw,nosuid,nodev` (exec allowed); `noexec` applies to `/tmp` and secret mounts only.
@@ -735,15 +765,12 @@ Legacy `~/.pi` data is not automatically migrated or pruned by default; Pi Box l
       upper/
       work/
 
-  caches/
-    npm/
-    pnpm/
-    pip/
-    uv/
-    go-build/
-    go-mod/
-    cargo/
-    sccache/
+  snapshots/
+    content-addressed-store/
+
+  runtime/
+    caches/
+    volumes/
 
   images/
     rootfs/
@@ -765,7 +792,7 @@ pi-box system disk-usage
 
 ## 16. Workspace model
 
-Each sandbox session has:
+Each sandbox has:
 
 ```text
 /workspace   repo checkout and editable files
@@ -787,7 +814,7 @@ Support three workspace modes:
 | `bind` | Bind mount explicit host directory. User must opt in. |
 | `overlay` | Read-only base plus writable upperdir. Good for snapshots and rollback. |
 
-GUI-launched sessions must preserve this model. The GUI must require explicit project-folder selection before local workspace access, display the selected folder before session creation, default to `copy`, and make `bind` an explicit per-session or per-folder opt-in. Folder picker grants are advisory UI state only; daemon policy remains authoritative.
+GUI-launched sandboxes must preserve this model. The GUI must require explicit project-folder selection before local workspace access, display the selected folder before sandbox creation, default to `copy`, and make `bind` an explicit per-sandbox or per-folder opt-in. Folder picker grants are advisory UI state only; daemon policy remains authoritative.
 
 ## 17. Cache model
 
@@ -811,9 +838,12 @@ Policy:
 
 - caches are not secrets
 - caches should be scoped by template/runtime/user
-- shared read-only cache plus per-session writable overlay is preferred later
+- shared read-only cache plus per-sandbox writable overlay is required
+- no sandbox may receive a writable host cache bind mount
 - cache promotion must be explicit or validated
 - cache pruning must be available
+
+Caches are daemon-managed runtime volumes or template snapshot layers. The local `~/.pi-box` tree may hold cache metadata and daemon-owned storage, but runtime code must not write directly into host cache directories through bind mounts.
 
 Recommended fast tools:
 
@@ -1068,7 +1098,7 @@ POST   /v1/sandboxes/{id}/files/write
 GET    /v1/sandboxes/{id}/files/read
 GET    /v1/sandboxes/{id}/diff
 GET    /v1/sandboxes/{id}/patch
-POST   /v1/sandboxes/{id}/artifacts/export
+POST   /v1/sandboxes/{id}/output
 POST   /v1/sandboxes/{id}/snapshot
 POST   /v1/sandboxes/{id}/rollback
 GET    /v1/sandboxes/{id}/logs
@@ -1196,8 +1226,8 @@ defaults:
 
   secrets:
     env: deny-by-default
-    sshAgent: opt-in
-    gitCredentials: brokered
+    sshAgent: opt-in-through-egress-proxy
+    gitCredentials: egress-proxy-injected
 ```
 
 Never mount these by default:
@@ -1214,13 +1244,13 @@ Never mount these by default:
 
 Do not dump secrets into sandbox environment by default.
 
-Use a secret broker later.
+Secrets exist as daemon policy and egress-proxy injection rules. They are not stored as plaintext files under `~/.pi-box`, are not mounted into sandboxes, and are not exposed as sandbox environment variables by default.
 
 Initial Git support options:
 
 1. Public HTTPS clone.
-2. User-approved SSH agent forwarding for Git only.
-3. User-approved token credential helper scoped to Git operations.
+2. User-approved SSH agent use through the egress proxy for Git only.
+3. User-approved token injection scoped to Git operations through the egress proxy.
 
 Long-term model:
 
@@ -1257,6 +1287,8 @@ local Kubernetes ranges when applicable
 
 Domain-aware egress is preferred over only IP-based filtering because package registries and Git hosts use dynamic IPs.
 
+In restricted mode, outbound traffic routes through the daemon-owned egress proxy. The proxy enforces the allowlist at runtime and injects scoped credentials into approved Git or registry requests without making those credentials readable inside the sandbox.
+
 ## 25. Snapshot and rollback
 
 Initial implementation can use filesystem-level snapshots:
@@ -1275,6 +1307,8 @@ pi-box box rollback app1 before-change
 
 MicroVM mode later should support template snapshots.
 
+Snapshots are warm-start and rollback inputs only. They are stored in a daemon-owned content-addressed store under `~/.pi-box/snapshots/` and are not an export channel.
+
 Important microVM restore hook:
 
 ```text
@@ -1286,9 +1320,9 @@ on_restore:
   notify pi-agentd
 ```
 
-## 26. Artifact model
+## 26. Output model
 
-Artifacts are files intentionally exported from the sandbox.
+Output deliverables are files intentionally delivered from the sandbox. Artifacts and patches share one output channel.
 
 Default artifact locations:
 
@@ -1301,15 +1335,15 @@ Default artifact locations:
 /workspace/target/release
 ```
 
-Artifact commands:
+Output commands:
 
 ```bash
-pi-box box artifacts list app1
-pi-box box artifacts pull app1 ./artifacts
-pi-box box artifacts pack app1 --output artifacts.tar.zst
+pi-box box output list app1
+pi-box box output pull app1 ./artifacts
+pi-box box output pack app1 --output artifacts.tar.zst
 ```
 
-Artifact export should avoid copying the whole workspace unless requested.
+Output delivery should avoid copying the whole workspace unless requested. `diff` and `patch` remain read-only workspace views; exporting a patch uses `POST /v1/sandboxes/{id}/output`.
 
 ## 27. Logs and telemetry
 
@@ -1322,7 +1356,7 @@ Each sandbox should produce:
 - timeout status
 - output truncation status
 - resource usage when available
-- artifact manifest
+- output manifest
 - snapshot history
 
 CLI:
@@ -1361,7 +1395,7 @@ Required benchmarks:
 | `cargo_test_cached` | Measures Rust toolchain and cache. |
 | `snapshot_create` | Measures snapshot creation. |
 | `snapshot_rollback` | Measures rollback. |
-| `artifact_export_20mb` | Measures artifact packing/export. |
+| `artifact_export_20mb` | Measures output packing/delivery. |
 | `parallel_10` | Measures 10 concurrent sandboxes. |
 | `parallel_100` | Measures high-density behavior where hardware allows. |
 
@@ -1388,7 +1422,7 @@ Initial target metrics:
 |---|---:|
 | Fast mode warm exec overhead | single-digit ms p50 |
 | Compat mode warm exec overhead | tens of ms p50 |
-| New warm session assignment | under 100 ms |
+| New warm sandbox assignment | under 100 ms |
 | Artifact export 20 MB | under 500 ms local |
 | Idle fast sandbox memory | as small as practical, target under 64 MiB where possible |
 
@@ -1565,7 +1599,7 @@ Deliver:
 - `pi-agentd` over vsock
 - template snapshot restore
 - workspace disk
-- artifact export
+- output delivery
 - reseed-on-restore hook
 - benchmark comparison
 
@@ -1616,16 +1650,16 @@ Deliver:
 - desktop GUI app for macOS, Windows, and Linux
 - onboarding for local daemon, remote context, or connect later
 - explicit workspace authorization and allowed folder management
-- dashboard for recent and active sandbox sessions
-- session detail with command runner, streaming logs, history, diff, patch export, artifacts, snapshots, rollback, and destroy
+- dashboard for recent and active sandboxes
+- sandbox detail with command runner, streaming logs, history, diff, patch output, artifacts, snapshots, rollback, and destroy
 - settings for active context, daemon connection, default template, runtime mode, network mode, allowed folders, and diagnostics
 - support bundle export with redacted configuration
 
 The GUI workbench should use a restrained desktop-tool interface:
 
-- left navigation: Dashboard, Sessions, Templates, Contexts, Policies, Settings
+- left navigation: Dashboard, Sandboxes, Templates, Contexts, Policies, Settings
 - status area: active daemon/context, connection state, runtime availability, and current version
-- primary action: create a sandbox session from a project folder, repository URL, or template
+- primary action: create a sandbox from a project folder, repository URL, or template
 - centered onboarding and authorization flows inspired by the accepted PROP-004 screenshots, with PI-specific text and workflows
 
 Recommended first implementation stack:
@@ -1639,10 +1673,10 @@ The GUI should consume existing daemon API operations wherever possible. If thes
 - list templates and inspect template metadata
 - report runtime/backend availability
 - report daemon version and health
-- return session list with lifecycle state, template, mode, workspace source, created time, TTL, and last command summary
-- stream exec output for a selected session
+- return sandbox list with lifecycle state, template, mode, workspace source, created time, TTL, and last command summary
+- stream exec output for a selected sandbox
 - return command history and logs
-- return diff, patch, artifact, snapshot, and storage usage metadata
+- return diff, patch, output, snapshot, and storage usage metadata
 
 ## 32. Compatibility expectations
 
@@ -1817,7 +1851,7 @@ Must include:
 - Runtime modes and isolation tradeoffs
 - Security model
 - Cache model
-- Artifact model
+- Output model
 - Agent API
 - SDK docs
 - Benchmarks
@@ -1834,7 +1868,7 @@ The project is successful when:
 4. Node.js, Python, Go, and Rust templates work with common projects.
 5. The benchmark suite clearly compares fast, compat, secure, and later microVM modes.
 6. Developers understand where files, caches, logs, artifacts, and snapshots live.
-7. Isolation is selectable per sandbox session.
+7. Isolation is selectable per sandbox.
 8. The project can later grow into remote workstation, microVM, and Kubernetes-backed modes without redesigning the API.
 
 ## 38. Product north star
@@ -1843,7 +1877,7 @@ The north star is not simply running containers or microVMs.
 
 The north star is:
 
-> A coding agent can get a warm, isolated, language-ready workspace almost instantly, run hundreds of commands with low overhead, safely manage code changes, and export only the useful diff and artifacts.
+> A coding agent can get a warm, isolated, language-ready workspace almost instantly, run hundreds of commands with low overhead, safely manage code changes, and deliver only the useful diff and artifacts through one output channel.
 
 ## 39. First coding-agent task list
 

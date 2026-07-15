@@ -42,6 +42,9 @@ func (d *Daemon) Start() error {
 		return fmt.Errorf("create socket dir: %w", err)
 	}
 
+	// Run orphan cleanup on startup (PROP-008 D7: reconciliation)
+	session.OrphanCleanup(d.store, d.store.Dir())
+
 	// Create Unix socket listener
 	unixListener, err := net.Listen("unix", d.socketPath)
 	if err != nil {

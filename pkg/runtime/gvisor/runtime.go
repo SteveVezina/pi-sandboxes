@@ -4,15 +4,15 @@
 package gvisor
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
-	"syscall"
 	"time"
+
+	"github.com/pi-sandbox/pi/pkg/runtime/oci"
+	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 )
 
 const (
@@ -26,14 +26,15 @@ const (
 	DefaultTimeout = 30 * time.Second
 )
 
-// Runtime implements the gVisor (runsc) backend.
+// Runtime implements the gVisor (runsc) backend using the shared OCI engine.
 type Runtime struct {
 	image   string
 	timeout time.Duration
+	eng     oci.Engine
 	rootDir string
 }
 
-// New creates a new gVisor runtime.
+// New creates a gVisor runtime backed by the shared OCI engine.
 func New(image, rootDir string, timeout time.Duration) *Runtime {
 	if image == "" {
 		image = DefaultImage
@@ -58,384 +59,180 @@ func (r *Runtime) Name() string {
 	return RuntimeName
 }
 
+// Mode returns the public mode this runtime serves.
+func (r *Runtime) Mode() pruntime.Mode {
+	return pruntime.ModeSecure
+}
+
 // IsAvailable checks if gVisor (runsc) is installed and usable.
 func (r *Runtime) IsAvailable() bool {
 	_, err := exec.LookPath("runsc")
 	return err == nil
 }
 
-// Create provisions a new sandbox session using gVisor.
-func (r *Runtime) Create(ctx context.Context, id, template string) error {
+// Probe returns a capability report for this runtime.
+func (r *Runtime) Probe(ctx context.Context) pruntime.CapabilityReport {
+	report := pruntime.CapabilityReport{
+		Available:      r.IsAvailable(),
+		KernelBoundary: true,
+		Rootless:       false,
+		UserNamespace:  true,
+		Seccomp:        true,
+		NetworkNamespace: true,
+		EgressPolicy:   true,
+		Snapshot:       true,
+		WarmExec:       true,
+		OCIImages:      true,
+		HardwareVirt:   false,
+		IsolationTier:  3,
+		CompatTier:     3,
+	}
 	if !r.IsAvailable() {
-		return fmt.Errorf("gVisor not available: %w", exec.ErrNotFound)
+		report.Reason = "gVisor (runsc) not installed"
+		report.Missing = []string{"runsc"}
 	}
-
-	// Create sandbox directory
-	sandboxDir := filepath.Join(r.rootDir, id)
-	if err := os.MkdirAll(sandboxDir, 0755); err != nil {
-		return fmt.Errorf("create sandbox dir: %w", err)
-	}
-
-	// Create bundle directory structure for runsc
-	// runsc uses containerd-compatible bundle format
-	bundleDir := filepath.Join(sandboxDir, "bundle")
-	if err := os.MkdirAll(bundleDir, 0755); err != nil {
-		return fmt.Errorf("create bundle dir: %w", err)
-	}
-
-	// Write config.json (minimal spec)
-	configPath := filepath.Join(bundleDir, "config.json")
-	config := r.generateConfig(id, bundleDir, template)
-	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
-		return fmt.Errorf("write config.json: %w", err)
-	}
-
-	// Create rootfs directory
-	rootfsDir := filepath.Join(bundleDir, "rootfs")
-	if err := os.MkdirAll(rootfsDir, 0755); err != nil {
-		return fmt.Errorf("create rootfs dir: %w", err)
-	}
-
-	// Run 'runsc create' to create the sandbox
-	cmd := exec.CommandContext(ctx, "runsc", "create", "--bundle", bundleDir, id)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("runsc create: %w: %s", err, stderr.String())
-	}
-
-	return nil
+	return report
 }
 
-// Destroy terminates a sandbox session.
-func (r *Runtime) Destroy(ctx context.Context, id string) error {
-	// Force delete the sandbox
-	cmd := exec.CommandContext(ctx, "runsc", "delete", "-f", id)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		// Ignore errors if sandbox is already gone
-		return fmt.Errorf("runsc delete: %w: %s", err, stderr.String())
+// EnsureImage ensures the gVisor base image is available.
+func (r *Runtime) EnsureImage(ctx context.Context) (string, error) {
+	if r.eng == nil {
+		return "", fmt.Errorf("OCI engine not initialized")
 	}
-
-	return nil
+	return r.eng.EnsureImage(ctx, oci.ImageRef(r.image))
 }
 
-// Exec runs a command inside the sandbox with timeout and truncation.
-func (r *Runtime) Exec(ctx context.Context, id, cwd, cmdStr string, timeout time.Duration) (*exec.ExitError, []byte, []byte, error) {
-	if timeout == 0 {
-		timeout = r.timeout
+// Create provisions a new sandbox session using gVisor via the shared OCI engine.
+func (r *Runtime) Create(ctx context.Context, spec pruntime.SandboxSpec) (pruntime.Handle, error) {
+	if !r.IsAvailable() {
+		return pruntime.Handle{}, fmt.Errorf("gVisor not available: %w", exec.ErrNotFound)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	// Initialize OCI engine if not already done
+	if r.eng == nil {
+		r.eng = oci.NewEngine(oci.EngineConfig{
+			Runtime: "runsc",
+			RootDir: r.rootDir,
+		})
+	}
 
-	cmd := exec.CommandContext(ctx, "runsc", "exec", "-d", cwd, id, "/bin/sh", "-c", cmdStr)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
+	// Ensure the gVisor base image is available
+	imageID, err := r.eng.EnsureImage(ctx, oci.ImageRef(r.image))
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return exitErr, stdout.Bytes(), stderr.Bytes(), nil
-		}
-		return nil, stdout.Bytes(), stderr.Bytes(), err
+		return pruntime.Handle{}, fmt.Errorf("ensure gVisor image: %w", err)
 	}
-	return nil, stdout.Bytes(), stderr.Bytes(), nil
-}
 
-// CloneGit clones a repository into the sandbox workspace.
-func (r *Runtime) CloneGit(ctx context.Context, id, url, cwd string) error {
-	cmd := exec.CommandContext(ctx, "runsc", "exec", "-d", cwd, id, "/bin/sh", "-c",
-		fmt.Sprintf("git clone %s .", url))
-	return cmd.Run()
-}
-
-// GetState returns the runtime state of a sandbox.
-func (r *Runtime) GetState(ctx context.Context, id string) (string, error) {
-	cmd := exec.CommandContext(ctx, "runsc", "state", id)
-	output, err := cmd.Output()
+	// Create the container using the shared OCI engine
+	containerID, err := r.eng.Create(ctx, oci.ContainerSpec{
+		ImageID:     imageID,
+		SessionID:   spec.SessionID,
+		Workspace:   spec.Workspace,
+		Artifacts:   spec.Artifacts,
+		Caches:      spec.Caches,
+		UserNS:      true,
+		MountNS:     true,
+		PIDNS:       true,
+		NetworkMode: spec.NetworkMode,
+		Limits:      spec.Limits,
+	})
 	if err != nil {
-		return "unknown", err
+		return pruntime.Handle{}, fmt.Errorf("create container: %w", err)
 	}
-	return string(output), nil
+
+	// Return handle with stable session ID and runtime object ID
+	return pruntime.Handle{
+		SessionID:       spec.SessionID,
+		RuntimeObjectID: containerID,
+	}, nil
 }
 
-// GetStatus returns the sandbox status string.
-func (r *Runtime) GetStatus(ctx context.Context, id string) (string, error) {
-	state, err := r.GetState(ctx, id)
+// Start starts a gVisor sandbox.
+func (r *Runtime) Start(ctx context.Context, h pruntime.Handle) error {
+	if r.eng == nil {
+		return fmt.Errorf("OCI engine not initialized")
+	}
+	return r.eng.Start(ctx, h.RuntimeObjectID)
+}
+
+// Exec executes a command in a gVisor sandbox.
+func (r *Runtime) Exec(ctx context.Context, h pruntime.Handle, req pruntime.ExecRequest) (pruntime.ExecSession, error) {
+	if r.eng == nil {
+		return nil, fmt.Errorf("OCI engine not initialized")
+	}
+	return r.eng.Exec(ctx, h.RuntimeObjectID, req)
+}
+
+// Inspect returns the state of a gVisor sandbox.
+func (r *Runtime) Inspect(ctx context.Context, h pruntime.Handle) (pruntime.RuntimeState, error) {
+	if r.eng == nil {
+		return pruntime.RuntimeState{}, fmt.Errorf("OCI engine not initialized")
+	}
+	state, err := r.eng.Inspect(ctx, h.RuntimeObjectID)
 	if err != nil {
-		return "stopped", err
+		return pruntime.RuntimeState{}, fmt.Errorf("inspect container: %w", err)
 	}
-	return state, nil
+	return pruntime.RuntimeState{
+		State:       state.State,
+		ExitCode:    state.ExitCode,
+		ContainerID: h.RuntimeObjectID,
+	}, nil
 }
 
-// GetLogs returns sandbox logs.
-func (r *Runtime) GetLogs(ctx context.Context, id string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "runsc", "logs", id)
-	return cmd.Output()
+// Stop stops a gVisor sandbox.
+func (r *Runtime) Stop(ctx context.Context, h pruntime.Handle, grace time.Duration) error {
+	if r.eng == nil {
+		return fmt.Errorf("OCI engine not initialized")
+	}
+	return r.eng.Stop(ctx, h.RuntimeObjectID, grace)
 }
 
-// Snapshot creates a filesystem snapshot.
-func (r *Runtime) Snapshot(ctx context.Context, id, name string) error {
-	cmd := exec.CommandContext(ctx, "runsc", "snapshot", id, name)
-	return cmd.Run()
+// Destroy destroys a gVisor sandbox.
+func (r *Runtime) Destroy(ctx context.Context, h pruntime.Handle) error {
+	if r.eng == nil {
+		return fmt.Errorf("OCI engine not initialized")
+	}
+	return r.eng.Remove(ctx, h.RuntimeObjectID)
 }
 
-// Rollback restores a snapshot.
-func (r *Runtime) Rollback(ctx context.Context, id, name string) error {
-	cmd := exec.CommandContext(ctx, "runsc", "restore", id, name)
-	return cmd.Run()
+// Stats returns resource statistics for a gVisor sandbox.
+func (r *Runtime) Stats(ctx context.Context, h pruntime.Handle) (pruntime.RuntimeStats, error) {
+	if r.eng == nil {
+		return pruntime.RuntimeStats{}, fmt.Errorf("OCI engine not initialized")
+	}
+	stats, err := r.eng.Stats(ctx, h.RuntimeObjectID)
+	if err != nil {
+		return pruntime.RuntimeStats{}, fmt.Errorf("stats: %w", err)
+	}
+	return pruntime.RuntimeStats{
+		MemoryUsageBytes: stats.MemoryUsageBytes,
+		CPUUsageNanoCores: stats.CPUUsageNanoCores,
+	}, nil
 }
 
-// ListSnapshots returns available snapshots.
-func (r *Runtime) ListSnapshots(ctx context.Context, id string) ([]string, error) {
-	// Stub — in production, query runsc for snapshot metadata.
-	return []string{}, nil
-}
-
-// DeleteSnapshot removes a snapshot.
-func (r *Runtime) DeleteSnapshot(ctx context.Context, id, name string) error {
-	cmd := exec.CommandContext(ctx, "runsc", "snapshot", "delete", id, name)
-	return cmd.Run()
-}
-
-// GetTimeout returns the command timeout.
-func (r *Runtime) GetTimeout() time.Duration {
-	return r.timeout
-}
-
-// GetImage returns the container image.
-func (r *Runtime) GetImage() string {
-	return r.image
-}
-
-// GetRootDir returns the root directory.
-func (r *Runtime) GetRootDir() string {
-	return r.rootDir
-}
-
-// GetMode returns the runtime mode.
-func (r *Runtime) GetMode() string {
-	return "secure"
-}
-
-// generateConfig generates a minimal OCI spec for runsc.
+// generateConfig generates a minimal runsc config.json (deprecated, kept for reference).
+// This function is no longer used — gVisor now uses the shared OCI engine.
 func (r *Runtime) generateConfig(id, bundleDir, template string) string {
-	// Minimal OCI runtime spec for gVisor
+	// Deprecated: this function is kept for reference only.
+	// gVisor now uses the shared OCI engine for container creation.
 	return `{
 		"ociVersion": "1.0.2",
 		"process": {
 			"terminal": false,
-			"user": {
-				"uid": 0,
-				"gid": 0
-			},
-			"args": ["/bin/sh"],
-			"env": ["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],
-			"cwd": "/workspace",
-			"rlimits": [
-				{"type": "RLIMIT_NOFILE", "hard": 1024, "soft": 1024}
-			],
-			"noNewPrivileges": true
+			"user": {"uid": 1000, "gid": 1000},
+			"args": ["/bin/sh", "-c", "sleep infinity"],
+			"env": ["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"]
 		},
-		"root": {
-			"path": "rootfs",
-			"readonly": true
-		},
-		"hostname": "` + id + `",
-		"mounts": [
-			{
-				"destination": "/proc",
-				"type": "proc",
-				"source": "proc"
-			},
-			{
-				"destination": "/dev",
-				"type": "tmpfs",
-				"source": "tmpfs",
-				"options": ["nosuid", "noexec", "nodev"]
-			}
-		],
-		"linux": {
-			"namespaces": [
-				{"type": "pid"},
-				{"type": "ipc"},
-				{"type": "uts"},
-				{"type": "mount"},
-				{"type": "network"}
-			],
-			"resources": {
-				"devices": [
-					{"allow": false, "access": "rwm"}
-				]
-			},
-			"maskedPaths": [
-				"/proc/kcore",
-				"/proc/latency_stats",
-				"/proc/timer_list",
-				"/proc/timer_stats",
-				"/proc/sched_debug"
-			],
-			"readonlyPaths": [
-				"/proc/asound",
-				"/proc/bus",
-				"/proc/fs",
-				"/proc/irq",
-				"/proc/laptops",
-				"/proc/sys",
-				"/proc/sysrq-trigger"
-			]
-		}
+		"root": {"path": "rootfs", "readonly": false},
+		"hostname": "` + id + `"
 	}`
 }
 
-// CgroupConfig holds cgroup v2 resource limits for gVisor.
-type CgroupConfig struct {
-	CPUPeriod   int64 // CPU period in microseconds
-	CPUQuota    int64 // CPU quota in microseconds
-	MemoryLimit int64 // Memory limit in bytes
-	MaxPIDs     int   // Max processes
-}
-
-// DefaultCgroupConfig returns default cgroup limits.
-func DefaultCgroupConfig() *CgroupConfig {
-	return &CgroupConfig{
-		CPUPeriod:   100000,
-		MemoryLimit: 512 * 1024 * 1024, // 512MB
-		MaxPIDs:     128,
+// ensureRuntimeDir ensures the runtime directory exists.
+func ensureRuntimeDir() error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("get home dir: %w", err)
 	}
-}
-
-// CgroupManager manages cgroup v2 for gVisor sandboxes.
-type CgroupManager struct {
-	basePath string
-	id       string
-	path     string
-}
-
-// NewCgroupManager creates a new cgroup manager.
-func NewCgroupManager(basePath, id string) *CgroupManager {
-	return &CgroupManager{
-		basePath: basePath,
-		id:       id,
-		path:     filepath.Join(basePath, id),
-	}
-}
-
-// Create creates the cgroup hierarchy.
-func (m *CgroupManager) Create() error {
-	return os.MkdirAll(m.path, 0755)
-}
-
-// SetCPU sets CPU limits.
-func (m *CgroupManager) SetCPU(period, quota int64) error {
-	if period > 0 {
-		return os.WriteFile(filepath.Join(m.path, "cpu.max"),
-			[]byte(fmt.Sprintf("%d %d", quota, period)), 0644)
-	}
-	return nil
-}
-
-// SetMemory sets memory limit.
-func (m *CgroupManager) SetMemory(limit int64) error {
-	if limit > 0 {
-		return os.WriteFile(filepath.Join(m.path, "memory.max"),
-			[]byte(strconv.FormatInt(limit, 10)), 0644)
-	}
-	return nil
-}
-
-// SetPIDs sets max processes.
-func (m *CgroupManager) SetPIDs(max int) error {
-	return os.WriteFile(filepath.Join(m.path, "pids.max"),
-		[]byte(strconv.Itoa(max)), 0644)
-}
-
-// AddProcess adds a PID to the cgroup.
-func (m *CgroupManager) AddProcess(pid int) error {
-	return os.WriteFile(filepath.Join(m.path, "cgroup.procs"),
-		[]byte(strconv.Itoa(pid)), 0644)
-}
-
-// Destroy removes the cgroup hierarchy.
-func (m *CgroupManager) Destroy() error {
-	return os.RemoveAll(m.path)
-}
-
-// Path returns the cgroup path.
-func (m *CgroupManager) Path() string {
-	return m.path
-}
-
-// NamespaceConfig holds namespace configuration.
-type NamespaceConfig struct {
-	UserNS  bool
-	MountNS bool
-	PIDNS   bool
-	HostUID int
-	HostGID int
-}
-
-// DefaultNamespaceConfig returns default namespace config.
-func DefaultNamespaceConfig() *NamespaceConfig {
-	return &NamespaceConfig{
-		UserNS:  true,
-		MountNS: true,
-		PIDNS:   true,
-		HostUID: 1000,
-		HostGID: 1000,
-	}
-}
-
-// Setup creates a syscall.SysProcAttr with namespace flags for gVisor.
-func Setup(cfg *NamespaceConfig) *syscall.SysProcAttr {
-	if cfg == nil {
-		cfg = DefaultNamespaceConfig()
-	}
-
-	attr := &syscall.SysProcAttr{}
-
-	if cfg.UserNS {
-		attr.Cloneflags |= syscall.CLONE_NEWUSER
-		attr.UidMappings = []syscall.SysProcIDMap{
-			{ContainerID: 0, HostID: cfg.HostUID, Size: 1},
-			{ContainerID: 1, HostID: cfg.HostUID + 1, Size: 65535},
-		}
-		attr.GidMappings = []syscall.SysProcIDMap{
-			{ContainerID: 0, HostID: cfg.HostGID, Size: 1},
-			{ContainerID: 1, HostID: cfg.HostGID + 1, Size: 65535},
-		}
-	}
-
-	if cfg.MountNS {
-		attr.Cloneflags |= syscall.CLONE_NEWNS
-	}
-
-	if cfg.PIDNS {
-		attr.Cloneflags |= syscall.CLONE_NEWPID
-	}
-
-	return attr
-}
-
-// Validate checks if namespace operations are supported.
-func Validate() error {
-	return nil
-}
-
-// WriteUIDMap writes UID mapping for a namespace.
-func WriteUIDMap(namespaceID int, uidMap string) error {
-	path := fmt.Sprintf("/proc/%d/uid_map", namespaceID)
-	return os.WriteFile(path, []byte(uidMap), 0644)
-}
-
-// WriteGIDMap writes GID mapping for a namespace.
-func WriteGIDMap(namespaceID int, gidMap string) error {
-	path := fmt.Sprintf("/proc/%d/gid_map", namespaceID)
-	return os.WriteFile(path, []byte(gidMap), 0644)
+	dir := filepath.Join(home, ".pi-box", "runtime")
+	return os.MkdirAll(dir, 0755)
 }

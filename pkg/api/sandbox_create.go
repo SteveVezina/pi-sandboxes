@@ -115,21 +115,19 @@ func createCompatContainer(store *session.Store, sandboxID, templateName string)
 	// Resolve the image
 	image := template.ResolveTemplateImage(t)
 
+	// Build cache mounts from the template's cache definitions
+	caches := make(map[string]string)
+	for name, path := range t.Caches {
+		caches[name] = path
+	}
+
 	// Create the container
 	spec := &compat.ContainerSpec{
 		ID:        sandboxID,
 		Image:     image,
 		Workspace: "/workspace",
 		Artifacts: "/artifacts",
-		Caches: map[string]string{
-			"npm":      "/cache/npm",
-			"pnpm":     "/cache/pnpm",
-			"uv":       "/cache/uv",
-			"pip":      "/cache/pip",
-			"go-mod":   "/cache/go/mod",
-			"go-build": "/cache/go/build",
-			"cargo":    "/cache/cargo",
-		},
+		Caches:    caches,
 	}
 
 	container, err := compat.CreateContainer(spec)

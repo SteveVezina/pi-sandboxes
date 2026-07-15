@@ -59,6 +59,8 @@ import {
   SupportBundle,
   SystemStatus
 } from "./api";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import "./styles.css";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -2364,7 +2366,9 @@ function Topbar({
       </div>
       <div className="topbar-actions">
         <div className="notification-control">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             className={`icon-button notification-button ${notificationMenuOpen ? "active" : ""}`}
             onClick={onToggleNotificationMenu}
             aria-label="Notifications menu"
@@ -2372,41 +2376,43 @@ function Topbar({
           >
             <Bell size={18} />
             {unreadNotifications > 0 && <span className="notification-dot" />}
-          </button>
+          </Button>
           {notificationMenuOpen && (
             <div className="notification-menu" role="menu">
               <div className="notification-menu-header">
                 <strong>PI Sandbox is running</strong>
-                <span>{notificationLabel}</span>
+                <Badge variant={notificationPermission === "granted" ? "success" : "outline"}>
+                  {notificationLabel}
+                </Badge>
               </div>
-              <button onClick={onOpenSettings} role="menuitem">
+              <Button variant="ghost" onClick={onOpenSettings} role="menuitem">
                 <Settings size={15} />
                 Settings
-              </button>
-              <button onClick={onEnableNotifications} role="menuitem">
+              </Button>
+              <Button variant="ghost" onClick={onEnableNotifications} role="menuitem">
                 <Bell size={15} />
                 Enable notifications
-              </button>
-              <button onClick={onTestNotification} role="menuitem">
+              </Button>
+              <Button variant="ghost" onClick={onTestNotification} role="menuitem">
                 <Play size={15} />
                 Send test notification
-              </button>
-              <button onClick={onCloseNotificationMenu} role="menuitem">
+              </Button>
+              <Button variant="ghost" onClick={onCloseNotificationMenu} role="menuitem">
                 <X size={15} />
                 Close
-              </button>
+              </Button>
             </div>
           )}
         </div>
         {(activeView === "dashboard" || activeView === "sessions") && (
-          <button
+          <Button
             className="primary-action"
             onClick={onCreateSession}
             disabled={!canCreate}
           >
             {isBusy ? <Loader2 className="spin" size={18} /> : <Play size={18} />}
             New sandbox
-          </button>
+          </Button>
         )}
       </div>
     </header>

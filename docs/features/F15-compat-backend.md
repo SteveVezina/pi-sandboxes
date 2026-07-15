@@ -129,36 +129,58 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Size:** S
 **Depends on:** None
 
-### T15.2: Container creation ⚠️ *(2026-07-14: AC updated per PROP-008 — mount exec policy, no --rm, limits, user mapping, versioned seccomp, ID separation)*
+### T15.2a: Shared OCI engine extraction ⚠️ *(2026-07-14: split from T15.2 per PROP-008 — L task split before execution)*
 
-**Description:** Implement container creation with hardened defaults through the shared OCI engine. OCI container spec generation, container start.
+**Description:** Extract the duplicated Docker/Podman CLI construction into a shared `pkg/runtime/oci` engine (EnsureImage/Create/Start/Exec/Inspect/Stop/Remove). Behavior-preserving refactor; compat becomes a thin driver over the engine.
 
 **Acceptance criteria:**
+- [ ] `oci.Engine` interface with `PodmanEngine` and `DockerEngine` implementations
 - [ ] Container created from template OCI image via `oci.Engine`
 - [ ] Runtime CLI creation fails instead of hanging indefinitely when the OCI runtime stalls
-- [ ] No privileged mode
-- [ ] No host network (bridge network)
-- [ ] No Docker socket mount
-- [ ] No hostPath unless explicitly configured
-- [ ] Capabilities dropped by default
-- [ ] Project-versioned seccomp profile passed explicitly (`--security-opt seccomp=`)
-- [ ] Workspace, artifacts, caches mounted `rw,nosuid,nodev` (exec allowed); `noexec` on `/tmp` and secret mounts only
-- [ ] No `--rm`; container survives daemon crash for reconciliation
-- [ ] Explicit unprivileged user (`--userns=keep-id`/`--user`)
-- [ ] `ResourceLimits` (memory, cpus, pids, ulimits) passed at creation
-- [ ] Session ID never overwritten with runtime container ID
+- [ ] Docker/Podman argument construction exists in exactly one place per engine
+- [ ] Session ID never overwritten with runtime container ID (`Handle.RuntimeObjectID` carries the container ID)
 
 **Verification:**
-- [ ] `go build ./pkg/runtime/compat/...`
-- [ ] Integration test: container created with hardened defaults
+- [ ] `go build ./pkg/runtime/...`
 - [ ] Unit test: stalled runtime CLI creation times out
-- [ ] Integration test: container cannot access host filesystem
-- [ ] Integration test: `./script` in `/workspace` executes (no noexec regression)
-- [ ] Integration test: daemon restart reconciles existing containers
+- [ ] Existing compat integration tests pass unchanged
 
 **Files:** `pkg/runtime/oci/engine.go`, `pkg/runtime/oci/podman.go`, `pkg/runtime/oci/docker.go`, `pkg/runtime/compat/create.go`
-**Size:** L
-**Depends on:** T15.1 (runtime detection), F5 (Template System — OCI images)
+**Size:** M
+**Depends on:** T15.1, T19.1 (driver contract)
+
+### T15.2b: Compat hardening corrections ⚠️ *(2026-07-14: split from T15.2 per PROP-008)*
+
+**Acceptance criteria:**
+- [ ] Workspace, artifacts, caches mounted `rw,nosuid,nodev` (exec allowed); `noexec` on `/tmp` and secret mounts only
+- [ ] Explicit unprivileged user (Podman `--userns=keep-id --user`; Docker `--user`)
+- [ ] Project-versioned seccomp profile passed explicitly (`--security-opt seccomp=`)
+- [ ] `ResourceLimits` (memory, cpus, pids, ulimits) passed at creation
+- [ ] No privileged mode, no host network, no Docker socket, no hostPath unless configured, capabilities dropped (unchanged)
+
+**Verification:**
+- [ ] Integration test: `./script` in `/workspace` executes (no noexec regression)
+- [ ] Integration test: container runs as non-root user
+- [ ] Integration test: container cannot access host filesystem
+
+**Files:** `pkg/runtime/oci/*.go`, `deploy/security/seccomp-profile.json`
+**Size:** M
+**Depends on:** T15.2a
+
+### T15.2c: Lifecycle recovery — no --rm + reconciliation ⚠️ *(2026-07-14: split from T15.2 per PROP-008)*
+
+**Acceptance criteria:**
+- [ ] No `--rm`; container survives daemon crash for post-mortem inspection
+- [ ] Daemon startup reconciles session store against `Inspect` results
+- [ ] Orphaned containers (no session) are garbage-collected
+
+**Verification:**
+- [ ] Integration test: daemon restart reconciles existing containers
+- [ ] Integration test: orphan container is garbage-collected
+
+**Files:** `pkg/runtime/oci/*.go`, `pkg/runtime/compat/lifecycle.go`, `pkg/daemon/`
+**Size:** M
+**Depends on:** T15.2a
 
 ### T15.3: Container exec and lifecycle
 

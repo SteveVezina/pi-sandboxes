@@ -39,7 +39,7 @@ func (f *fakeVMM) Running() bool { return f.started && !f.stopped }
 
 func TestSandbox_StartUsesFakeVMM(t *testing.T) {
 	vmm := &fakeVMM{}
-	sb := microvm.NewSandbox("session-1", vmm)
+	sb := microvm.NewSandbox("sandbox-1", vmm)
 
 	if err := sb.Start(microvm.VMConfig{
 		Rootfs:    microvm.Disk{Path: "/img/rootfs.ext4", ReadOnly: true},
@@ -61,7 +61,7 @@ func TestSandbox_StartUsesFakeVMM(t *testing.T) {
 
 func TestSandbox_StopShutsDownVMM(t *testing.T) {
 	vmm := &fakeVMM{}
-	sb := microvm.NewSandbox("session-1", vmm)
+	sb := microvm.NewSandbox("sandbox-1", vmm)
 	_ = sb.Start(microvm.VMConfig{
 		Rootfs:    microvm.Disk{Path: "/img/rootfs.ext4", ReadOnly: true},
 		Workspace: microvm.Disk{Path: "/img/ws.ext4", ReadOnly: false},
@@ -77,7 +77,7 @@ func TestSandbox_StopShutsDownVMM(t *testing.T) {
 
 func TestSandbox_GuestRootfsIsReadOnly(t *testing.T) {
 	vmm := &fakeVMM{}
-	sb := microvm.NewSandbox("session-1", vmm)
+	sb := microvm.NewSandbox("sandbox-1", vmm)
 	_ = sb.Start(microvm.VMConfig{
 		Rootfs:    microvm.Disk{Path: "/img/rootfs.ext4", ReadOnly: true},
 		Workspace: microvm.Disk{Path: "/img/ws.ext4", ReadOnly: false},
@@ -90,7 +90,7 @@ func TestSandbox_GuestRootfsIsReadOnly(t *testing.T) {
 
 func TestSandbox_StartRejectsWritableRootfs(t *testing.T) {
 	vmm := &fakeVMM{}
-	sb := microvm.NewSandbox("session-1", vmm)
+	sb := microvm.NewSandbox("sandbox-1", vmm)
 
 	err := sb.Start(microvm.VMConfig{
 		Rootfs:    microvm.Disk{Path: "/img/rootfs.ext4", ReadOnly: false},
@@ -107,7 +107,7 @@ func TestSandbox_StartRejectsWritableRootfs(t *testing.T) {
 func TestSandbox_StartPropagatesVMMError(t *testing.T) {
 	want := errors.New("boot failed")
 	vmm := &fakeVMM{startErr: want}
-	sb := microvm.NewSandbox("session-1", vmm)
+	sb := microvm.NewSandbox("sandbox-1", vmm)
 
 	err := sb.Start(microvm.VMConfig{
 		Rootfs:    microvm.Disk{Path: "/img/rootfs.ext4", ReadOnly: true},

@@ -16,7 +16,7 @@ func TestProtocol_EncodeDecodeRoundTrip_Succeeds(t *testing.T) {
 	frame := microvm.Frame{
 		Type:      microvm.FrameTypeRequest,
 		ID:        "req-1",
-		SessionID: "sandbox-1",
+		SandboxID: "sandbox-1",
 		Method:    "exec",
 		Payload:   payload,
 	}
@@ -33,7 +33,7 @@ func TestProtocol_EncodeDecodeRoundTrip_Succeeds(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DecodeFrame failed: %v", err)
 	}
-	if got.Type != frame.Type || got.ID != frame.ID || got.SessionID != frame.SessionID || got.Method != frame.Method {
+	if got.Type != frame.Type || got.ID != frame.ID || got.SandboxID != frame.SandboxID || got.Method != frame.Method {
 		t.Fatalf("decoded frame mismatch: got %+v want %+v", got, frame)
 	}
 	if string(got.Payload) != string(payload) {
@@ -42,7 +42,7 @@ func TestProtocol_EncodeDecodeRoundTrip_Succeeds(t *testing.T) {
 }
 
 func TestProtocol_DecodeInvalidType_ReturnsError(t *testing.T) {
-	input := `{"type":"wat","id":"req-1","session_id":"sandbox-1","method":"exec"}` + "\n"
+	input := `{"type":"wat","id":"req-1","sandbox_id":"sandbox-1","method":"exec"}` + "\n"
 
 	_, err := microvm.DecodeFrame(bufio.NewReader(strings.NewReader(input)))
 	if err == nil {

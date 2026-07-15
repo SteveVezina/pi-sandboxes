@@ -41,7 +41,7 @@ func findRepoRoot(t *testing.T) string {
 }
 
 // TestBoxDestroyAll_CleansAllSandboxes verifies AC-8.4:
-// `pi-box box destroy --all` iterates over active sessions and destroys them all.
+// `pi-box box destroy --all` iterates over active sandboxes and destroys them all.
 // This exercises the callAPIList → destroy-all path in cmd/pi-box/box/box.go.
 func TestBoxDestroyAll_CleansAllSandboxes(t *testing.T) {
 	bin := buildPIBinary(t)

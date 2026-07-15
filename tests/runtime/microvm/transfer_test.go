@@ -88,7 +88,7 @@ func TestProtocol_DecodeFileDataPayload_DecodesBase64Bytes(t *testing.T) {
 	frame := microvm.Frame{
 		Type:      microvm.FrameTypeResponse,
 		ID:        "req-1",
-		SessionID: "sandbox-1",
+		SandboxID: "sandbox-1",
 		Method:    "file.read",
 		Payload:   payload,
 	}
@@ -166,7 +166,7 @@ func (f *fakeTransferTransport) Send(frame microvm.Frame) (microvm.Frame, error)
 		return microvm.Frame{
 			Type:      microvm.FrameTypeResponse,
 			ID:        frame.ID,
-			SessionID: frame.SessionID,
+			SandboxID: frame.SandboxID,
 			Method:    frame.Method,
 			Payload:   payload,
 		}, nil
@@ -179,7 +179,7 @@ func (f *fakeTransferTransport) Send(frame microvm.Frame) (microvm.Frame, error)
 			return microvm.Frame{
 				Type:      microvm.FrameTypeResponse,
 				ID:        frame.ID,
-				SessionID: frame.SessionID,
+				SandboxID: frame.SandboxID,
 				Method:    frame.Method,
 				Error:     &microvm.FrameError{Code: "bad_request", Message: "unexpected write payload"},
 			}, nil
@@ -187,7 +187,7 @@ func (f *fakeTransferTransport) Send(frame microvm.Frame) (microvm.Frame, error)
 		return microvm.Frame{
 			Type:      microvm.FrameTypeResponse,
 			ID:        frame.ID,
-			SessionID: frame.SessionID,
+			SandboxID: frame.SandboxID,
 			Method:    frame.Method,
 		}, nil
 	case "artifact.list":
@@ -197,7 +197,7 @@ func (f *fakeTransferTransport) Send(frame microvm.Frame) (microvm.Frame, error)
 		return microvm.Frame{
 			Type:      microvm.FrameTypeResponse,
 			ID:        frame.ID,
-			SessionID: frame.SessionID,
+			SandboxID: frame.SandboxID,
 			Method:    frame.Method,
 			Payload:   payload,
 		}, nil
@@ -210,7 +210,7 @@ func (f *fakeTransferTransport) Send(frame microvm.Frame) (microvm.Frame, error)
 		return microvm.Frame{
 			Type:      microvm.FrameTypeResponse,
 			ID:        frame.ID,
-			SessionID: frame.SessionID,
+			SandboxID: frame.SandboxID,
 			Method:    frame.Method,
 			Payload:   payload,
 		}, nil
@@ -218,7 +218,7 @@ func (f *fakeTransferTransport) Send(frame microvm.Frame) (microvm.Frame, error)
 		return microvm.Frame{
 			Type:      microvm.FrameTypeResponse,
 			ID:        frame.ID,
-			SessionID: frame.SessionID,
+			SandboxID: frame.SandboxID,
 			Method:    frame.Method,
 			Error:     &microvm.FrameError{Code: "unknown_method", Message: frame.Method},
 		}, nil

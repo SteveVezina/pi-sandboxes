@@ -8,10 +8,10 @@ import (
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 )
 
-// TestCreateContainer_PreservesSessionID verifies the PROP-008 identity
-// rule: the stable session ID is never overwritten with the runtime
+// TestCreateContainer_PreservesSandboxID verifies the PROP-008 identity
+// rule: the stable sandbox ID is never overwritten with the runtime
 // container ID (old code mutated spec.ID after create).
-func TestCreateContainer_PreservesSessionID(t *testing.T) {
+func TestCreateContainer_PreservesSandboxID(t *testing.T) {
 	dir := t.TempDir()
 	fake := filepath.Join(dir, "docker")
 	script := "#!/bin/sh\necho fedcba9876543210aaaa\n"
@@ -24,7 +24,7 @@ func TestCreateContainer_PreservesSessionID(t *testing.T) {
 	t.Cleanup(compat.ResetDetection)
 
 	spec := &compat.ContainerSpec{
-		ID:    "session-1234-uuid",
+		ID:    "sandbox-1234-uuid",
 		Image: "debian:bookworm-slim",
 	}
 	container, err := compat.CreateContainer(spec)
@@ -32,11 +32,11 @@ func TestCreateContainer_PreservesSessionID(t *testing.T) {
 		t.Fatalf("CreateContainer failed: %v", err)
 	}
 
-	if spec.ID != "session-1234-uuid" {
-		t.Errorf("session ID mutated to %q — must stay stable", spec.ID)
+	if spec.ID != "sandbox-1234-uuid" {
+		t.Errorf("sandbox ID mutated to %q — must stay stable", spec.ID)
 	}
-	if container.ID != "session-1234-uuid" {
-		t.Errorf("container session ID = %q, want session-1234-uuid", container.ID)
+	if container.ID != "sandbox-1234-uuid" {
+		t.Errorf("container sandbox ID = %q, want sandbox-1234-uuid", container.ID)
 	}
 	if container.RuntimeObjectID != "fedcba987654" {
 		t.Errorf("RuntimeObjectID = %q, want truncated runtime container ID", container.RuntimeObjectID)

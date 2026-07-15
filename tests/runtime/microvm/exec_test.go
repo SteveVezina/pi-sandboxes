@@ -47,8 +47,8 @@ func TestExec_NewHelloFrame_CorrectType(t *testing.T) {
 	if frame.ID != "h-1" {
 		t.Errorf("frame id = %q, want h-1", frame.ID)
 	}
-	if frame.SessionID != "sess-1" {
-		t.Errorf("frame session_id = %q, want sess-1", frame.SessionID)
+	if frame.SandboxID != "sess-1" {
+		t.Errorf("frame sandbox_id = %q, want sess-1", frame.SandboxID)
 	}
 }
 
@@ -165,7 +165,7 @@ func TestExec_StreamPayload_InvalidFrameType(t *testing.T) {
 	frame := microvm.Frame{
 		Type:      microvm.FrameTypeRequest,
 		ID:        "req-1",
-		SessionID: "sess-1",
+		SandboxID: "sess-1",
 		Method:    "exec",
 	}
 	_, _, err := microvm.DecodeStreamPayload(frame)

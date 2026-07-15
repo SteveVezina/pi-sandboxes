@@ -10,7 +10,7 @@ import (
 
 func TestWorkspaceDisk_IsExt4AndWritable(t *testing.T) {
 	dir := t.TempDir()
-	disk, err := microvm.CreateWorkspaceDisk(dir, "session-1", 64*1024*1024)
+	disk, err := microvm.CreateWorkspaceDisk(dir, "sandbox-1", 64*1024*1024)
 	if err != nil {
 		t.Fatalf("CreateWorkspaceDisk: %v", err)
 	}

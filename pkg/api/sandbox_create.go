@@ -1,12 +1,14 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
@@ -29,7 +31,7 @@ type CreateRequest struct {
 	} `json:"workspace"`
 }
 
-// CreateSandbox returns an HTTP handler that creates a sandbox session.
+// CreateSandbox returns an HTTP handler that creates a sandbox.
 func CreateSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req CreateRequest
@@ -134,7 +136,7 @@ func createCompatContainer(store *sandbox.Store, sandboxID, templateName string)
 		ID:        sandboxID,
 		Image:     image,
 		Workspace: managedVolumeName("workspace", sandboxID),
-		Artifacts: managedVolumeName("artifacts", sandboxID),
+		Artifacts: compatArtifactsSource(sandboxID),
 		Caches:    caches,
 	}
 
@@ -148,6 +150,15 @@ func createCompatContainer(store *sandbox.Store, sandboxID, templateName string)
 	if state != "running" {
 		container.Destroy()
 		return fmt.Errorf("container not running after creation: %s", state)
+	}
+
+	// Fresh named volumes are mounted root-owned; hand them to the
+	// sandbox user so workspace and artifact writes work.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := container.ExecAsRoot(ctx, "chown 1000:1000 /workspace /artifacts /cache/* 2>/dev/null || chown 1000:1000 /workspace /artifacts"); err != nil {
+		container.Destroy()
+		return fmt.Errorf("prepare volumes: %w", err)
 	}
 
 	return nil
@@ -175,6 +186,17 @@ func managedVolumeName(parts ...string) string {
 		cleaned = append(cleaned, b.String())
 	}
 	return strings.Join(cleaned, "-")
+}
+
+func compatWorkspaceSource(id string, meta *sandbox.Meta) string {
+	if meta != nil && meta.WorkspaceMode == "bind" && strings.TrimSpace(meta.Workspace) != "" {
+		return meta.Workspace
+	}
+	return managedVolumeName("workspace", id)
+}
+
+func compatArtifactsSource(id string) string {
+	return managedVolumeName("artifacts", id)
 }
 
 func validateWorkspaceSource(mode, source string) error {

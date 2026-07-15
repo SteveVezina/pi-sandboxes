@@ -7,7 +7,7 @@ import (
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
-// ListSandboxes returns an HTTP handler that lists sandbox sessions.
+// ListSandboxes returns an HTTP handler that lists sandboxes.
 func ListSandboxes(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ids, err := store.List()

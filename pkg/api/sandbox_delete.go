@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -41,6 +42,11 @@ func DeleteSandbox(store *sandbox.Store) http.HandlerFunc {
 			if err := c.Destroy(); err != nil {
 				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("destroy compat container: %v", err)})
 				return
+			}
+			// Remove daemon-managed volumes (workspace, artifacts, caches).
+			// Best-effort: a leaked volume must not block sandbox destruction.
+			if err := compat.RemoveManagedVolumes(id); err != nil {
+				log.Printf("sandbox: remove managed volumes for %s: %v", id, err)
 			}
 		}
 

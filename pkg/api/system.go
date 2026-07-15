@@ -76,7 +76,7 @@ func SupportBundle(store *sandbox.Store) http.HandlerFunc {
 				"available": available,
 				"best":      detect.BestMode(""),
 			},
-			"sessions": map[string]interface{}{
+			"sandboxes": map[string]interface{}{
 				"count": len(ids),
 				"ids":   ids,
 			},

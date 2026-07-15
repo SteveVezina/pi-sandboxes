@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pi-sandbox/pi/pkg/exec"
+	"github.com/pi-sandbox/pi/pkg/logs"
 	"github.com/pi-sandbox/pi/pkg/network"
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
@@ -128,6 +129,8 @@ func ExecSandbox(store *sandbox.Store) http.HandlerFunc {
 					writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 					return
 				}
+				_, _ = logs.NewManager(id).Record(execReq.Command, result.ExitCode,
+					result.DurationMs, result.TimedOut, result.Truncated, result.Stdout, result.Stderr)
 				writeJSON(w, http.StatusOK, ExecResponse{
 					ExitCode:   result.ExitCode,
 					DurationMs: result.DurationMs,
@@ -153,7 +156,8 @@ func execInContainer(store *sandbox.Store, id string, meta *sandbox.Meta, ctx co
 		ID:        id,
 		Name:      "pi-sandbox-" + id[:8],
 		Image:     "debian:bookworm-slim",
-		Workspace: meta.Workspace,
+		Workspace: compatWorkspaceSource(id, meta),
+		Artifacts: compatArtifactsSource(id),
 		Mode:      meta.Mode,
 		Template:  meta.Template,
 	}
@@ -186,6 +190,10 @@ func execInContainer(store *sandbox.Store, id string, meta *sandbox.Meta, ctx co
 	if err != nil {
 		return fmt.Errorf("exec in container: %w", err)
 	}
+
+	// Record the run in the sandbox exec history (best-effort).
+	_, _ = logs.NewManager(id).Record(execReq.Command, result.ExitCode,
+		result.DurationMs, result.TimedOut, result.Truncated, result.Stdout, result.Stderr)
 
 	if streaming {
 		// Streaming path

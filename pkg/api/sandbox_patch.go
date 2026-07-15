@@ -6,41 +6,31 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pi-sandbox/pi/pkg/git"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
-	"github.com/pi-sandbox/pi/pkg/workspace"
 )
 
-// PatchSandbox returns an HTTP handler that exports workspace as a git patch.
+// PatchSandbox returns an HTTP handler that exports the workspace diff as
+// a git patch computed inside the sandbox container.
 func PatchSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
 
-		// Validate sandbox exists
 		meta, err := store.Get(id)
 		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
 			return
 		}
-
-		// Create workspace manager
-		mgr := workspace.NewManager(id, workspace.ModeCopy)
-		if err := mgr.EnsureDir(); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "ensure workspace: " + err.Error()})
+		if err := requireCompat(meta); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
 
-		// Initialize git repo if needed
 		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 		defer cancel()
 
-		if err := git.InitIfNotRepo(ctx, mgr.Dir()); err != nil {
-			// Non-fatal — just log and continue
-		}
-
-		// Export patch
-		patch, err := git.Patch(ctx, mgr.Dir())
+		start := time.Now()
+		patch, err := workspaceDiff(ctx, id)
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "patch failed: " + err.Error()})
 			return
@@ -49,9 +39,9 @@ func PatchSandbox(store *sandbox.Store) http.HandlerFunc {
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"id":          id,
 			"name":        meta.Name,
-			"patch":       patch.Patch,
-			"timed_out":   patch.TimedOut,
-			"duration_ms": patch.DurationMs,
+			"patch":       patch,
+			"timed_out":   false,
+			"duration_ms": time.Since(start).Milliseconds(),
 		})
 	}
 }

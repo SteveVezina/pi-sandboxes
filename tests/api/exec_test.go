@@ -83,7 +83,7 @@ func TestExecSandbox_RejectsNonWarmState(t *testing.T) {
 	store, _ := newTestStore(t)
 
 	id, err := store.CreateWithOptions(sandbox.CreateOptions{
-		Name:     "busy-session",
+		Name:     "busy-sandbox",
 		Template: "base",
 		Mode:     "fast",
 	})

@@ -53,13 +53,13 @@ func TestReadinessTracker_ObserveWrongSession_DoesNotMarkWarm(t *testing.T) {
 
 	err = tracker.Observe(ready)
 	if err == nil {
-		t.Fatal("expected wrong session error")
+		t.Fatal("expected wrong sandbox error")
 	}
-	if !strings.Contains(err.Error(), "unexpected ready session") {
-		t.Fatalf("error = %v, want unexpected ready session", err)
+	if !strings.Contains(err.Error(), "unexpected ready sandbox") {
+		t.Fatalf("error = %v, want unexpected ready sandbox", err)
 	}
 	if tracker.Warm() {
-		t.Fatal("wrong-session ready frame must not mark sandbox warm")
+		t.Fatal("wrong-sandbox ready frame must not mark sandbox warm")
 	}
 }
 
@@ -74,7 +74,7 @@ func TestGuestInit_StartsAgentAndReportsReady(t *testing.T) {
 		t.Fatalf("build pi-agentd failed: %v\n%s", err, out)
 	}
 
-	run := exec.Command("go", "run", "./cmd/pi-init", "--session", "sandbox-1", "--agentd", agentd)
+	run := exec.Command("go", "run", "./cmd/pi-init", "--sandbox", "sandbox-1", "--agentd", agentd)
 	run.Dir = root
 	run.Stdin = strings.NewReader("")
 	var stdout bytes.Buffer
@@ -89,7 +89,7 @@ func TestGuestInit_StartsAgentAndReportsReady(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DecodeFrame failed: %v", err)
 	}
-	if frame.Type != microvm.FrameTypeEvent || frame.Method != "ready" || frame.SessionID != "sandbox-1" {
+	if frame.Type != microvm.FrameTypeEvent || frame.Method != "ready" || frame.SandboxID != "sandbox-1" {
 		t.Fatalf("frame = %+v, want ready event for sandbox-1", frame)
 	}
 }

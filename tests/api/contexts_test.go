@@ -294,12 +294,12 @@ contexts:
 	if sawAuth != "Bearer secret-token" {
 		t.Fatalf("Authorization header = %q, want bearer token", sawAuth)
 	}
-	var sessions []map[string]interface{}
-	if err := json.NewDecoder(w.Body).Decode(&sessions); err != nil {
+	var sandboxes []map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&sandboxes); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if len(sessions) != 1 || sessions[0]["name"] != "from-remote" {
-		t.Fatalf("sessions = %#v, want remote response", sessions)
+	if len(sandboxes) != 1 || sandboxes[0]["name"] != "from-remote" {
+		t.Fatalf("sandboxes = %#v, want remote response", sandboxes)
 	}
 }
 

@@ -28,13 +28,13 @@ func TestArtifactExporter_UsesControlPlane(t *testing.T) {
 	sender := &recordingSender{}
 	listPayload, _ := json.Marshal(microvm.ArtifactListPayload{Paths: []string{"/artifacts/out.tar"}})
 	sender.responses = append(sender.responses, microvm.Frame{
-		Type: microvm.FrameTypeResponse, ID: "list-1", SessionID: "s1",
+		Type: microvm.FrameTypeResponse, ID: "list-1", SandboxID: "s1",
 		Method: "artifact.list", Payload: listPayload,
 	})
 	dataB64 := base64.StdEncoding.EncodeToString([]byte("hello"))
 	pullPayload, _ := json.Marshal(microvm.FileDataPayload{Path: "/artifacts/out.tar", Data: dataB64, Mode: 0o644})
 	sender.responses = append(sender.responses, microvm.Frame{
-		Type: microvm.FrameTypeResponse, ID: "pull-1", SessionID: "s1",
+		Type: microvm.FrameTypeResponse, ID: "pull-1", SandboxID: "s1",
 		Method: "artifact.pull", Payload: pullPayload,
 	})
 
@@ -65,7 +65,7 @@ func TestArtifactExporter_ReturnsEmptyWhenNoArtifacts(t *testing.T) {
 	sender := &recordingSender{}
 	emptyPayload, _ := json.Marshal(microvm.ArtifactListPayload{Paths: []string{}})
 	sender.responses = append(sender.responses, microvm.Frame{
-		Type: microvm.FrameTypeResponse, ID: "list-1", SessionID: "s1",
+		Type: microvm.FrameTypeResponse, ID: "list-1", SandboxID: "s1",
 		Method: "artifact.list", Payload: emptyPayload,
 	})
 

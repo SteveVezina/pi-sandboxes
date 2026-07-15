@@ -12,7 +12,7 @@
 ## Cross-Feature Dependency Graph
 
 ```
-F01 (CLI) ──→ F02 (Daemon API) ──→ F04 (Session Lifecycle) ──→ F03 (Fast Backend)
+F01 (CLI) ──→ F02 (Daemon API) ──→ F04 (Sandbox Lifecycle) ──→ F03 (Fast Backend)
                                                           └──→ F15 (Compat Backend)
 F07 (Templates) ──→ F03/F15 ──→ F05 (Exec) ──→ F09 (Logs)
        │              │         │
@@ -36,7 +36,7 @@ F18 (Secure Backend) ──→ F19 (Runtime Selection & Fallback)
 F23 (Remote Transport/Auth) ──→ F22 (Remote Daemon Contexts)
 
 F02/F16/F22/F23 ──→ F24 (GUI Workbench) ──→ F25 (Workspace Authorization)
-                                │             ├──→ F26 (Session Operations)
+                                │             ├──→ F26 (Sandbox Operations)
                                 │             └──→ F27 (Settings & Diagnostics)
 F05/F06/F08/F09/F14 ────────────┘
 F10/F17/F19 ───────────────────────────────────────┘
@@ -45,7 +45,7 @@ F10/F17/F19 ──────────────────────�
 ## Execution Order (All Complete)
 
 ### ✅ Phase 1 — Foundation (M1 core)
-1. **F04** Session Lifecycle ✅
+1. **F04** Sandbox Lifecycle ✅
 2. **F01** CLI Entry Point ✅
 3. **F02** Daemon API ✅
 4. **F03** Fast Backend ✅
@@ -92,7 +92,7 @@ F10/F17/F19 ──────────────────────�
 ### ✅ Phase 9 — M7 cross-platform GUI workbench
 30. **F24** Cross-Platform GUI Workbench ✅
 31. **F25** GUI Workspace Authorization ✅
-32. **F26** GUI Session Operations ✅
+32. **F26** GUI Sandbox Operations ✅
 33. **F27** GUI Settings and Diagnostics ✅
 
 ## Risk Tracking

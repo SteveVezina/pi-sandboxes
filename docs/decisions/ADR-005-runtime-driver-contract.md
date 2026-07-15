@@ -11,7 +11,7 @@ F19 specified runtime detection and selection but never specified a driver lifec
 
 1. **Lifecycle driver contract.** All backends implement one `Driver` interface in `pkg/runtime`: `Name`, `Mode`, `Probe`, `Create`, `Start`, `Exec`, `Inspect`, `Stop`, `Destroy`, `Stats`. Everything above the driver (files, artifacts, logs, metadata, policy, API semantics) is runtime-neutral. Workspace snapshots stay outside the driver contract.
 
-2. **Identity separation.** A `Handle` carries `SessionID` (stable, user-facing) and `RuntimeObjectID` (driver-owned) as distinct fields. Session IDs are never overwritten with runtime object IDs.
+2. **Identity separation.** A `Handle` carries `SandboxID` (stable, user-facing) and `RuntimeObjectID` (driver-owned) as distinct fields. Sandbox IDs are never overwritten with runtime object IDs.
 
 3. **Structured capability reports.** `Probe` returns a `CapabilityReport` (availability, reason, missing prerequisites, per-capability booleans, isolation tier, compatibility tier). Probes must actually execute their checks. `GetSecurityLevel() int` is removed; doctor and `GET /v1/runtimes` render the report.
 
@@ -27,9 +27,12 @@ F19 specified runtime detection and selection but never specified a driver lifec
 - F3, F4, F18, F19 task statuses were reset where acceptance criteria changed; re-verification is required.
 - The fast backend's Linux build fix (`syscall.SysProcIDMap`) and real availability validation are P0 prerequisites.
 
+*(Updated 2026-07-15 per PROP-009: lifecycle identity is named sandbox ID in the public/runtime-neutral contract; connection-scoped protocols may still use "session" when that is their domain term.)*
+
 ## References
 
 - `SPEC.md` §14.7.5 Runtime driver contract
 - `docs/proposals/PROP-008-runtime-driver-contract.md`
 - `docs/features/F03-fast-backend.md`, `docs/features/F15-compat-backend.md`, `docs/features/F18-secure-backend.md`, `docs/features/F19-runtime-selection-fallback.md`
 - ADR-001 (microVM backend sits behind the same runtime interface)
+- PROP-009

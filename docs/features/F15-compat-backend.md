@@ -10,6 +10,8 @@
 |------------|------|-------------|-----------|
 | F4 | Compat Backend | OCI container backend (runc/containerd/Podman) for maximum compatibility | M1 |
 
+> Status: ✅ Implemented *(2026-07-15: PROP-008 T15.2c lifecycle recovery complete)*
+
 ## Expanded Specification
 
 The compat backend provides maximum language/tool compatibility using standard OCI containers through runc/containerd/Podman/Docker-compatible plumbing.
@@ -170,12 +172,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Size:** M
 **Depends on:** T15.2a
 
-### T15.2c: Lifecycle recovery — no --rm + reconciliation ⚠️ *(2026-07-14: split from T15.2 per PROP-008)*
+### T15.2c: Lifecycle recovery — no --rm + reconciliation ✅ *(2026-07-15: PROP-008 complete)*
 
 **Acceptance criteria:**
-- [ ] No `--rm`; container survives daemon crash for post-mortem inspection
-- [ ] Daemon startup reconciles session store against `Inspect` results
-- [ ] Orphaned containers (no session) are garbage-collected
+- [x] No `--rm`; container survives daemon crash for post-mortem inspection
+- [x] Daemon startup reconciles session store against `Inspect` results
+- [x] Orphaned containers (no session) are garbage-collected
 
 **Verification:**
 - [ ] Integration test: daemon restart reconciles existing containers

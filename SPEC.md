@@ -126,7 +126,7 @@ repeat
 | F17 | Policy Enforcement | Default security policy: no host home mount, no Docker socket, process limits, output limits | M2 |
 | F18 | Secure Backend | gVisor-backed runtime mode for unknown or untrusted repositories, including runsc integration, secure-mode lifecycle, compatibility notes, and benchmark comparison against fast/compat | M4 |
 | F19 | Runtime Selection & Fallback | Runtime detection and backend selection across fast, compat, secure, and future microVM modes, including fallback to compat mode when secure mode is unavailable or incompatible | M4 |
-| F20 | MicroVM Backend | Firecracker or Cloud Hypervisor backend with `pi-vmm-manager`, tiny guest rootfs, workspace disk, template snapshot restore, artifact export, and reseed-on-restore behavior | M5 |
+| F20 | MicroVM Backend | Firecracker or Cloud Hypervisor backend with `pi-vmm-manager`, tiny guest rootfs, workspace disk, template snapshot restore, output delivery, and reseed-on-restore behavior | M5 |
 | F21 | MicroVM Guest Control Plane | Guest-side `pi-init` and `pi-agentd` over virtio-vsock for command execution, lifecycle coordination, file/artifact transfer, and sandbox readiness reporting | M5 |
 | F22 | Remote Daemon Contexts | CLI context management for local and remote daemons, including `pi-box context create/use/list/inspect/delete` and context-aware `pi-box box` commands | M6 |
 | F23 | Remote Daemon Transport & Auth | SSH/Tailscale/WireGuard-friendly remote daemon access with secure local-to-remote API authentication and remote workstation support | M6 |
@@ -293,7 +293,7 @@ repeat
 - [ ] `pi-vmm-manager` can start and stop a microVM sandbox
 - [ ] Firecracker or Cloud Hypervisor backend boots a tiny guest rootfs
 - [ ] Template snapshot restore creates a ready workspace quickly
-- [ ] Workspace disk persists sandbox changes for the session
+- [ ] Workspace disk persists sandbox changes for the sandbox lifecycle
 - [ ] Artifact export works from microVM sandboxes
 - [ ] Reseed-on-restore hook runs after snapshot restore
 - [ ] Benchmarks include microVM mode comparison

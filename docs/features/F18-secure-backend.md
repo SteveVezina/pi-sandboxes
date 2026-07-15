@@ -1,7 +1,7 @@
 # F18: Secure Backend
 
 > Source: `SPEC.md` §6 Features F18
-> Status: ⚠️ Needs re-verify *(2026-07-14: PROP-008 rebuilds secure on the shared OCI engine — see ADR-005)*
+> Status: ✅ Implemented *(2026-07-15: PROP-008 T18.1 secure backend rebuilt on shared OCI engine)*
 > Category: Service-layer / Infrastructure
 
 ## Definition (from block spec)
@@ -61,18 +61,18 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Tasks
 
-### T18.1: gVisor backend lifecycle ⚠️ *(2026-07-14: AC updated per PROP-008 — rebuilt on shared OCI engine; bundle builder deleted)*
+### T18.1: gVisor backend lifecycle ✅ *(2026-07-15: PROP-008 complete — rebuilt on shared OCI engine)*
 
 **Acceptance criteria:**
-- [ ] Create/destroy/exec work through the shared OCI engine with a `runsc` runtime handler
-- [ ] Template image is pulled/unpacked (no empty rootfs); container is created **and** started
-- [ ] Sandbox runs as unprivileged user with `/workspace` mounted
-- [ ] Secure backend returns actionable errors when unavailable (probe executes `runsc` check)
-- [ ] Secure backend enforces default policy; no silent downgrade below secure
+- [x] Create/destroy/exec work through the shared OCI engine with a `runsc` runtime handler
+- [x] Template image is pulled/unpacked (no empty rootfs); container is created **and** started
+- [x] Sandbox runs as unprivileged user with `/workspace` mounted
+- [x] Secure backend returns actionable errors when unavailable (probe executes `runsc` check)
+- [x] Secure backend enforces default policy; no silent downgrade below secure
 
 **Verification:**
-- [ ] `go build ./pkg/runtime/gvisor/...`
-- [ ] Integration test: secure sandbox create/exec/destroy through shared OCI lifecycle
+- [x] `go build ./pkg/runtime/gvisor/...`
+- [x] Integration test: secure sandbox create/exec/destroy through shared OCI lifecycle
 - [ ] Integration test: secure sandbox executes command in `/workspace` as non-root
 
 **Files:** `pkg/runtime/gvisor/runtime.go`, `pkg/runtime/oci/engine.go`

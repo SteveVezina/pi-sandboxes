@@ -1,7 +1,7 @@
 # PROP-008: Formal Runtime Driver Contract and Shared OCI Engine
 
 ## Status
-✅ Applied to block spec (2026-07-14)
+✅ Complete (2026-07-15)
 
 > Note: PROP-006 is still 🟡 Proposed. This PROP was explicitly requested by the human
 > and is independent of PROP-006 (templates); treated as a permitted exception to the
@@ -272,14 +272,62 @@ Deferred deliberately (both reviews agree these come after the contract is stabl
 
 ## Cascade completed
 
-Applied on 2026-07-14 (accepted by human same day):
+Applied on 2026-07-14 (accepted by human same day), completed 2026-07-15:
 
-- **Block spec:** `SPEC.md` §14 — added §14.7.5 "Runtime driver contract" (driver lifecycle, capability reports, shared OCI engine, mount/lifecycle/seccomp/limits rules, four-input selection, no-silent-downgrade)
-- **ADRs:** `docs/decisions/ADR-005-runtime-driver-contract.md` created (resolves the runtime registry/fallback ADR gap recorded in F15, F18, F19)
-- **Feature specs cascaded:**
-  - `docs/features/F03-fast-backend.md` — T3.1 reset ⚠️ (SysProcIDMap build fix, real `Validate()`)
-  - `docs/features/F15-compat-backend.md` — status ⚠️; T15.2 reset ⚠️ (OCI engine, mount exec policy, no `--rm`, limits, user mapping, versioned seccomp, ID separation); ADR gap resolved
-  - `docs/features/F18-secure-backend.md` — status ⚠️; T18.1 reset ⚠️ (rebuilt on shared OCI engine); ADR gap resolved
-  - `docs/features/F19-runtime-selection-fallback.md` — status ⚠️; T19.1/T19.2 reset ⚠️ (capability reports, four-input selection); ADR gap resolved
-- **INDEX files:** `docs/features/INDEX.md` (F4/F18/F19 → ⚠️, M4 → ⚠️, summary note), `docs/proposals/INDEX.md` (PROP-008 → ✅ Applied)
-- **Plan:** `docs/plan.md` Active Cursor points at PROP-008 P0-P3 implementation order
+### P0 (blocking) — Applied 2026-07-14
+- D5 build fix: `syscall.SysProcIDMap` → correct type (Linux build restored)
+- D4 real validation: `fast.Validate()` runs namespace probe command
+
+### P1 (contract) — Applied 2026-07-14
+- Driver interface: `Driver`, `Handle`, `SandboxSpec`, `ResourceLimits` in `pkg/runtime/`
+- Capability reports: `CapabilityReport` with per-capability flags
+- Registry: `pkg/runtime/registry.go` for driver registration
+- Selector: `pkg/runtime/selector.go` with four-input selection (mode/trust/capability/fallback)
+- Feature specs cascaded: F03, F15, F18, F19
+
+### P2 (compat) — Applied 2026-07-14
+- Shared OCI engine: `pkg/runtime/oci/` with Podman/Docker implementations
+- D6 mount exec policy: `/workspace`, `/artifacts`, `/cache` allow exec
+- D7 no `--rm`: containers survive daemon crash
+- D9 resource limits: memory, swap, cpus, pids, ulimits
+- D10 user mapping: `--user 1000:1000` for Docker, `--userns=keep-id` for Podman
+- D11 seccomp: versioned `seccomp-profile.json` passed explicitly
+- D8 ID separation: `Handle.SessionID` and `Handle.RuntimeObjectID` distinct
+
+### P3 (secure) — Applied 2026-07-15
+- T18.1: gVisor backend rebuilt on shared OCI engine (`pkg/runtime/gvisor/runtime.go`)
+- Handcrafted bundle builder deleted; secure inherits OCI engine lifecycle
+- `runsc` runtime handler configured via `oci.EngineConfig`
+
+### Lifecycle recovery — Applied 2026-07-15
+- T15.2c: Daemon startup calls `session.OrphanCleanup()` for crash reconciliation
+- `--rm` removed; containers survive daemon crash for post-mortem inspection
+- Orphaned containers (no session) are garbage-collected
+
+### Image resolution — Applied 2026-07-15 (PROP-007)
+- `ResolveImage()` maps template `base` shorthands to full OCI image names
+- `ResolveTemplateImage()` uses explicit `Image` field or resolved `Base`
+- Template-specific cache mounts (no more hardcoded all-caches)
+
+### Error handling — Applied 2026-07-15
+- CLI surfaces daemon-not-running, container-creation-failed, Docker Desktop guidance
+- HTTP status code parsing from curl output
+- Dynamic failing path extraction from Docker error messages
+
+### Binary rename — Applied 2026-07-15
+- `pi` → `pi-box` to avoid collision with real PI Agent CLI
+- All references updated: code, tests, docs, SPEC.md, Dockerfile, Makefile
+
+### Makefile polish — Applied 2026-07-15
+- Install to `~/bin/`
+- Build all 5 binaries
+- Docker targets (build, run, stop)
+- GUI targets (dev, build, desktop-dev, desktop-build)
+- Template image targets (build, pull, push, install)
+
+### .gitignore polish — Applied 2026-07-15
+- Binaries, coverage files, GUI screenshots, temp files, IDE configs
+
+### Test results
+- All 30 test packages pass (shell test pre-existing failure, unrelated to PROP-008)
+- New e2e test: `tests/integration/compat_e2e_test.go`

@@ -82,7 +82,7 @@ func TestExecSandbox_RejectsInvalidNetworkMode(t *testing.T) {
 func TestExecSandbox_RejectsNonWarmState(t *testing.T) {
 	store, _ := newTestStore(t)
 
-	id, err := store.CreateWithOptions(session.CreateOptions{
+	id, err := store.CreateWithOptions(sandbox.CreateOptions{
 		Name:     "busy-session",
 		Template: "base",
 		Mode:     "fast",
@@ -90,10 +90,10 @@ func TestExecSandbox_RejectsNonWarmState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateWithOptions failed: %v", err)
 	}
-	if err := store.UpdateState(id, session.StateWarm); err != nil {
+	if err := store.UpdateState(id, sandbox.StateWarm); err != nil {
 		t.Fatalf("UpdateState warm failed: %v", err)
 	}
-	if err := store.UpdateState(id, session.StateExecuting); err != nil {
+	if err := store.UpdateState(id, sandbox.StateExecuting); err != nil {
 		t.Fatalf("UpdateState executing failed: %v", err)
 	}
 
@@ -140,9 +140,9 @@ func TestExecSandbox_BadRequest(t *testing.T) {
 	}
 }
 
-func makeWarmExecSandbox(t *testing.T, store *session.Store, name string) string {
+func makeWarmExecSandbox(t *testing.T, store *sandbox.Store, name string) string {
 	t.Helper()
-	id, err := store.CreateWithOptions(session.CreateOptions{
+	id, err := store.CreateWithOptions(sandbox.CreateOptions{
 		Name:     name,
 		Template: "base",
 		Mode:     "fast",
@@ -150,7 +150,7 @@ func makeWarmExecSandbox(t *testing.T, store *session.Store, name string) string
 	if err != nil {
 		t.Fatalf("CreateWithOptions failed: %v", err)
 	}
-	if err := store.UpdateState(id, session.StateWarm); err != nil {
+	if err := store.UpdateState(id, sandbox.StateWarm); err != nil {
 		t.Fatalf("UpdateState warm failed: %v", err)
 	}
 	return id

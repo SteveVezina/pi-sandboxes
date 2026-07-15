@@ -8,7 +8,7 @@ import (
 )
 
 // ListSandboxes returns an HTTP handler that lists sandbox sessions.
-func ListSandboxes(store *session.Store) http.HandlerFunc {
+func ListSandboxes(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ids, err := store.List()
 		if err != nil {

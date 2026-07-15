@@ -18,12 +18,12 @@ import (
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
-func newTestStore(t *testing.T) (*session.Store, string) {
+func newTestStore(t *testing.T) (*sandbox.Store, string) {
 	tmpDir := filepath.Join(os.TempDir(), "pi-api-test")
 	os.RemoveAll(tmpDir)
 	t.Cleanup(func() { os.RemoveAll(tmpDir) })
 
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 	return store, tmpDir
 }
 
@@ -31,9 +31,9 @@ func fastUnavailable(w *httptest.ResponseRecorder) bool {
 	return w.Code == http.StatusBadRequest && strings.Contains(w.Body.String(), "runtime mode fast is unavailable")
 }
 
-func createStoredSandbox(t *testing.T, store *session.Store, name, template string) string {
+func createStoredSandbox(t *testing.T, store *sandbox.Store, name, template string) string {
 	t.Helper()
-	id, err := store.CreateWithOptions(session.CreateOptions{
+	id, err := store.CreateWithOptions(sandbox.CreateOptions{
 		Name:          name,
 		Template:      template,
 		Mode:          "fast",
@@ -42,7 +42,7 @@ func createStoredSandbox(t *testing.T, store *session.Store, name, template stri
 	if err != nil {
 		t.Fatalf("CreateWithOptions failed: %v", err)
 	}
-	if err := store.UpdateState(id, session.StateWarm); err != nil {
+	if err := store.UpdateState(id, sandbox.StateWarm); err != nil {
 		t.Fatalf("UpdateState warm failed: %v", err)
 	}
 	return id

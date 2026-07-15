@@ -8,14 +8,14 @@ import (
 
 func TestCanTransition_Valid(t *testing.T) {
 	tests := []struct {
-		from, to session.State
+		from, to sandbox.State
 	}{
-		{session.StateCreating, session.StateWarm},
-		{session.StateWarm, session.StateExecuting},
-		{session.StateWarm, session.StateDestroying},
-		{session.StateExecuting, session.StateWarm},
-		{session.StateExecuting, session.StateDestroying},
-		{session.StateDestroying, session.StateDestroyed},
+		{sandbox.StateCreating, sandbox.StateWarm},
+		{sandbox.StateWarm, sandbox.StateExecuting},
+		{sandbox.StateWarm, sandbox.StateDestroying},
+		{sandbox.StateExecuting, sandbox.StateWarm},
+		{sandbox.StateExecuting, sandbox.StateDestroying},
+		{sandbox.StateDestroying, sandbox.StateDestroyed},
 	}
 
 	for _, tt := range tests {
@@ -27,13 +27,13 @@ func TestCanTransition_Valid(t *testing.T) {
 
 func TestCanTransition_Invalid(t *testing.T) {
 	tests := []struct {
-		from, to session.State
+		from, to sandbox.State
 	}{
-		{session.StateWarm, session.StateCreating},
-		{session.StateCreating, session.StateExecuting},
-		{session.StateDestroying, session.StateWarm},
-		{session.StateDestroyed, session.StateWarm},
-		{session.StateExecuting, session.StateCreating},
+		{sandbox.StateWarm, sandbox.StateCreating},
+		{sandbox.StateCreating, sandbox.StateExecuting},
+		{sandbox.StateDestroying, sandbox.StateWarm},
+		{sandbox.StateDestroyed, sandbox.StateWarm},
+		{sandbox.StateExecuting, sandbox.StateCreating},
 	}
 
 	for _, tt := range tests {
@@ -44,14 +44,14 @@ func TestCanTransition_Invalid(t *testing.T) {
 }
 
 func TestValidateTransition_Valid(t *testing.T) {
-	err := session.ValidateTransition(session.StateWarm, session.StateExecuting)
+	err := session.ValidateTransition(sandbox.StateWarm, sandbox.StateExecuting)
 	if err != nil {
 		t.Fatalf("Expected nil error, got: %v", err)
 	}
 }
 
 func TestValidateTransition_Invalid(t *testing.T) {
-	err := session.ValidateTransition(session.StateDestroyed, session.StateWarm)
+	err := session.ValidateTransition(sandbox.StateDestroyed, sandbox.StateWarm)
 	if err == nil {
 		t.Fatal("Expected error, got nil")
 	}

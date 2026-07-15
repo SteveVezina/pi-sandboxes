@@ -13,7 +13,7 @@ import (
 )
 
 // NewRouter creates the HTTP router with all endpoints.
-func NewRouter(store *session.Store) *mux.Router {
+func NewRouter(store *sandbox.Store, runStore *sandbox.AgentRunStore) *mux.Router {
 	router := mux.NewRouter()
 	router.Use(guiCORSMiddleware)
 	router.Use(activeContextProxyMiddleware)
@@ -83,6 +83,12 @@ func NewRouter(store *session.Store) *mux.Router {
 	router.HandleFunc("/v1/contexts/{name}", api.ContextUpdate()).Methods("PUT")
 	router.HandleFunc("/v1/contexts/{name}", api.ContextDelete()).Methods("DELETE")
 	router.HandleFunc("/v1/contexts/use", api.ContextUse()).Methods("POST")
+
+	// Agent Run
+	router.HandleFunc("/v1/sandboxes/{id}/agent-run", api.StartAgentRun(store, runStore)).Methods("POST")
+	router.HandleFunc("/v1/agent-runs/{id}", api.GetAgentRun(runStore)).Methods("GET")
+	router.HandleFunc("/v1/agent-runs/{id}/cancel", api.CancelAgentRun(runStore)).Methods("POST")
+	router.HandleFunc("/v1/agent-runs", api.ListAgentRuns(runStore)).Methods("GET")
 
 	return router
 }

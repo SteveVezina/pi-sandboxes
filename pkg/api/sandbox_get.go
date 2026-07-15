@@ -8,7 +8,7 @@ import (
 )
 
 // GetSandbox returns an HTTP handler that gets a sandbox by ID.
-func GetSandbox(store *session.Store) http.HandlerFunc {
+func GetSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]

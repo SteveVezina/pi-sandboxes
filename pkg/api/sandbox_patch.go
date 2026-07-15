@@ -12,7 +12,7 @@ import (
 )
 
 // PatchSandbox returns an HTTP handler that exports workspace as a git patch.
-func PatchSandbox(store *session.Store) http.HandlerFunc {
+func PatchSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]

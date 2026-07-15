@@ -21,7 +21,7 @@ func TestCompatSandboxCreation(t *testing.T) {
 
 	// Create a temporary store
 	tmpDir := t.TempDir()
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	// Create the handler
 	handler := api.CreateSandbox(store)

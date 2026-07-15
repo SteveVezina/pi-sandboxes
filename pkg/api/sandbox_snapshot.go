@@ -13,7 +13,7 @@ import (
 )
 
 // SnapshotSandbox returns an HTTP handler for snapshot operations.
-func SnapshotSandbox(store *session.Store) http.HandlerFunc {
+func SnapshotSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
@@ -81,7 +81,7 @@ func SnapshotSandbox(store *session.Store) http.HandlerFunc {
 }
 
 // SnapshotCreate returns an HTTP handler that creates a snapshot.
-func SnapshotCreate(store *session.Store) http.HandlerFunc {
+func SnapshotCreate(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
@@ -125,7 +125,7 @@ func SnapshotCreate(store *session.Store) http.HandlerFunc {
 }
 
 // SnapshotList returns an HTTP handler that lists snapshots.
-func SnapshotList(store *session.Store) http.HandlerFunc {
+func SnapshotList(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
@@ -152,7 +152,7 @@ func SnapshotList(store *session.Store) http.HandlerFunc {
 }
 
 // SnapshotRollback returns an HTTP handler that rolls back to a snapshot.
-func SnapshotRollback(store *session.Store) http.HandlerFunc {
+func SnapshotRollback(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
@@ -196,7 +196,7 @@ func SnapshotRollback(store *session.Store) http.HandlerFunc {
 }
 
 // SnapshotDelete returns an HTTP handler that deletes a snapshot.
-func SnapshotDelete(store *session.Store) http.HandlerFunc {
+func SnapshotDelete(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]

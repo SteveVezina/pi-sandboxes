@@ -18,7 +18,7 @@ import (
 func TestDaemon_StartAndHealth(t *testing.T) {
 	tmpDir := t.TempDir()
 	socketPath := filepath.Join(tmpDir, "sandboxd.sock")
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	d := daemon.New(socketPath, 0, store)
 
@@ -63,7 +63,7 @@ func TestDaemon_CreatesDir(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 	// Use a nested path that doesn't exist yet
 	socketPath := filepath.Join(tmpDir, "nonexistent", "sandboxd.sock")
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	// Verify parent doesn't exist yet
 	parentDir := filepath.Dir(socketPath)
@@ -87,7 +87,7 @@ func TestDaemon_CreatesDir(t *testing.T) {
 func TestDaemon_HTTPPort(t *testing.T) {
 	tmpDir := t.TempDir()
 	socketPath := filepath.Join(tmpDir, "sandboxd.sock")
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	d := daemon.New(socketPath, 9999, store)
 
@@ -110,7 +110,7 @@ func TestDaemon_HTTPPort(t *testing.T) {
 }
 
 func TestRouter_GUICORSPreflight(t *testing.T) {
-	store := session.NewStore(t.TempDir())
+	store := sandbox.NewStore(t.TempDir())
 	router := daemon.NewRouter(store)
 
 	req := httptest.NewRequest(http.MethodOptions, "/v1/sandboxes", nil)
@@ -132,7 +132,7 @@ func TestRouter_GUICORSPreflight(t *testing.T) {
 }
 
 func TestRouter_GUICORSHealth(t *testing.T) {
-	store := session.NewStore(t.TempDir())
+	store := sandbox.NewStore(t.TempDir())
 	router := daemon.NewRouter(store)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
@@ -152,7 +152,7 @@ func TestRouter_GUICORSHealth(t *testing.T) {
 func TestDaemon_Stop(t *testing.T) {
 	tmpDir := t.TempDir()
 	socketPath := filepath.Join(tmpDir, "sandboxd.sock")
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	d := daemon.New(socketPath, 0, store)
 

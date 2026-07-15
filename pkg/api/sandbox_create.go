@@ -29,7 +29,7 @@ type CreateRequest struct {
 }
 
 // CreateSandbox returns an HTTP handler that creates a sandbox session.
-func CreateSandbox(store *session.Store) http.HandlerFunc {
+func CreateSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req CreateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -68,7 +68,7 @@ func CreateSandbox(store *session.Store) http.HandlerFunc {
 			return
 		}
 
-		id, err := store.CreateWithOptions(session.CreateOptions{
+		id, err := store.CreateWithOptions(sandbox.CreateOptions{
 			Name:           req.Name,
 			Template:       req.Template,
 			Mode:           req.Mode,
@@ -94,14 +94,14 @@ func CreateSandbox(store *session.Store) http.HandlerFunc {
 		}
 
 		// Update state to warm
-		store.UpdateState(id, session.StateWarm)
+		store.UpdateState(id, sandbox.StateWarm)
 
 		writeJSON(w, http.StatusCreated, map[string]string{"id": id})
 	}
 }
 
 // createCompatContainer resolves the template image and creates a Docker container.
-func createCompatContainer(store *session.Store, sandboxID, templateName string) error {
+func createCompatContainer(store *sandbox.Store, sandboxID, templateName string) error {
 	// Load the template
 	tmplStore := template.NewStore(filepath.Join(os.Getenv("HOME"), ".pi-box", "templates"))
 	t, err := tmplStore.Get(templateName)

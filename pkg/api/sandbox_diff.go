@@ -12,7 +12,7 @@ import (
 )
 
 // DiffSandbox returns an HTTP handler that shows workspace diff.
-func DiffSandbox(store *session.Store) http.HandlerFunc {
+func DiffSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]

@@ -16,7 +16,7 @@ type FilesWriteRequest struct {
 }
 
 // FilesWriteSandbox returns an HTTP handler that writes a file to a sandbox workspace.
-func FilesWriteSandbox(store *session.Store) http.HandlerFunc {
+func FilesWriteSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]

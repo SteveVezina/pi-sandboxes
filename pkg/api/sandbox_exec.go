@@ -44,7 +44,7 @@ func wantsStream(r *http.Request) bool {
 }
 
 // ExecSandbox returns an HTTP handler that executes a command in a sandbox.
-func ExecSandbox(store *session.Store) http.HandlerFunc {
+func ExecSandbox(store *sandbox.Store) http.HandlerFunc {
 	engine := exec.NewEngine(8 * 1024 * 1024) // 8 MiB default
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +57,7 @@ func ExecSandbox(store *session.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
 			return
 		}
-		if !requireSandboxState(w, meta, session.StateWarm) {
+		if !requireSandboxState(w, meta, sandbox.StateWarm) {
 			return
 		}
 
@@ -96,11 +96,11 @@ func ExecSandbox(store *session.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 			return
 		}
-		if err := store.UpdateState(id, session.StateExecuting); err != nil {
+		if err := store.UpdateState(id, sandbox.StateExecuting); err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 			return
 		}
-		defer store.UpdateState(id, session.StateWarm)
+		defer store.UpdateState(id, sandbox.StateWarm)
 
 		ctx, cancel := contextWithTimeout(r.Context(), execReq.Timeout)
 		defer cancel()
@@ -142,7 +142,7 @@ func ExecSandbox(store *session.Store) http.HandlerFunc {
 }
 
 // execInContainer executes a command inside an OCI container using the compat backend.
-func execInContainer(store *session.Store, id string, meta *session.Meta, ctx context.Context, execReq *exec.Request, w http.ResponseWriter, streaming bool) error {
+func execInContainer(store *sandbox.Store, id string, meta *sandbox.Meta, ctx context.Context, execReq *exec.Request, w http.ResponseWriter, streaming bool) error {
 	// Ensure OCI runtime is available
 	if err := compat.EnsureRuntimeAvailable(); err != nil {
 		return fmt.Errorf("compat backend: %w", err)

@@ -22,9 +22,10 @@ func main() {
 
 	// Create session store
 	storeDir := filepath.Join(system.PiHome(), "sandboxes")
-	store := session.NewStore(storeDir)
+	store := sandbox.NewStore(storeDir)
+	runStore := sandbox.NewAgentRunStore()
 
-	d := daemon.New(*socketPath, *httpPort, store)
+	d := daemon.New(*socketPath, *httpPort, store, runStore)
 
 	if err := d.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: daemon failed to start: %v\n", err)

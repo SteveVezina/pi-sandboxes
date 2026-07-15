@@ -10,7 +10,7 @@ import (
 
 func TestStore_Create(t *testing.T) {
 	tmpDir := t.TempDir()
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	id, err := store.Create("test-box", "node-python", "fast")
 	if err != nil {
@@ -29,7 +29,7 @@ func TestStore_Create(t *testing.T) {
 
 func TestStore_Create_DirectoryPermissions(t *testing.T) {
 	tmpDir := t.TempDir()
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	id, err := store.Create("test-box", "node-python", "fast")
 	if err != nil {
@@ -50,7 +50,7 @@ func TestStore_Create_DirectoryPermissions(t *testing.T) {
 
 func TestStore_Get(t *testing.T) {
 	tmpDir := t.TempDir()
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	id, err := store.Create("test-box", "node-python", "fast")
 	if err != nil {
@@ -74,7 +74,7 @@ func TestStore_Get(t *testing.T) {
 
 func TestStore_Get_NotFound(t *testing.T) {
 	tmpDir := t.TempDir()
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	_, err := store.Get("nonexistent-id")
 	if err == nil {
@@ -84,14 +84,14 @@ func TestStore_Get_NotFound(t *testing.T) {
 
 func TestStore_Update(t *testing.T) {
 	tmpDir := t.TempDir()
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	id, err := store.Create("test-box", "node-python", "fast")
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	err = store.UpdateState(id, session.StateExecuting)
+	err = store.UpdateState(id, sandbox.StateExecuting)
 	if err != nil {
 		t.Fatalf("UpdateState failed: %v", err)
 	}
@@ -100,14 +100,14 @@ func TestStore_Update(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
 	}
-	if meta.State != session.StateExecuting {
+	if meta.State != sandbox.StateExecuting {
 		t.Errorf("Expected state 'EXECUTING', got '%s'", meta.State)
 	}
 }
 
 func TestStore_List(t *testing.T) {
 	tmpDir := t.TempDir()
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	id1, _ := store.Create("box-1", "base", "fast")
 	id2, _ := store.Create("box-2", "node", "fast")
@@ -135,7 +135,7 @@ func TestStore_List(t *testing.T) {
 
 func TestStore_Delete(t *testing.T) {
 	tmpDir := t.TempDir()
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	id, err := store.Create("test-box", "node-python", "fast")
 	if err != nil {
@@ -162,7 +162,7 @@ func TestStore_Delete(t *testing.T) {
 
 func TestStore_Delete_Idempotent(t *testing.T) {
 	tmpDir := t.TempDir()
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	id, _ := store.Create("test-box", "node-python", "fast")
 

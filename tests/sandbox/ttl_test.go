@@ -9,7 +9,7 @@ import (
 
 func TestTTLChecker_ExpiresSession(t *testing.T) {
 	tmpDir := t.TempDir()
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	checker := session.NewTTLChecker(store, 500*time.Millisecond)
 	checker.Start()
@@ -27,7 +27,7 @@ func TestTTLChecker_ExpiresSession(t *testing.T) {
 	// Set TTL to 1 second and set LastUsedAt to now
 	store.UpdateTTL(id, 1)
 	store.UpdateLastUsed(id)
-	store.UpdateState(id, session.StateWarm)
+	store.UpdateState(id, sandbox.StateWarm)
 
 	// Wait for TTL check to run (1s TTL + buffer)
 	time.Sleep(2 * time.Second)
@@ -37,17 +37,17 @@ func TestTTLChecker_ExpiresSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
 	}
-	if meta.State != session.StateDestroying {
+	if meta.State != sandbox.StateDestroying {
 		t.Errorf("Expected state DESTROYING, got %s", meta.State)
 	}
 }
 
 func TestTTLChecker_InfiniteTTL(t *testing.T) {
 	tmpDir := t.TempDir()
-	store := session.NewStore(tmpDir)
+	store := sandbox.NewStore(tmpDir)
 
 	id, _ := store.Create("test-box", "node-python", "fast")
-	store.UpdateState(id, session.StateWarm)
+	store.UpdateState(id, sandbox.StateWarm)
 
 	// TTL of 0 = infinite
 	store.UpdateLastUsed(id)
@@ -60,7 +60,7 @@ func TestTTLChecker_InfiniteTTL(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	meta, _ := store.Get(id)
-	if meta.State != session.StateWarm {
+	if meta.State != sandbox.StateWarm {
 		t.Errorf("Expected state WARM (infinite TTL), got %s", meta.State)
 	}
 }

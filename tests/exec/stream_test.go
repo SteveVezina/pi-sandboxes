@@ -145,7 +145,7 @@ func TestRunStream_TruncatesOutput(t *testing.T) {
 // NDJSON when the client sends ?stream=true.
 func TestExecAPIHandler_StreamingPath(t *testing.T) {
 	// Re-use the engine directly to confirm StreamEvent JSON shape,
-	// since we can't easily create a full session.Store in a unit test.
+	// since we can't easily create a full sandbox.Store in a unit test.
 	engine := exec.NewEngine(0)
 	req := &exec.Request{
 		Command: "printf 'line1\nline2\n'",

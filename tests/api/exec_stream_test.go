@@ -15,20 +15,20 @@ import (
 )
 
 // streamRouter builds a minimal mux that mounts the exec handler.
-func streamRouter(store *session.Store) *mux.Router {
+func streamRouter(store *sandbox.Store) *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/sandboxes/{id}/exec", api.ExecSandbox(store)).Methods("POST")
 	return r
 }
 
 // makeStreamSandbox creates a sandbox in the store for test use.
-func makeStreamSandbox(t *testing.T, store *session.Store) string {
+func makeStreamSandbox(t *testing.T, store *sandbox.Store) string {
 	t.Helper()
 	id, err := store.Create("test-sb", "node-python", "fast")
 	if err != nil {
 		t.Fatalf("create sandbox: %v", err)
 	}
-	if err := store.UpdateState(id, session.StateWarm); err != nil {
+	if err := store.UpdateState(id, sandbox.StateWarm); err != nil {
 		t.Fatalf("warm sandbox: %v", err)
 	}
 	return id

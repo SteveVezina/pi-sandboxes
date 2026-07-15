@@ -14,9 +14,9 @@ import (
 
 var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 
-func newStoreWithSandbox(t *testing.T) (*session.Store, string) {
+func newStoreWithSandbox(t *testing.T) (*sandbox.Store, string) {
 	t.Helper()
-	store := session.NewStore(t.TempDir())
+	store := sandbox.NewStore(t.TempDir())
 	id, err := store.Create("test-shell", "base", "fast")
 	if err != nil {
 		t.Fatalf("create sandbox: %v", err)
@@ -71,7 +71,7 @@ func TestShellSandbox_ConnectsAndEchoes(t *testing.T) {
 
 // TestShellSandbox_NotFound verifies a 404 is returned for unknown sandbox ids.
 func TestShellSandbox_NotFound(t *testing.T) {
-	store := session.NewStore(t.TempDir())
+	store := sandbox.NewStore(t.TempDir())
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := api.ShellSandboxForID(store, "nonexistent-id")
 		h.ServeHTTP(w, r)

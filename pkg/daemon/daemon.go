@@ -16,16 +16,18 @@ import (
 type Daemon struct {
 	socketPath string
 	httpPort   int
-	store      *session.Store
+	store      *sandbox.Store
+	runStore   *sandbox.AgentRunStore
 	server     *http.Server
 }
 
-// New creates a new daemon with the given session store.
-func New(socketPath string, httpPort int, store *session.Store) *Daemon {
+// New creates a new daemon with the given store and agent run store.
+func New(socketPath string, httpPort int, store *sandbox.Store, runStore *sandbox.AgentRunStore) *Daemon {
 	return &Daemon{
 		socketPath: socketPath,
 		httpPort:   httpPort,
 		store:      store,
+		runStore:   runStore,
 	}
 }
 
@@ -43,7 +45,7 @@ func (d *Daemon) Start() error {
 	}
 
 	// Run orphan cleanup on startup (PROP-008 D7: reconciliation)
-	session.OrphanCleanup(d.store, d.store.Dir())
+	sandbox.OrphanCleanup(d.store, d.store.Dir())
 
 	// Create Unix socket listener
 	unixListener, err := net.Listen("unix", d.socketPath)
@@ -55,7 +57,7 @@ func (d *Daemon) Start() error {
 	os.Chmod(d.socketPath, 0755)
 
 	// Create HTTP server with router
-	router := NewRouter(d.store)
+	router := NewRouter(d.store, d.runStore)
 	d.server = &http.Server{Handler: router}
 
 	// Start HTTP server on Unix socket

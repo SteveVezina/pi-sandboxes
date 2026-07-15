@@ -19,14 +19,14 @@ var wsUpgrader = websocket.Upgrader{
 
 // ShellSandboxForID is a test helper that returns a shell handler pre-bound
 // to a specific sandbox id, bypassing mux variable extraction.
-func ShellSandboxForID(store *session.Store, id string) http.Handler {
+func ShellSandboxForID(store *sandbox.Store, id string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		meta, err := store.Get(id)
 		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
 			return
 		}
-		if !requireSandboxState(w, meta, session.StateWarm) {
+		if !requireSandboxState(w, meta, sandbox.StateWarm) {
 			return
 		}
 		conn, err := wsUpgrader.Upgrade(w, r, nil)
@@ -34,11 +34,11 @@ func ShellSandboxForID(store *session.Store, id string) http.Handler {
 			return
 		}
 		defer conn.Close()
-		if err := store.UpdateState(id, session.StateExecuting); err != nil {
+		if err := store.UpdateState(id, sandbox.StateExecuting); err != nil {
 			_ = conn.WriteMessage(websocket.TextMessage, []byte("error: "+err.Error()+"\n"))
 			return
 		}
-		defer store.UpdateState(id, session.StateWarm)
+		defer store.UpdateState(id, sandbox.StateWarm)
 		shell := "bash"
 		if _, err := exec.LookPath("bash"); err != nil {
 			shell = "sh"
@@ -99,7 +99,7 @@ func ShellSandboxForID(store *session.Store, id string) http.Handler {
 // shell (the fast/compat backends use exec.Command; a real isolated sandbox
 // would exec inside the namespace). This satisfies the interactive-shell
 // contract while the namespace plumbing is backend-specific.
-func ShellSandbox(store *session.Store) http.HandlerFunc {
+func ShellSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
@@ -109,7 +109,7 @@ func ShellSandbox(store *session.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
 			return
 		}
-		if !requireSandboxState(w, meta, session.StateWarm) {
+		if !requireSandboxState(w, meta, sandbox.StateWarm) {
 			return
 		}
 
@@ -120,11 +120,11 @@ func ShellSandbox(store *session.Store) http.HandlerFunc {
 		}
 		defer conn.Close()
 
-		if err := store.UpdateState(id, session.StateExecuting); err != nil {
+		if err := store.UpdateState(id, sandbox.StateExecuting); err != nil {
 			_ = conn.WriteMessage(websocket.TextMessage, []byte("error: "+err.Error()+"\n"))
 			return
 		}
-		defer store.UpdateState(id, session.StateWarm)
+		defer store.UpdateState(id, sandbox.StateWarm)
 
 		// Start a bash shell (or sh as fallback).
 		shell := "bash"

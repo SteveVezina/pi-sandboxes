@@ -10,7 +10,7 @@ import (
 )
 
 // LogsSandbox returns an HTTP handler for log operations.
-func LogsSandbox(store *session.Store) http.HandlerFunc {
+func LogsSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
@@ -133,7 +133,7 @@ func LogsSandbox(store *session.Store) http.HandlerFunc {
 }
 
 // LogsList returns an HTTP handler that lists all log entries.
-func LogsList(store *session.Store) http.HandlerFunc {
+func LogsList(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
@@ -160,7 +160,7 @@ func LogsList(store *session.Store) http.HandlerFunc {
 }
 
 // LogsHistory returns an HTTP handler that returns command history.
-func LogsHistory(store *session.Store) http.HandlerFunc {
+func LogsHistory(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]

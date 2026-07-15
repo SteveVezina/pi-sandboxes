@@ -13,7 +13,7 @@ import (
 )
 
 // ArtifactsSandbox returns an HTTP handler for artifact operations.
-func ArtifactsSandbox(store *session.Store) http.HandlerFunc {
+func ArtifactsSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
@@ -131,7 +131,7 @@ func ArtifactsSandbox(store *session.Store) http.HandlerFunc {
 }
 
 // ArtifactsList returns an HTTP handler that lists artifacts for a sandbox.
-func ArtifactsList(store *session.Store) http.HandlerFunc {
+func ArtifactsList(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
@@ -163,7 +163,7 @@ func ArtifactsList(store *session.Store) http.HandlerFunc {
 }
 
 // ArtifactsPull returns an HTTP handler that pulls artifacts to a host destination.
-func ArtifactsPull(store *session.Store) http.HandlerFunc {
+func ArtifactsPull(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
@@ -210,7 +210,7 @@ func ArtifactsPull(store *session.Store) http.HandlerFunc {
 }
 
 // ArtifactsPack returns an HTTP handler that packs artifacts into an archive.
-func ArtifactsPack(store *session.Store) http.HandlerFunc {
+func ArtifactsPack(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]

@@ -12,7 +12,7 @@ import (
 )
 
 // SystemStatus returns GUI-readable local daemon status.
-func SystemStatus(store *session.Store) http.HandlerFunc {
+func SystemStatus(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ids, err := store.List()
 		if err != nil {
@@ -23,7 +23,7 @@ func SystemStatus(store *session.Store) http.HandlerFunc {
 		active := 0
 		for _, id := range ids {
 			meta, err := store.Get(id)
-			if err == nil && (meta.State == session.StateWarm || meta.State == session.StateExecuting) {
+			if err == nil && (meta.State == sandbox.StateWarm || meta.State == sandbox.StateExecuting) {
 				active++
 			}
 		}
@@ -61,7 +61,7 @@ func SystemRuntimes() http.HandlerFunc {
 }
 
 // SupportBundle returns a redacted support bundle payload for the GUI.
-func SupportBundle(store *session.Store) http.HandlerFunc {
+func SupportBundle(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ids, _ := store.List()
 		doctor := redactedDoctor(system.RunDoctor())

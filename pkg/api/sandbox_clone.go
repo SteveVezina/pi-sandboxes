@@ -18,7 +18,7 @@ type CloneRequest struct {
 }
 
 // CloneSandbox returns an HTTP handler that clones a repository into a sandbox workspace.
-func CloneSandbox(store *session.Store) http.HandlerFunc {
+func CloneSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]

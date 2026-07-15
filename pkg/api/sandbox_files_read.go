@@ -15,7 +15,7 @@ type FilesReadRequest struct {
 }
 
 // FilesReadSandbox returns an HTTP handler that reads a file from a sandbox workspace.
-func FilesReadSandbox(store *session.Store) http.HandlerFunc {
+func FilesReadSandbox(store *sandbox.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]

@@ -6,7 +6,7 @@ import (
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
-func requireSandboxState(w http.ResponseWriter, meta *session.Meta, allowed ...session.State) bool {
+func requireSandboxState(w http.ResponseWriter, meta *sandbox.Meta, allowed ...sandbox.State) bool {
 	for _, state := range allowed {
 		if meta.State == state {
 			return true
@@ -21,7 +21,7 @@ func requireSandboxState(w http.ResponseWriter, meta *session.Meta, allowed ...s
 	return false
 }
 
-func requiredStatesLabel(states []session.State) string {
+func requiredStatesLabel(states []sandbox.State) string {
 	if len(states) == 0 {
 		return ""
 	}

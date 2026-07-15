@@ -38,11 +38,11 @@ func GetStatus(socketPath string) (*StatusInfo, error) {
 				if entry.IsDir() {
 					metaPath := filepath.Join(info.PiHomePath, entry.Name(), "meta.json")
 					if _, err := os.Stat(metaPath); err == nil {
-						store := session.NewStore(info.PiHomePath)
+						store := sandbox.NewStore(info.PiHomePath)
 						meta, err := store.Get(entry.Name())
 						if err == nil {
 							info.TotalSandboxes++
-							if meta.State == session.StateWarm || meta.State == session.StateExecuting {
+							if meta.State == sandbox.StateWarm || meta.State == sandbox.StateExecuting {
 								info.ActiveSandboxes++
 							}
 						}

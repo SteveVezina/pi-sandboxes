@@ -49,7 +49,7 @@ output/
 docs/gaps/
 
 # Go build binaries
-pi
+pi-box
 pi-sandboxd
 pi-agentd
 pi-init

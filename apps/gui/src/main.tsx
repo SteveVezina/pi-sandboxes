@@ -30,7 +30,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   XCircle,
-  Copy,
   Download,
   X
 } from "lucide-react";
@@ -53,6 +52,7 @@ import {
   PiDaemonClient,
   RuntimeBackend,
   RuntimeInfo,
+  OutputItem,
   SandboxInfo,
   SnapshotMeta,
   SupportBundle,
@@ -71,6 +71,8 @@ const TEMPLATES = ["base", "node", "python", "go", "rust", "node-python", "polyg
 const DEFAULT_RUNTIME_MODE = "compat";
 const MODES = ["microvm", "secure", "fast", "compat"];
 const NETWORK_MODES = ["restricted", "none", "open"];
+const ONLINE_REFRESH_INTERVAL_MS = 5000;
+const OFFLINE_REFRESH_INTERVAL_MS = 30000;
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: Command, view: "dashboard" },
@@ -83,7 +85,7 @@ const NAV_ITEMS = [
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type TabId = "exec" | "history" | "logs" | "diff" | "patch" | "artifacts" | "snapshots";
+type TabId = "exec" | "history" | "logs" | "diff" | "patch" | "output" | "snapshots";
 type NotificationPermissionState = "checking" | "granted" | "denied" | "default" | "unsupported";
 type WorkspaceMode = "copy" | "overlay" | "bind";
 
@@ -94,7 +96,7 @@ interface GUIDefaults {
   network: string;
 }
 
-interface SessionTabState {
+interface SandboxTabState {
   tab: TabId;
   content?: unknown;
   loading: boolean;
@@ -172,27 +174,27 @@ function bestRuntimeMode(runtimeInfo: RuntimeInfo | null, current?: string): str
   return modes[0] || DEFAULT_RUNTIME_MODE;
 }
 
-function sessionState(session: SandboxInfo): string {
-  return (session.state || "").toUpperCase();
+function sandboxState(sandbox: SandboxInfo): string {
+  return (sandbox.state || "").toUpperCase();
 }
 
-function canRunSession(session: SandboxInfo): boolean {
-  return sessionState(session) === "WARM";
+function canRunSandbox(sandbox: SandboxInfo): boolean {
+  return sandboxState(sandbox) === "WARM";
 }
 
-function canDestroySession(session: SandboxInfo): boolean {
-  const state = sessionState(session);
+function canDestroySandbox(sandbox: SandboxInfo): boolean {
+  const state = sandboxState(sandbox);
   return state === "WARM" || state === "EXECUTING";
 }
 
-function sessionGateMessage(session: SandboxInfo): string {
-  const state = sessionState(session);
+function sandboxGateMessage(sandbox: SandboxInfo): string {
+  const state = sandboxState(sandbox);
   if (state === "WARM") return "Ready for commands and workspace operations.";
-  if (state === "EXECUTING") return "Command is running. Workspace operations unlock when the session returns to WARM.";
-  if (state === "CREATING") return "Session is still being created. Controls unlock when the daemon reports WARM.";
-  if (state === "DESTROYING") return "Session is being destroyed. Controls are locked.";
-  if (state === "DESTROYED") return "Session is destroyed. This view is read-only.";
-  return "Session is not ready for mutating operations.";
+  if (state === "EXECUTING") return "Command is running. Workspace operations unlock when the sandbox returns to WARM.";
+  if (state === "CREATING") return "Sandbox is still being created. Controls unlock when the daemon reports WARM.";
+  if (state === "DESTROYING") return "Sandbox is being destroyed. Controls are locked.";
+  if (state === "DESTROYED") return "Sandbox is destroyed. This view is read-only.";
+  return "Sandbox is not ready for mutating operations.";
 }
 
 function redactGuiLogMessage(message: string): string {
@@ -286,7 +288,7 @@ function OnboardingView({
           </div>
           <h1>PI Sandbox Workbench</h1>
           <p className="onboarding-subtitle">
-            Create and manage isolated sandbox sessions for your coding projects.
+            Create and manage isolated sandboxes for your coding projects.
           </p>
         </div>
 
@@ -397,7 +399,7 @@ function Sidebar({
   health: string;
   daemonUrl: string;
   setDaemonUrl: (url: string) => void;
-  refresh: () => void;
+  refresh: (options?: { manual?: boolean }) => void;
   activeView: string;
   setActiveView: (view: string) => void;
   contexts: ContextInfo[];
@@ -451,7 +453,7 @@ function Sidebar({
           value={daemonUrl}
           onChange={(event) => setDaemonUrl(event.target.value)}
         />
-        <button className="secondary-action" onClick={refresh}>
+        <button className="secondary-action" onClick={() => void refresh({ manual: true })}>
           Re-check
         </button>
         {contexts.length > 0 && (
@@ -482,23 +484,23 @@ function Sidebar({
 function DashboardView({
   connection,
   health,
-  sessions,
+  sandboxes,
   systemStatus,
   runtimeInfo,
-  onSelectSession
+  onSelectSandbox
 }: {
   connection: ConnectionState;
   health: string;
-  sessions: SandboxInfo[];
+  sandboxes: SandboxInfo[];
   systemStatus: SystemStatus | null;
   runtimeInfo: RuntimeInfo | null;
-  onSelectSession: (id: string) => void;
+  onSelectSandbox: (id: string) => void;
 }) {
-  const readySandboxes = sessions.filter((s) => s.state === "WARM" || s.state === "EXECUTING");
-  const warmSandboxes = sessions.filter((s) => s.state === "WARM");
-  const executingSandboxes = sessions.filter((s) => s.state === "EXECUTING");
+  const readySandboxes = sandboxes.filter((s) => s.state === "WARM" || s.state === "EXECUTING");
+  const warmSandboxes = sandboxes.filter((s) => s.state === "WARM");
+  const executingSandboxes = sandboxes.filter((s) => s.state === "EXECUTING");
   const availableBackends = runtimeInfo?.available.length ?? 0;
-  const recentSandboxes = [...sessions].sort((a, b) => {
+  const recentSandboxes = [...sandboxes].sort((a, b) => {
     const aTime = new Date(a.last_used || a.updated_at || a.created_at || 0).getTime();
     const bTime = new Date(b.last_used || b.updated_at || b.created_at || 0).getTime();
     return bTime - aTime;
@@ -511,7 +513,7 @@ function DashboardView({
           <span className="eyebrow">Dashboard</span>
           <h2>Sandbox control</h2>
           <p>
-            {warmSandboxes.length} ready · {executingSandboxes.length} executing · {sessions.length} total · best runtime {runtimeInfo?.best || "unknown"}
+            {warmSandboxes.length} ready · {executingSandboxes.length} executing · {sandboxes.length} total · best runtime {runtimeInfo?.best || "unknown"}
           </p>
         </div>
       </section>
@@ -551,7 +553,7 @@ function DashboardView({
         </div>
         <div className="metric-row">
           <MonitorPlay size={18} />
-          <span>Ready sessions</span>
+          <span>Ready sandboxes</span>
           <strong>{readySandboxes.length}</strong>
         </div>
         <div className="metric-row">
@@ -561,39 +563,39 @@ function DashboardView({
         </div>
       </section>
 
-      <section className="sessions-panel dashboard-sessions-panel">
+      <section className="sandboxes-panel dashboard-sandboxes-panel">
         <div className="section-heading">
-          <h3>Ready sessions</h3>
-          <span>{warmSandboxes.length} warm · {executingSandboxes.length} executing · {sessions.length} total</span>
+          <h3>Ready sandboxes</h3>
+          <span>{warmSandboxes.length} warm · {executingSandboxes.length} executing · {sandboxes.length} total</span>
         </div>
-        <div className="session-list">
+        <div className="sandbox-list">
           {readySandboxes.length === 0 ? (
             <div className="empty-state dashboard-empty">
               <MonitorPlay size={22} />
-              <strong>No live sessions</strong>
-              <span>Create a sandbox to start a warm workbench session.</span>
+              <strong>No live sandboxes</strong>
+              <span>Create a sandbox to start a warm workbench.</span>
             </div>
-          ) : readySandboxes.map((session) => (
+          ) : readySandboxes.map((sandbox) => (
             <button
-              className="session-row active"
-              key={session.id}
-              onClick={() => onSelectSession(session.id)}
+              className="sandbox-row active"
+              key={sandbox.id}
+              onClick={() => onSelectSandbox(sandbox.id)}
             >
-              <div className="session-icon">
+              <div className="sandbox-icon">
                 <SquareTerminal size={20} />
               </div>
-              <div className="session-main">
-                <strong>{session.name}</strong>
+              <div className="sandbox-main">
+                <strong>{sandbox.name}</strong>
                 <span>
-                  {session.id.slice(0, 8)} · {session.template} · {session.mode}
+                  {sandbox.id.slice(0, 8)} · {sandbox.template} · {sandbox.mode}
                 </span>
                 <span>
-                  {session.workspace_mode} · {formatTime(session.last_used || session.updated_at)}
+                  {sandbox.workspace_mode} · {formatTime(sandbox.last_used || sandbox.updated_at)}
                 </span>
               </div>
-              <div className={`state-pill ${session.state.toLowerCase()}`}>
+              <div className={`state-pill ${sandbox.state.toLowerCase()}`}>
                 <CircleDot size={12} />
-                {session.state}
+                {sandbox.state}
               </div>
               <ChevronRight size={18} />
             </button>
@@ -619,12 +621,12 @@ function DashboardView({
         <div className="metric-row">
           <MonitorPlay size={18} />
           <span>Active sandboxes</span>
-          <strong>{systemStatus?.active_sandboxes ?? sessions.length}</strong>
+          <strong>{systemStatus?.active_sandboxes ?? sandboxes.length}</strong>
         </div>
         <div className="metric-row">
           <HardDrive size={18} />
           <span>Total sandboxes</span>
-          <strong>{systemStatus?.total_sandboxes ?? sessions.length}</strong>
+          <strong>{systemStatus?.total_sandboxes ?? sandboxes.length}</strong>
         </div>
         <div className="metric-row">
           <Wrench size={18} />
@@ -634,30 +636,30 @@ function DashboardView({
       </section>
 
       {recentSandboxes.length > 0 && (
-        <section className="recent-sessions-panel">
+        <section className="recent-sandboxes-panel">
           <div className="section-heading">
-            <h3>Recent sessions</h3>
+            <h3>Recent sandboxes</h3>
             <span>Last activity</span>
           </div>
-          <div className="session-list">
-            {recentSandboxes.map((session) => (
+          <div className="sandbox-list">
+            {recentSandboxes.map((sandbox) => (
               <button
-                className="session-row"
-                key={session.id}
-                onClick={() => onSelectSession(session.id)}
+                className="sandbox-row"
+                key={sandbox.id}
+                onClick={() => onSelectSandbox(sandbox.id)}
               >
-                <div className="session-icon">
+                <div className="sandbox-icon">
                   <Clock3 size={20} />
                 </div>
-                <div className="session-main">
-                  <strong>{session.name}</strong>
+                <div className="sandbox-main">
+                  <strong>{sandbox.name}</strong>
                   <span>
-                    {session.id.slice(0, 8)} · {session.template} · {formatTime(session.last_used)}
+                    {sandbox.id.slice(0, 8)} · {sandbox.template} · {formatTime(sandbox.last_used)}
                   </span>
                 </div>
-                <div className={`state-pill ${session.state.toLowerCase()}`}>
+                <div className={`state-pill ${sandbox.state.toLowerCase()}`}>
                   <CircleDot size={12} />
-                  {session.state}
+                  {sandbox.state}
                 </div>
                 <ChevronRight size={18} />
               </button>
@@ -669,16 +671,16 @@ function DashboardView({
   );
 }
 
-// ─── Session Detail View ─────────────────────────────────────────────────────
+// ─── Sandbox Detail View ─────────────────────────────────────────────────────
 
-function SessionDetailView({
-  session,
+function SandboxDetailView({
+  sandbox,
   client,
   defaultNetwork,
   onRefresh,
   onBack
 }: {
-  session: SandboxInfo;
+  sandbox: SandboxInfo;
   client: PiDaemonClient;
   defaultNetwork: string;
   onRefresh: () => void;
@@ -690,26 +692,26 @@ function SessionDetailView({
   const [execStreamText, setExecStreamText] = useState("");
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tabs, setTabs] = useState<Record<string, SessionTabState>>({
+  const [tabs, setTabs] = useState<Record<string, SandboxTabState>>({
     exec: { tab: "exec", loading: false, error: null },
     history: { tab: "history", loading: false, error: null, content: [] },
     logs: { tab: "logs", loading: false, error: null, content: [] },
     diff: { tab: "diff", loading: false, error: null },
     patch: { tab: "patch", loading: false, error: null },
-    artifacts: { tab: "artifacts", loading: false, error: null, content: [] },
+    output: { tab: "output", loading: false, error: null, content: [] },
     snapshots: { tab: "snapshots", loading: false, error: null, content: [] }
   });
-  const [artifactDestination, setArtifactDestination] = useState("/tmp/pi-gui-artifacts");
+  const [outputDestination, setOutputDestination] = useState("/tmp/pi-gui-output");
   const [snapshotName, setSnapshotName] = useState("gui-checkpoint");
   const [repoUrl, setRepoUrl] = useState("");
   const [executionNetwork, setExecutionNetwork] = useState(defaultNetwork || "restricted");
   const [cloneResult, setCloneResult] = useState<string | null>(null);
-  const [artifactPullOutput, setArtifactPullOutput] = useState<string | null>(null);
-  const [artifactPackOutput, setArtifactPackOutput] = useState<string | null>(null);
+  const [outputPullResult, setOutputPullResult] = useState<string | null>(null);
+  const [outputPackResult, setOutputPackResult] = useState<string | null>(null);
   const [deletingSnapshot, setDeletingSnapshot] = useState<string | null>(null);
-  const isSessionReady = canRunSession(session);
-  const canDestroy = canDestroySession(session);
-  const controlsLocked = isBusy || !isSessionReady;
+  const isSandboxReady = canRunSandbox(sandbox);
+  const canDestroy = canDestroySandbox(sandbox);
+  const controlsLocked = isBusy || !isSandboxReady;
 
   const loadTab = useCallback(
     async (tabId: TabId) => {
@@ -718,32 +720,32 @@ function SessionDetailView({
         let content: unknown;
         switch (tabId) {
           case "history": {
-            const resp = await client.logsHistory(session.id);
+            const resp = await client.logsHistory(sandbox.id);
             content = resp.entries;
             break;
           }
           case "logs": {
-            const resp = await client.logs(session.id);
+            const resp = await client.logs(sandbox.id);
             content = resp.entries;
             break;
           }
           case "diff": {
-            const resp = await client.diff(session.id);
+            const resp = await client.diff(sandbox.id);
             content = resp;
             break;
           }
           case "patch": {
-            const resp = await client.patch(session.id);
+            const resp = await client.patch(sandbox.id);
             content = resp;
             break;
           }
-          case "artifacts": {
-            const resp = await client.artifacts(session.id);
-            content = resp.files;
+          case "output": {
+            const resp = await client.outputList(sandbox.id);
+            content = resp.items;
             break;
           }
           case "snapshots": {
-            const resp = await client.snapshots(session.id);
+            const resp = await client.snapshots(sandbox.id);
             content = resp.snapshots;
             break;
           }
@@ -765,7 +767,7 @@ function SessionDetailView({
         }));
       }
     },
-    [session.id, client]
+    [sandbox.id, client]
   );
 
   useEffect(() => {
@@ -782,18 +784,18 @@ function SessionDetailView({
     if (tab === "patch") {
       void loadTab("patch");
     }
-    if (tab === "artifacts") {
-      void loadTab("artifacts");
+    if (tab === "output") {
+      void loadTab("output");
     }
     if (tab === "snapshots") {
       void loadTab("snapshots");
     }
-  }, [tab, session.id, loadTab]);
+  }, [tab, sandbox.id, loadTab]);
 
   const runCommand = useCallback(async () => {
     if (!command.trim()) return;
-    if (!isSessionReady) {
-      setError(sessionGateMessage(session));
+    if (!isSandboxReady) {
+      setError(sandboxGateMessage(sandbox));
       return;
     }
     setIsBusy(true);
@@ -803,7 +805,7 @@ function SessionDetailView({
     try {
       let stdout = "";
       let stderr = "";
-      for await (const event of client.execStream(session.id, command.trim(), { network: executionNetwork })) {
+      for await (const event of client.execStream(sandbox.id, command.trim(), { network: executionNetwork })) {
         if (event.type === "stdout") {
           stdout += event.data || "";
           setExecStreamText(stdout + (stderr ? `\n--- stderr ---\n${stderr}` : ""));
@@ -827,74 +829,74 @@ function SessionDetailView({
     } finally {
       setIsBusy(false);
     }
-  }, [command, executionNetwork, isSessionReady, session, client, onRefresh]);
+  }, [command, executionNetwork, isSandboxReady, sandbox, client, onRefresh]);
 
   const cloneRepo = useCallback(async () => {
     if (!repoUrl.trim()) return;
-    if (!isSessionReady) {
-      setError(sessionGateMessage(session));
+    if (!isSandboxReady) {
+      setError(sandboxGateMessage(sandbox));
       return;
     }
     setIsBusy(true);
     setError(null);
     setCloneResult(null);
     try {
-      const result = await client.cloneSandbox(session.id, repoUrl.trim());
-      setCloneResult(`Cloned to session: ${result.id}`);
+      const result = await client.cloneSandbox(sandbox.id, repoUrl.trim());
+      setCloneResult(`Cloned in sandbox: ${result.id}`);
       await onRefresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Clone failed");
     } finally {
       setIsBusy(false);
     }
-  }, [repoUrl, isSessionReady, session, client, onRefresh]);
+  }, [repoUrl, isSandboxReady, sandbox, client, onRefresh]);
 
-  const pullArtifacts = useCallback(async () => {
-    if (!isSessionReady) {
-      setError(sessionGateMessage(session));
+  const pullOutput = useCallback(async () => {
+    if (!isSandboxReady) {
+      setError(sandboxGateMessage(sandbox));
       return;
     }
     setIsBusy(true);
     setError(null);
-    setArtifactPullOutput(null);
+    setOutputPullResult(null);
     try {
-      await client.artifactPull(session.id, artifactDestination);
-      setArtifactPullOutput(`Pulled to ${artifactDestination}`);
+      await client.outputPull(sandbox.id, outputDestination);
+      setOutputPullResult(`Delivered to ${outputDestination}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Pull failed");
     } finally {
       setIsBusy(false);
     }
-  }, [isSessionReady, session, client, artifactDestination]);
+  }, [isSandboxReady, sandbox, client, outputDestination]);
 
-  const packArtifacts = useCallback(async () => {
-    if (!isSessionReady) {
-      setError(sessionGateMessage(session));
+  const packOutput = useCallback(async () => {
+    if (!isSandboxReady) {
+      setError(sandboxGateMessage(sandbox));
       return;
     }
     setIsBusy(true);
     setError(null);
-    setArtifactPackOutput(null);
+    setOutputPackResult(null);
     try {
-      const output = `/tmp/artifacts-${session.id.slice(0, 8)}.tar.zst`;
-      const result = await client.artifactPack(session.id, output);
-      setArtifactPackOutput(`Packed: ${output} (${formatBytes(result.bytes)})`);
+      const output = `/tmp/output-${sandbox.id.slice(0, 8)}.tar.zst`;
+      const result = await client.outputPack(sandbox.id, output);
+      setOutputPackResult(`Packed: ${output} (${formatBytes(result.size)})`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Pack failed");
     } finally {
       setIsBusy(false);
     }
-  }, [isSessionReady, session, client]);
+  }, [isSandboxReady, sandbox, client]);
 
   const createSnapshot = useCallback(async () => {
-    if (!isSessionReady) {
-      setError(sessionGateMessage(session));
+    if (!isSandboxReady) {
+      setError(sandboxGateMessage(sandbox));
       return;
     }
     setIsBusy(true);
     setError(null);
     try {
-      await client.snapshotCreate(session.id, snapshotName);
+      await client.snapshotCreate(sandbox.id, snapshotName);
       await loadTab("snapshots");
       await onRefresh();
     } catch (err) {
@@ -902,17 +904,17 @@ function SessionDetailView({
     } finally {
       setIsBusy(false);
     }
-  }, [isSessionReady, session, client, snapshotName, loadTab, onRefresh]);
+  }, [isSandboxReady, sandbox, client, snapshotName, loadTab, onRefresh]);
 
   const rollbackSnapshot = useCallback(async (name = snapshotName) => {
-    if (!isSessionReady) {
-      setError(sessionGateMessage(session));
+    if (!isSandboxReady) {
+      setError(sandboxGateMessage(sandbox));
       return;
     }
     setIsBusy(true);
     setError(null);
     try {
-      await client.snapshotRollback(session.id, name);
+      await client.snapshotRollback(sandbox.id, name);
       await loadTab("snapshots");
       await onRefresh();
     } catch (err) {
@@ -920,17 +922,17 @@ function SessionDetailView({
     } finally {
       setIsBusy(false);
     }
-  }, [isSessionReady, session, client, snapshotName, loadTab, onRefresh]);
+  }, [isSandboxReady, sandbox, client, snapshotName, loadTab, onRefresh]);
 
   const deleteSnapshot = useCallback(
     async (name: string) => {
-      if (!isSessionReady) {
-        setError(sessionGateMessage(session));
+      if (!isSandboxReady) {
+        setError(sandboxGateMessage(sandbox));
         return;
       }
       setDeletingSnapshot(name);
       try {
-        await client.snapshotDelete(session.id, name);
+        await client.snapshotDelete(sandbox.id, name);
         await loadTab("snapshots");
         await onRefresh();
       } catch (err) {
@@ -939,25 +941,25 @@ function SessionDetailView({
         setDeletingSnapshot(null);
       }
     },
-    [isSessionReady, session, client, loadTab, onRefresh]
+    [isSandboxReady, sandbox, client, loadTab, onRefresh]
   );
 
-  const destroySession = useCallback(async () => {
+  const destroySandbox = useCallback(async () => {
     if (!canDestroy) {
-      setError(sessionGateMessage(session));
+      setError(sandboxGateMessage(sandbox));
       return;
     }
     setIsBusy(true);
     setError(null);
     try {
-      await client.destroySandbox(session.id);
+      await client.destroySandbox(sandbox.id);
       await onRefresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Destroy failed");
     } finally {
       setIsBusy(false);
     }
-  }, [canDestroy, session, client, onRefresh]);
+  }, [canDestroy, sandbox, client, onRefresh]);
 
   const tabItems: { id: TabId; label: string; icon: typeof Command }[] = [
     { id: "exec", label: "Exec", icon: Play },
@@ -965,51 +967,51 @@ function SessionDetailView({
     { id: "logs", label: "Logs", icon: Clock3 },
     { id: "diff", label: "Diff", icon: ListChecks },
     { id: "patch", label: "Patch", icon: FileText },
-    { id: "artifacts", label: "Artifacts", icon: Database },
+    { id: "output", label: "Output", icon: Database },
     { id: "snapshots", label: "Snapshots", icon: RotateCcw }
   ];
 
   return (
-    <div className="session-detail">
-      <div className="session-detail-header">
+    <div className="sandbox-detail">
+      <div className="sandbox-detail-header">
         <button className="back-button" onClick={onBack}>
           <ArrowLeft size={15} />
           Back
         </button>
         <div>
           <h2>
-            {session.name}
-            <span className="session-id">{session.id.slice(0, 12)}</span>
+            {sandbox.name}
+            <span className="sandbox-id">{sandbox.id.slice(0, 12)}</span>
           </h2>
           <p>
-            {session.template} · {session.mode} · {session.workspace_mode}
+            {sandbox.template} · {sandbox.mode} · {sandbox.workspace_mode}
           </p>
         </div>
-        <div className="session-detail-actions">
-          <div className={`state-pill ${session.state.toLowerCase()}`}>
+        <div className="sandbox-detail-actions">
+          <div className={`state-pill ${sandbox.state.toLowerCase()}`}>
             <CircleDot size={12} />
-            {session.state}
+            {sandbox.state}
           </div>
-          <button className="danger-action" onClick={destroySession} disabled={isBusy || !canDestroy}>
+          <button className="danger-action" onClick={destroySandbox} disabled={isBusy || !canDestroy}>
             <Trash2 size={16} />
             Destroy
           </button>
         </div>
       </div>
 
-      <div className={`session-state-gate ${isSessionReady ? "ready" : "locked"}`}>
+      <div className={`sandbox-state-gate ${isSandboxReady ? "ready" : "locked"}`}>
         <CircleDot size={13} />
-        <span>{sessionGateMessage(session)}</span>
+        <span>{sandboxGateMessage(sandbox)}</span>
       </div>
 
-      <div className="session-tabs">
+      <div className="sandbox-tabs">
         {tabItems.map((item) => {
           const Icon = item.icon;
           const isActive = tab === item.id;
           const tabState = tabs[item.id];
           return (
             <button
-              className={`session-tab ${isActive ? "active" : ""}`}
+              className={`sandbox-tab ${isActive ? "active" : ""}`}
               key={item.id}
               onClick={() => setTab(item.id)}
             >
@@ -1023,7 +1025,7 @@ function SessionDetailView({
 
       {error && <div className="error-banner">{error}</div>}
 
-      <div className="session-tab-content">
+      <div className="sandbox-tab-content">
         {/* ── Exec tab ──────────────────────────────────────────────────── */}
         {tab === "exec" && (
           <div className="exec-panel">
@@ -1032,8 +1034,8 @@ function SessionDetailView({
                 value={command}
                 onChange={(e) => setCommand(e.target.value)}
                 placeholder="Enter command to execute..."
-                disabled={!isSessionReady}
-                onKeyDown={(e) => e.key === "Enter" && isSessionReady && runCommand()}
+                disabled={!isSandboxReady}
+                onKeyDown={(e) => e.key === "Enter" && isSandboxReady && runCommand()}
               />
               <button className="primary-action" onClick={runCommand} disabled={controlsLocked}>
                 <Play size={16} />
@@ -1045,7 +1047,7 @@ function SessionDetailView({
               <select
                 value={executionNetwork}
                 onChange={(e) => setExecutionNetwork(e.target.value)}
-                disabled={!isSessionReady}
+                disabled={!isSandboxReady}
               >
                 {NETWORK_MODES.map((mode) => (
                   <option key={mode} value={mode}>{mode}</option>
@@ -1057,8 +1059,8 @@ function SessionDetailView({
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
                 placeholder="https://github.com/owner/repo.git"
-                disabled={!isSessionReady}
-                onKeyDown={(e) => e.key === "Enter" && isSessionReady && cloneRepo()}
+                disabled={!isSandboxReady}
+                onKeyDown={(e) => e.key === "Enter" && isSandboxReady && cloneRepo()}
               />
               <button onClick={cloneRepo} disabled={controlsLocked}>
                 <Download size={16} />
@@ -1184,17 +1186,9 @@ function SessionDetailView({
                     <pre className="terminal-output patch-output">
                       {(tabs.patch.content as PatchResult | undefined)?.patch}
                     </pre>
-                    <button
-                      className="secondary-action"
-                      onClick={() => {
-                        const text = (tabs.patch.content as PatchResult | undefined)?.patch;
-                        if (text) {
-                          navigator.clipboard.writeText(text);
-                        }
-                      }}
-                    >
-                      <Copy size={14} />
-                      Copy patch
+                    <button className="secondary-action" onClick={() => setTab("output")}>
+                      <Database size={14} />
+                      Open output
                     </button>
                   </>
                 )}
@@ -1203,21 +1197,22 @@ function SessionDetailView({
           </div>
         )}
 
-        {/* ── Artifacts tab ─────────────────────────────────────────────── */}
-        {tab === "artifacts" && (
+        {/* ── Output tab ────────────────────────────────────────────────── */}
+        {tab === "output" && (
           <div className="artifacts-panel">
-            {tabs.artifacts.loading && <div className="loading-msg">Listing artifacts...</div>}
-            {tabs.artifacts.error && <div className="error-msg">{tabs.artifacts.error}</div>}
-            {!tabs.artifacts.loading && !tabs.artifacts.error && (
+            {tabs.output.loading && <div className="loading-msg">Listing output...</div>}
+            {tabs.output.error && <div className="error-msg">{tabs.output.error}</div>}
+            {!tabs.output.loading && !tabs.output.error && (
               <>
-                {(tabs.artifacts.content as string[] | undefined)?.length === 0 && (
-                  <div className="empty-state">No artifacts found.</div>
+                {(tabs.output.content as OutputItem[] | undefined)?.length === 0 && (
+                  <div className="empty-state">No output deliverables found.</div>
                 )}
                 <div className="artifact-list">
-                  {(tabs.artifacts.content as string[] | undefined)?.map((file) => (
-                    <div className="artifact-item" key={file}>
+                  {(tabs.output.content as OutputItem[] | undefined)?.map((item) => (
+                    <div className="artifact-item" key={`${item.type}:${item.path}`}>
                       <FileText size={16} />
-                      <span>{file}</span>
+                      <span>{item.path}</span>
+                      <small>{item.type} · {formatBytes(item.size)}</small>
                     </div>
                   ))}
                 </div>
@@ -1225,21 +1220,21 @@ function SessionDetailView({
                   <label>
                     Destination
                     <input
-                      value={artifactDestination}
-                      onChange={(e) => setArtifactDestination(e.target.value)}
-                      disabled={!isSessionReady}
+                      value={outputDestination}
+                      onChange={(e) => setOutputDestination(e.target.value)}
+                      disabled={!isSandboxReady}
                     />
                   </label>
-                  <button onClick={pullArtifacts} disabled={controlsLocked}>
+                  <button onClick={pullOutput} disabled={controlsLocked}>
                     <Download size={14} />
                     Pull
                   </button>
-                  <button onClick={packArtifacts} disabled={controlsLocked}>
+                  <button onClick={packOutput} disabled={controlsLocked}>
                     Pack
                   </button>
                 </div>
-                {artifactPullOutput && <div className="success-msg">{artifactPullOutput}</div>}
-                {artifactPackOutput && <div className="success-msg">{artifactPackOutput}</div>}
+                {outputPullResult && <div className="success-msg">{outputPullResult}</div>}
+                {outputPackResult && <div className="success-msg">{outputPackResult}</div>}
               </>
             )}
           </div>
@@ -1257,7 +1252,7 @@ function SessionDetailView({
                     value={snapshotName}
                     onChange={(e) => setSnapshotName(e.target.value)}
                     placeholder="Snapshot name..."
-                    disabled={!isSessionReady}
+                    disabled={!isSandboxReady}
                   />
                   <button onClick={createSnapshot} disabled={controlsLocked}>
                     <Plus size={14} />
@@ -1337,7 +1332,7 @@ function CreateSandboxDialog({
   const defaultMode = bestRuntimeMode(runtimeInfo, defaults.mode);
   const runtimeModeKey = `${runtimeInfo?.best || ""}:${runtimeInfo?.available.join("|") || ""}`;
   const [draft, setDraft] = useState<CreateSandboxDraft>({
-    name: "gui-session",
+    name: "gui-sandbox",
     template: defaults.template,
     mode: defaultMode,
     network: defaults.network,
@@ -1385,7 +1380,7 @@ function CreateSandboxDialog({
           <div>
             <span className="eyebrow">POST /v1/sandboxes</span>
             <h2 id="create-dialog-title">New sandbox</h2>
-            <p>Select every launch parameter before the daemon creates the session.</p>
+            <p>Select every launch parameter before the daemon creates the sandbox.</p>
           </div>
           <button className="icon-button" onClick={onCancel} aria-label="Close create sandbox dialog">
             <X size={18} />
@@ -1405,7 +1400,7 @@ function CreateSandboxDialog({
               <input
                 value={draft.name}
                 onChange={(event) => updateDraft({ name: event.target.value })}
-                placeholder="gui-session"
+                placeholder="gui-sandbox"
               />
             </label>
           </section>
@@ -1887,7 +1882,7 @@ function PoliciesView({
   runtimeInfo,
   connection,
   activeContext,
-  sessions,
+  sandboxes,
   onOpenSettings,
   onOpenSandboxes
 }: {
@@ -1898,11 +1893,11 @@ function PoliciesView({
   runtimeInfo: RuntimeInfo | null;
   connection: ConnectionState;
   activeContext: string;
-  sessions: SandboxInfo[];
+  sandboxes: SandboxInfo[];
   onOpenSettings: () => void;
   onOpenSandboxes: () => void;
 }) {
-  const activeSandboxes = sessions.filter((s) => s.state === "WARM" || s.state === "EXECUTING");
+  const activeSandboxes = sandboxes.filter((s) => s.state === "WARM" || s.state === "EXECUTING");
   const doctorErrors = doctorResult?.issues.filter((issue) => issue.level === "error").length ?? 0;
   const doctorWarnings = doctorResult?.issues.filter((issue) => issue.level === "warning").length ?? 0;
 
@@ -1942,15 +1937,15 @@ function PoliciesView({
 
   const apiCoverage = [
     {
-      group: "Session lifecycle",
+      group: "Sandbox lifecycle",
       wired: "create, list, inspect, destroy",
       surface: "Dashboard, Sandboxes",
       status: "wired"
     },
     {
-      group: "Session operations",
-      wired: "exec stream, clone, diff, patch, artifacts, snapshots, logs",
-      surface: "Session detail",
+      group: "Sandbox operations",
+      wired: "exec stream, clone, diff, patch view, output channel, snapshots, logs",
+      surface: "Sandbox detail",
       status: "wired"
     },
     {
@@ -1984,7 +1979,7 @@ function PoliciesView({
           <h2>See what the GUI asks for and what the daemon enforces.</h2>
           <p>
             This view is mostly read-only by design. Change preferences in Settings or
-            session controls; the daemon remains the source of truth.
+            sandbox controls; the daemon remains the source of truth.
           </p>
         </div>
         <div className="policy-summary-actions">
@@ -2320,14 +2315,14 @@ function Topbar({
   health,
   daemonUrl,
   isBusy,
-  onCreateSession
+  onCreateSandbox
 }: {
   activeView: string;
   connection: ConnectionState;
   health: string;
   daemonUrl: string;
   isBusy: boolean;
-  onCreateSession: () => void;
+  onCreateSandbox: () => void;
 }) {
   const canCreate = connection === "connected" && !isBusy;
 
@@ -2340,10 +2335,10 @@ function Topbar({
         </p>
       </div>
       <div className="topbar-actions">
-        {(activeView === "dashboard" || activeView === "sessions") && (
+        {(activeView === "dashboard" || activeView === "sandboxes") && (
           <Button
             className="primary-action"
-            onClick={onCreateSession}
+            onClick={onCreateSandbox}
             disabled={!canCreate}
           >
             {isBusy ? <Loader2 className="spin" size={18} /> : <Play size={18} />}
@@ -2362,7 +2357,7 @@ function App() {
   const [daemonBearerToken, setDaemonBearerToken] = useState("");
   const [connection, setConnection] = useState<ConnectionState>("checking");
   const [health, setHealth] = useState<string>("checking");
-  const [sessions, setSandboxes] = useState<SandboxInfo[]>([]);
+  const [sandboxes, setSandboxes] = useState<SandboxInfo[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [isBusy, setIsBusy] = useState(false);
@@ -2386,13 +2381,14 @@ function App() {
   const guiLogsRef = useRef<GuiLogEntry[]>([]);
   const lastConnectionRef = useRef<ConnectionState>("checking");
   const refreshInFlightRef = useRef(false);
+  const nextAutoRefreshAtRef = useRef(0);
 
   // Track whether the user has dismissed the onboarding (skip or connect).
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
 
   const client = useMemo(() => new PiDaemonClient(daemonUrl, daemonBearerToken), [daemonUrl, daemonBearerToken]);
-  const selectedSession = sessions.find((s) => s.id === selectedId);
+  const selectedSandbox = sandboxes.find((s) => s.id === selectedId);
 
   const notifySystem = useCallback(
     async (title: string, body: string) => {
@@ -2420,16 +2416,24 @@ function App() {
     return guiLogsRef.current;
   }
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (options: { manual?: boolean } = {}) => {
+    const isManual = options.manual === true;
+    const now = Date.now();
+    if (!isManual && lastConnectionRef.current === "disconnected" && now < nextAutoRefreshAtRef.current) {
+      return;
+    }
     if (refreshInFlightRef.current) return;
     refreshInFlightRef.current = true;
-    setError("");
-    setLastError(null);
+    if (isManual || lastConnectionRef.current !== "disconnected") {
+      setError("");
+      setLastError(null);
+    }
     try {
       if (lastConnectionRef.current !== "connected") {
         setConnection("checking");
       }
       const daemonHealth = await client.health();
+      nextAutoRefreshAtRef.current = 0;
       setHealth(daemonHealth.status || "ok");
       setConnection("connected");
       if (lastConnectionRef.current === "disconnected") {
@@ -2451,9 +2455,9 @@ function App() {
         if (!selectedId && sandboxList.value.length > 0) {
           setSelectedId(sandboxList.value[0].id);
         }
-        recordGuiLog("info", `Daemon refresh ok at ${daemonUrl}; sessions=${sandboxList.value.length}`);
+        recordGuiLog("info", `Daemon refresh ok at ${daemonUrl}; sandboxes=${sandboxList.value.length}`);
       } else {
-        recordGuiLog("warning", `Session refresh failed while daemon stayed healthy: ${sandboxList.reason}`);
+        recordGuiLog("warning", `Sandbox refresh failed while daemon stayed healthy: ${sandboxList.reason}`);
       }
       if (status.status === "fulfilled") {
         setSystemStatus(status.value);
@@ -2471,6 +2475,7 @@ function App() {
       }
     } catch (err) {
       setConnection("disconnected");
+      nextAutoRefreshAtRef.current = Date.now() + OFFLINE_REFRESH_INTERVAL_MS;
       if (lastConnectionRef.current === "connected") {
         void notifySystem("PI Sandbox disconnected", "The daemon connection dropped.");
       }
@@ -2478,8 +2483,8 @@ function App() {
       setHealth("offline");
       setSandboxes([]);
       const msg = err instanceof Error ? err.message : "Unable to connect to daemon";
-      setError(msg);
-      setLastError(msg);
+      setError(isManual ? msg : "");
+      setLastError(isManual ? msg : null);
       recordGuiLog("error", `Connection failed for ${daemonUrl}: ${msg}`);
     } finally {
       refreshInFlightRef.current = false;
@@ -2528,15 +2533,15 @@ function App() {
 
   useEffect(() => {
     void refresh();
-    const timer = window.setInterval(() => void refresh(), 5000);
+    const timer = window.setInterval(() => void refresh(), ONLINE_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [refresh]);
 
-  async function createSession(draft: CreateSandboxDraft) {
+  async function createSandbox(draft: CreateSandboxDraft) {
     const workspaceSource = draft.workspaceSource.trim();
     const folderIsAllowed = workspaceSource ? allowedFolders.includes(workspaceSource) : true;
     if (!folderIsAllowed && workspaceSource) {
-      setError("Authorize the project folder before creating a GUI-launched session.");
+      setError("Authorize the project folder before creating a GUI-launched sandbox.");
       return;
     }
     setIsBusy(true);
@@ -2550,7 +2555,7 @@ function App() {
           }
         : undefined;
       const created = await client.createSandbox({
-        name: draft.name.trim() || "gui-session",
+        name: draft.name.trim() || "gui-sandbox",
         template: draft.template,
         mode: draft.mode,
         workspace,
@@ -2568,11 +2573,11 @@ function App() {
         }));
       }
       setSelectedId(created.id);
-      setActiveView("sessions");
+      setActiveView("sandboxes");
       setCreateDialogOpen(false);
       recordGuiLog("info", `Created sandbox ${created.id} (${created.name || draft.name})`);
       void notifySystem("Sandbox created", `${created.name || draft.name} is ready to inspect.`);
-      await refresh();
+      await refresh({ manual: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unable to create sandbox";
       setError(msg);
@@ -2609,7 +2614,7 @@ function App() {
       }
       setDaemonBearerToken("");
       recordGuiLog("info", `Switched active context to ${response.active}`);
-      await refresh();
+      await refresh({ manual: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unable to switch context";
       setError(msg);
@@ -2694,7 +2699,7 @@ function App() {
           health={health}
           daemonUrl={daemonUrl}
           isBusy={isBusy}
-          onCreateSession={() => setCreateDialogOpen(true)}
+          onCreateSandbox={() => setCreateDialogOpen(true)}
         />
 
         {error && <div className="error-banner">{error}</div>}
@@ -2704,54 +2709,54 @@ function App() {
           <DashboardView
             connection={connection}
             health={health}
-            sessions={sessions}
+            sandboxes={sandboxes}
             systemStatus={systemStatus}
             runtimeInfo={runtimeInfo}
-            onSelectSession={(id) => {
+            onSelectSandbox={(id) => {
               setSelectedId(id);
-              setActiveView("sessions");
+              setActiveView("sandboxes");
             }}
           />
         )}
 
         {/* ── Sandboxes view ──────────────────────────────────────────────── */}
-        {activeView === "sessions" && (
-          <div className="sessions-workbench">
-            <section className="sessions-panel">
+        {activeView === "sandboxes" && (
+          <div className="sandboxes-workbench">
+            <section className="sandboxes-panel">
               <div className="section-heading">
                 <h3>Sandboxes</h3>
-                <button onClick={refresh}>Refresh</button>
+                <button onClick={() => void refresh({ manual: true })}>Refresh</button>
               </div>
-              <div className="session-list">
-                {sessions.length === 0 ? (
-                  <div className="empty-state">No sessions returned by the daemon.</div>
-                ) : sessions.map((session) => (
+              <div className="sandbox-list">
+                {sandboxes.length === 0 ? (
+                  <div className="empty-state">No sandboxes returned by the daemon.</div>
+                ) : sandboxes.map((sandbox) => (
                   <button
                     className={
-                      selectedId === session.id
-                        ? "session-row selected"
-                        : session.state === "WARM" || session.state === "EXECUTING"
-                        ? "session-row active"
-                        : "session-row"
+                      selectedId === sandbox.id
+                        ? "sandbox-row selected"
+                        : sandbox.state === "WARM" || sandbox.state === "EXECUTING"
+                        ? "sandbox-row active"
+                        : "sandbox-row"
                     }
-                    key={session.id}
-                    onClick={() => setSelectedId(session.id)}
+                    key={sandbox.id}
+                    onClick={() => setSelectedId(sandbox.id)}
                   >
-                    <div className="session-icon">
+                    <div className="sandbox-icon">
                       <SquareTerminal size={20} />
                     </div>
-                    <div className="session-main">
-                      <strong>{session.name}</strong>
+                    <div className="sandbox-main">
+                      <strong>{sandbox.name}</strong>
                       <span>
-                        {session.id.slice(0, 8)} · {session.template} · {session.mode}
+                        {sandbox.id.slice(0, 8)} · {sandbox.template} · {sandbox.mode}
                       </span>
                       <span>
-                        {session.workspace_mode} · {formatTime(session.last_used || session.updated_at)}
+                        {sandbox.workspace_mode} · {formatTime(sandbox.last_used || sandbox.updated_at)}
                       </span>
                     </div>
-                    <div className={`state-pill ${session.state.toLowerCase()}`}>
+                    <div className={`state-pill ${sandbox.state.toLowerCase()}`}>
                       <CircleDot size={12} />
-                      {session.state}
+                      {sandbox.state}
                     </div>
                     <ChevronRight size={18} />
                   </button>
@@ -2759,16 +2764,16 @@ function App() {
               </div>
             </section>
 
-            {selectedSession ? (
-              <SessionDetailView
-                session={selectedSession}
+            {selectedSandbox ? (
+              <SandboxDetailView
+                sandbox={selectedSandbox}
                 client={client}
                 defaultNetwork={defaults.network}
                 onRefresh={refresh}
                 onBack={() => setSelectedId("")}
               />
             ) : (
-              <div className="empty-state">Select a session to view details.</div>
+              <div className="empty-state">Select a sandbox to view details.</div>
             )}
           </div>
         )}
@@ -2800,9 +2805,9 @@ function App() {
             runtimeInfo={runtimeInfo}
             connection={connection}
             activeContext={activeContext}
-            sessions={sessions}
+            sandboxes={sandboxes}
             onOpenSettings={() => setActiveView("settings")}
-            onOpenSandboxes={() => setActiveView("sessions")}
+            onOpenSandboxes={() => setActiveView("sandboxes")}
           />
         )}
 
@@ -2832,7 +2837,7 @@ function App() {
           onAuthorizeFolder={authorizeFolder}
           onRemoveAllowedFolder={removeAllowedFolder}
           onCancel={() => setCreateDialogOpen(false)}
-          onCreate={(draft) => void createSession(draft)}
+          onCreate={(draft) => void createSandbox(draft)}
         />
       </section>
     </main>

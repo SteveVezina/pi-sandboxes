@@ -165,9 +165,28 @@ export type PatchResult = {
   duration_ms: number;
 };
 
-export type ArtifactsResponse = {
-  id: string;
-  files: string[];
+export type OutputItem = {
+  path: string;
+  type: "file" | "directory" | "patch";
+  size: number;
+  modified: string;
+};
+
+export type OutputListResponse = {
+  sandbox_id: string;
+  items: OutputItem[];
+};
+
+export type OutputPullResponse = {
+  sandbox_id: string;
+  destination: string;
+  items: string[];
+};
+
+export type OutputPackResponse = {
+  sandbox_id: string;
+  output: string;
+  size: number;
 };
 
 export type SnapshotMeta = {
@@ -205,7 +224,7 @@ export type SupportBundle = {
   version: { component: string };
   diagnostics: DoctorResult;
   runtimes: { available: string[]; best: string };
-  sessions: { count: number; ids: string[] };
+  sandboxes: { count: number; ids: string[] };
   config: { path: string; pi_home: string };
   gui_logs?: GuiLogEntry[];
   redacted: boolean;
@@ -375,25 +394,28 @@ export class PiDaemonClient {
     return this.request<PatchResult>("GET", `/v1/sandboxes/${encodeURIComponent(id)}/patch`);
   }
 
-  async artifacts(id: string): Promise<ArtifactsResponse> {
-    const raw = await this.request<ArtifactsResponse>("GET", `/v1/sandboxes/${encodeURIComponent(id)}/artifacts/list`);
-    // Daemon may return null for empty arrays.
-    return { ...raw, files: raw.files || [] };
+  async outputList(id: string): Promise<OutputListResponse> {
+    const raw = await this.request<OutputListResponse>(
+      "POST",
+      `/v1/sandboxes/${encodeURIComponent(id)}/output`,
+      { action: "list" }
+    );
+    return { ...raw, items: raw.items || [] };
   }
 
-  async artifactPull(id: string, destination: string): Promise<{ action: string; destination: string }> {
-    return this.request<{ action: string; destination: string }>(
+  async outputPull(id: string, destination: string): Promise<OutputPullResponse> {
+    return this.request<OutputPullResponse>(
       "POST",
-      `/v1/sandboxes/${encodeURIComponent(id)}/artifacts/pull`,
-      { destination }
+      `/v1/sandboxes/${encodeURIComponent(id)}/output`,
+      { action: "pull", dest: destination }
     );
   }
 
-  async artifactPack(id: string, output: string): Promise<{ action: string; output: string; bytes: number }> {
-    return this.request<{ action: string; output: string; bytes: number }>(
+  async outputPack(id: string, output: string): Promise<OutputPackResponse> {
+    return this.request<OutputPackResponse>(
       "POST",
-      `/v1/sandboxes/${encodeURIComponent(id)}/artifacts/pack`,
-      { output }
+      `/v1/sandboxes/${encodeURIComponent(id)}/output`,
+      { action: "pack", output }
     );
   }
 
@@ -447,11 +469,16 @@ export class PiDaemonClient {
       headers.Authorization = `Bearer ${this.bearerToken}`;
     }
 
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body)
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${path}`, {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body)
+      });
+    } catch {
+      throw new Error(`Unable to reach daemon at ${this.baseUrl}`);
+    }
 
     if (!response.ok) {
       let message: string;

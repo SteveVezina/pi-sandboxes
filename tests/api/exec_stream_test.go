@@ -11,7 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pi-sandbox/pi/pkg/api"
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
 // streamRouter builds a minimal mux that mounts the exec handler.

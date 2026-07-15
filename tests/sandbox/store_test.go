@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
 func TestStore_Create(t *testing.T) {

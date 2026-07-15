@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/pi-sandbox/pi/pkg/runtime/detect"
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 	"github.com/pi-sandbox/pi/pkg/system"
 )
 

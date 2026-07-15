@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/pi-sandbox/pi/pkg/api"
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 	"github.com/pi-sandbox/pi/pkg/template"
 )
 

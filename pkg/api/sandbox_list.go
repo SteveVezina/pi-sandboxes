@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
 // ListSandboxes returns an HTTP handler that lists sandbox sessions.

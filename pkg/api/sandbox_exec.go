@@ -13,7 +13,7 @@ import (
 	"github.com/pi-sandbox/pi/pkg/exec"
 	"github.com/pi-sandbox/pi/pkg/network"
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
 // ExecRequest is the API request for command execution.

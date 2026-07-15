@@ -20,7 +20,12 @@ func NewStore(root string) *Store {
 	return &Store{root: root}
 }
 
-// sandboxDir returns the path for a session's metadata directory.
+// Dir returns the root directory path for the store.
+func (s *Store) Dir() string {
+	return s.root
+}
+
+// sandboxDir returns the path for a sandbox's metadata directory.
 func (s *Store) sandboxDir(id string) string {
 	return filepath.Join(s.root, id)
 }

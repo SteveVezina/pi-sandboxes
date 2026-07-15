@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/pi-sandbox/pi/pkg/daemon"
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
 func TestDaemon_StartAndHealth(t *testing.T) {

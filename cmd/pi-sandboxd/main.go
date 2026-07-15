@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/pi-sandbox/pi/pkg/daemon"
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 	"github.com/pi-sandbox/pi/pkg/system"
 )
 

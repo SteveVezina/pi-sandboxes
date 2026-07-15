@@ -15,7 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pi-sandbox/pi/pkg/api"
 	"github.com/pi-sandbox/pi/pkg/daemon"
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
 func newTestStore(t *testing.T) (*session.Store, string) {

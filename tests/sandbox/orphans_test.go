@@ -3,7 +3,7 @@ package session_test
 import (
 	"testing"
 
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
 func TestOrphanCleanup_CleansOrphans(t *testing.T) {

@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
 func requireSandboxState(w http.ResponseWriter, meta *session.Meta, allowed ...session.State) bool {

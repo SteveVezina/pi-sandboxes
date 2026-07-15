@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
 func TestTTLChecker_ExpiresSession(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"github.com/pi-sandbox/pi/pkg/api"
 	pictx "github.com/pi-sandbox/pi/pkg/context"
 	"github.com/pi-sandbox/pi/pkg/remote"
-	"github.com/pi-sandbox/pi/pkg/session"
+	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
 // NewRouter creates the HTTP router with all endpoints.

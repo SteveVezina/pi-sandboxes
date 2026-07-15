@@ -45,6 +45,7 @@ func NewRouter(store *sandbox.Store, runStores ...*sandbox.AgentRunStore) *mux.R
 	router.HandleFunc("/v1/sandboxes/{id}/clone", api.CloneSandbox(store)).Methods("POST")
 
 	// Files
+	router.HandleFunc("/v1/sandboxes/{id}/files/list", api.FilesListSandbox(store)).Methods("GET")
 	router.HandleFunc("/v1/sandboxes/{id}/files/read", api.FilesReadSandbox(store)).Methods("GET")
 	router.HandleFunc("/v1/sandboxes/{id}/files/write", api.FilesWriteSandbox(store)).Methods("POST")
 

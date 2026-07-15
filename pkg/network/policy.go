@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// Policy defines network access rules for a sandbox session.
+// Policy defines network access rules for a sandbox.
 type Policy struct {
 	Mode      Mode       `json:"mode"`
 	Allowlist DomainList `json:"allowlist"`

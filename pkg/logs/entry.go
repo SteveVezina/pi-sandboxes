@@ -21,19 +21,27 @@ type Entry struct {
 	StderrPath string    `json:"stderrPath"`
 }
 
-// Manager handles log storage for a sandbox session.
+// Manager handles log storage for a sandbox.
 type Manager struct {
 	logsDir  string
 	sequence int
 }
 
-// NewManager creates a log manager for the given sandbox ID.
+// NewManager creates a log manager for the given sandbox ID. Logs live
+// under the daemon-owned Pi Box home, next to the sandbox metadata.
 func NewManager(sandboxID string) *Manager {
-	logsDir := filepath.Join(os.TempDir(), "pi-sandbox-logs", sandboxID)
-	return &Manager{
-		logsDir:  logsDir,
-		sequence: 0,
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = os.TempDir()
 	}
+	logsDir := filepath.Join(home, ".pi-box", "sandboxes", sandboxID, "logs")
+	m := &Manager{logsDir: logsDir}
+	// Resume the sequence from what is already on disk so entries are
+	// never overwritten across daemon restarts or manager instances.
+	if matches, err := filepath.Glob(filepath.Join(logsDir, "exec-*.stdout")); err == nil {
+		m.sequence = len(matches)
+	}
+	return m
 }
 
 // Dir returns the logs directory path.

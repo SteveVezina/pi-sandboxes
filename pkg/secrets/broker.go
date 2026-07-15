@@ -1,6 +1,6 @@
 package secrets
 
-// Broker manages secret exposure for sandbox sessions.
+// Broker manages secret exposure for sandboxes.
 type Broker struct {
 	secrets map[string]*Secret
 }

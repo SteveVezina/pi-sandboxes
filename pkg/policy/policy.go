@@ -2,7 +2,7 @@ package policy
 
 import "fmt"
 
-// Policy defines the security constraints for a sandbox session.
+// Policy defines the security constraints for a sandbox.
 type Policy struct {
 	Filesystem FilesystemPolicy `yaml:"filesystem"`
 	Process    ProcessPolicy    `yaml:"process"`

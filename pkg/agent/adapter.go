@@ -293,20 +293,26 @@ func (a *Adapter) execFilesWrite(args map[string]interface{}) (*ToolResult, erro
 func (a *Adapter) execArtifactsList(args map[string]interface{}) (*ToolResult, error) {
 	sandboxID, _ := args["sandbox_id"].(string)
 
-	respBody, err := a.doJSON("GET", fmt.Sprintf("/v1/sandboxes/%s/artifacts/list", sandboxID), nil)
+	respBody, err := a.doJSON("GET", fmt.Sprintf("/v1/sandboxes/%s/output", sandboxID), nil)
 	if err != nil {
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}
 
 	var result struct {
-		Files []string `json:"files"`
+		Items []struct {
+			Path string `json:"path"`
+		} `json:"items"`
 	}
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}
+	files := make([]string, 0, len(result.Items))
+	for _, item := range result.Items {
+		files = append(files, item.Path)
+	}
 	return &ToolResult{
 		Success: true,
-		Data:    map[string]interface{}{"sandbox_id": sandboxID, "files": result.Files, "count": len(result.Files)},
+		Data:    map[string]interface{}{"sandbox_id": sandboxID, "files": files, "count": len(files)},
 	}, nil
 }
 
@@ -314,8 +320,8 @@ func (a *Adapter) execArtifactsPull(args map[string]interface{}) (*ToolResult, e
 	sandboxID, _ := args["sandbox_id"].(string)
 	destination, _ := args["destination"].(string)
 
-	body := map[string]interface{}{"destination": destination}
-	_, err := a.doJSON("POST", fmt.Sprintf("/v1/sandboxes/%s/artifacts/pull", sandboxID), body)
+	body := map[string]interface{}{"action": "pull", "dest": destination}
+	_, err := a.doJSON("POST", fmt.Sprintf("/v1/sandboxes/%s/output", sandboxID), body)
 	if err != nil {
 		return &ToolResult{Success: false, Error: err.Error()}, nil
 	}

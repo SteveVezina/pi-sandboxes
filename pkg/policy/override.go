@@ -1,6 +1,6 @@
 package policy
 
-// Override represents per-session policy overrides.
+// Override represents per-sandbox policy overrides.
 type Override struct {
 	MaxProcesses   *int
 	MaxOutput      *int64

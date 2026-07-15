@@ -13,31 +13,33 @@ type MountPoint struct {
 	ReadOnly    bool   `json:"readOnly"`
 }
 
-// Manager manages cache mounts for sandbox sessions.
+// Manager manages cache mounts for sandbox sessions using daemon-managed volumes.
 type Manager struct {
 	scope Scope
+	rootDir string
 }
 
 // NewManager creates a cache manager for a scope.
-func NewManager(scope Scope) *Manager {
-	return &Manager{scope: scope}
+func NewManager(scope Scope, rootDir string) *Manager {
+	return &Manager{scope: scope, rootDir: rootDir}
 }
 
-// Mounts returns all cache mount points for this scope.
+// Mounts returns all cache mount points for this scope using daemon-managed volumes.
 func (m *Manager) Mounts() ([]MountPoint, error) {
 	var mounts []MountPoint
 
 	for _, t := range AllCacheTypes() {
-		hostPath := m.scope.Dir(t)
+		// Use daemon-managed cache storage instead of host bind mounts
+		volumePath := m.volumePath(t)
 		sandboxPath := "/cache/" + string(t)
 
-		// Ensure cache directory exists
-		if err := os.MkdirAll(hostPath, 0755); err != nil {
-			return nil, fmt.Errorf("ensure cache dir %s: %w", hostPath, err)
+		// Ensure volume directory exists
+		if err := os.MkdirAll(volumePath, 0755); err != nil {
+			return nil, fmt.Errorf("ensure volume dir %s: %w", volumePath, err)
 		}
 
 		mounts = append(mounts, MountPoint{
-			HostPath:    hostPath,
+			HostPath:    volumePath,
 			SandboxPath: sandboxPath,
 			ReadOnly:    false,
 		})
@@ -46,25 +48,30 @@ func (m *Manager) Mounts() ([]MountPoint, error) {
 	return mounts, nil
 }
 
+// volumePath returns the daemon-managed volume path for a cache type.
+func (m *Manager) volumePath(cacheType Type) string {
+	return filepath.Join(m.rootDir, "runtime", "caches", m.scope.String(), string(cacheType))
+}
+
 // GetMount returns the mount point for a specific cache type.
 func (m *Manager) GetMount(t Type) (*MountPoint, error) {
-	hostPath := m.scope.Dir(t)
-	if _, err := os.Stat(hostPath); err != nil {
-		return nil, fmt.Errorf("cache %s not found: %w", t, err)
+	volumePath := m.volumePath(t)
+	if _, err := os.Stat(volumePath); err != nil {
+		return nil, fmt.Errorf("cache volume %s not found: %w", t, err)
 	}
 
 	return &MountPoint{
-		HostPath:    hostPath,
+		HostPath:    volumePath,
 		SandboxPath: "/cache/" + string(t),
 		ReadOnly:    false,
 	}, nil
 }
 
-// Size returns the total size of all caches for this scope in bytes.
+// Size returns the total size of all cache volumes for this scope in bytes.
 func (m *Manager) Size() (int64, error) {
 	var total int64
 	for _, t := range AllCacheTypes() {
-		dir := m.scope.Dir(t)
+		dir := m.volumePath(t)
 		size, err := dirSize(dir)
 		if err != nil {
 			continue
@@ -74,6 +81,7 @@ func (m *Manager) Size() (int64, error) {
 	return total, nil
 }
 
+// dirSize returns the total size of a directory in bytes.
 func dirSize(path string) (int64, error) {
 	var size int64
 	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
@@ -86,4 +94,25 @@ func dirSize(path string) (int64, error) {
 		return nil
 	})
 	return size, err
+}
+
+// EnsureVolume ensures a cache volume exists and returns its path.
+func (m *Manager) EnsureVolume(cacheType Type) (string, error) {
+	volumePath := m.volumePath(cacheType)
+	if err := os.MkdirAll(volumePath, 0755); err != nil {
+		return "", fmt.Errorf("ensure volume dir %s: %w", volumePath, err)
+	}
+	return volumePath, nil
+}
+
+// VolumeExists checks if a cache volume exists.
+func (m *Manager) VolumeExists(cacheType Type) bool {
+	_, err := os.Stat(m.volumePath(cacheType))
+	return err == nil
+}
+
+// RemoveVolume removes a cache volume.
+func (m *Manager) RemoveVolume(cacheType Type) error {
+	volumePath := m.volumePath(cacheType)
+	return os.RemoveAll(volumePath)
 }

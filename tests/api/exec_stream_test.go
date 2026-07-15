@@ -28,6 +28,9 @@ func makeStreamSandbox(t *testing.T, store *session.Store) string {
 	if err != nil {
 		t.Fatalf("create sandbox: %v", err)
 	}
+	if err := store.UpdateState(id, session.StateWarm); err != nil {
+		t.Fatalf("warm sandbox: %v", err)
+	}
 	return id
 }
 

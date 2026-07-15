@@ -34,6 +34,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | `pkg/system/` | Doctor backend availability |
 | `pkg/logs/` | Fallback decisions recorded |
 | `cmd/pi-box/box` | Explicit and auto runtime mode flags |
+| `pi-sandboxd` API | Create defaults to the detected best available runtime and rejects unavailable explicit runtime modes |
 
 ## Security Considerations
 
@@ -86,6 +87,24 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Files:** `pkg/runtime/detect/detect.go`, `pkg/logs/entry.go`
 **Size:** M
 **Depends on:** T19.1, F17
+
+### T19.3: Daemon-facing supported runtime contract ✅
+
+**Description:** Keep daemon and GUI runtime selection aligned on user-facing runtime mode names and host capability checks.
+
+**Acceptance criteria:**
+- [x] Runtime discovery reports supported modes as `secure`, `fast`, `compat`, and `microvm`
+- [x] gVisor remains an implementation detail behind the `secure` mode
+- [x] Sandbox creation without an explicit mode uses the detected best available mode
+- [x] Sandbox creation with an unavailable explicit mode fails before creating session metadata
+
+**Verification:**
+- [x] Unit tests verify runtime detection exposes the best mode in the available list
+- [x] API tests verify default-mode creation and unavailable explicit-mode rejection
+
+**Files:** `pkg/runtime/detect/detect.go`, `pkg/api/sandbox_create.go`, `tests/runtime/detect/detect_test.go`, `tests/api/sandbox_test.go`
+**Size:** S
+**Depends on:** T19.1, T19.2
 
 ## Verification Plan
 

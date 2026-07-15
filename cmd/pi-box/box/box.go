@@ -82,7 +82,7 @@ func callAPI(method, endpoint string, body io.Reader) (map[string]interface{}, e
 }
 
 func callAPIUnix(method, endpoint string, body io.Reader) (map[string]interface{}, error) {
-	args := []string{"-s", "-X", method, "-H", "Content-Type: application/json",
+	args := []string{"-s", "-w", "\n%{http_code}", "-X", method, "-H", "Content-Type: application/json",
 		"--unix-socket", getSocketPath(), "http://localhost" + endpoint}
 	if body != nil {
 		args = append(args, "-d", "@-")
@@ -91,9 +91,45 @@ func callAPIUnix(method, endpoint string, body io.Reader) (map[string]interface{
 	if body != nil {
 		cmd.Stdin = body
 	}
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, err
+		// Provide better error messages for common failure modes
+		exitErr, ok := err.(*exec.ExitError)
+		if ok {
+			exitCode := exitErr.ExitCode()
+			exitMsg := string(exitErr.Stderr)
+			// Check for daemon not running (connection refused)
+			if exitCode == 7 || strings.Contains(exitMsg, "Connection refused") || strings.Contains(exitMsg, "No such file or directory") {
+				return nil, fmt.Errorf("daemon not running at %s (start with: pi-sandboxd)", getSocketPath())
+			}
+			// Check for HTTP error from daemon
+			if strings.Contains(exitMsg, `"error"`) {
+				return nil, fmt.Errorf("daemon error: %s", strings.TrimSpace(exitMsg))
+			}
+			return nil, fmt.Errorf("curl failed (exit %d): %s", exitCode, strings.TrimSpace(exitMsg))
+		}
+		return nil, fmt.Errorf("curl failed: %w", err)
+	}
+	// Parse the HTTP status code from the end of output
+	// Output format: JSON response + "\n" + HTTP status code
+	outputStr := strings.TrimSpace(string(output))
+	// Find the last newline that separates JSON from HTTP status code
+	lastNL := strings.LastIndex(outputStr, "\n")
+	if lastNL > 0 {
+		jsonStr := outputStr[:lastNL]
+		httpCode := outputStr[lastNL+1:]
+		// Validate HTTP status code is numeric
+		if len(httpCode) > 0 && httpCode[0] >= '0' && httpCode[0] <= '9' {
+			var result map[string]interface{}
+			if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+				return nil, fmt.Errorf("parse response: %w", err)
+			}
+			// Check for error in response
+			if errMsg, ok := result["error"].(string); ok {
+				return nil, fmt.Errorf("%s", errMsg)
+			}
+			return result, nil
+		}
 	}
 	var result map[string]interface{}
 	if len(output) == 0 {
@@ -112,7 +148,8 @@ func callAPIRemote(ctx pictx.Context, method, endpoint string, body io.Reader) (
 	}
 	resp, err := client.Do(method, endpoint, body)
 	if err != nil {
-		return nil, err
+		// Provide better error messages for connection failures
+		return nil, fmt.Errorf("remote connection failed (%s): %w", ctx.Target, err)
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
@@ -212,7 +249,26 @@ var createCmd = &cobra.Command{
 		data, _ := json.Marshal(payload)
 		result, err := callAPI("POST", "/v1/sandboxes", bytes.NewReader(data))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: failed to create sandbox: %v\n", err)
+			errMsg := err.Error()
+			// Check for daemon not running
+			if strings.Contains(errMsg, "daemon not running") {
+				fmt.Fprintf(os.Stderr, "error: %s\n", errMsg)
+				fmt.Fprintln(os.Stderr, "\nStart the daemon with:")
+				fmt.Fprintf(os.Stderr, "  pi-sandboxd\n")
+				fmt.Fprintf(os.Stderr, "Or check if it's already running:")
+				fmt.Fprintf(os.Stderr, "  ps aux | grep pi-sandboxd\n")
+				os.Exit(1)
+			}
+			// Check for container creation failure (compat mode)
+			if strings.Contains(errMsg, "container creation failed") {
+				fmt.Fprintf(os.Stderr, "error: %s\n", errMsg)
+				if strings.Contains(errMsg, "mounts denied") || strings.Contains(errMsg, "not shared") {
+					fmt.Fprintln(os.Stderr, "\nDocker Desktop on macOS needs /workspace in File Sharing:")
+					fmt.Fprintln(os.Stderr, "  Docker → Preferences → Resources → File Sharing → add /workspace")
+				}
+				os.Exit(1)
+			}
+			fmt.Fprintf(os.Stderr, "error: %s\n", errMsg)
 			os.Exit(1)
 		}
 		fmt.Printf("Created sandbox: %v\n", result["id"])

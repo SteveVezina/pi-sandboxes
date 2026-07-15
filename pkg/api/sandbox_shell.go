@@ -21,8 +21,12 @@ var wsUpgrader = websocket.Upgrader{
 // to a specific sandbox id, bypassing mux variable extraction.
 func ShellSandboxForID(store *session.Store, id string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, err := store.Get(id); err != nil {
+		meta, err := store.Get(id)
+		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
+			return
+		}
+		if !requireSandboxState(w, meta, session.StateWarm) {
 			return
 		}
 		conn, err := wsUpgrader.Upgrade(w, r, nil)
@@ -30,7 +34,10 @@ func ShellSandboxForID(store *session.Store, id string) http.Handler {
 			return
 		}
 		defer conn.Close()
-		store.UpdateState(id, session.StateExecuting)
+		if err := store.UpdateState(id, session.StateExecuting); err != nil {
+			_ = conn.WriteMessage(websocket.TextMessage, []byte("error: "+err.Error()+"\n"))
+			return
+		}
 		defer store.UpdateState(id, session.StateWarm)
 		shell := "bash"
 		if _, err := exec.LookPath("bash"); err != nil {
@@ -97,8 +104,12 @@ func ShellSandbox(store *session.Store) http.HandlerFunc {
 		vars := mux.Vars(r)
 		id := vars["id"]
 
-		if _, err := store.Get(id); err != nil {
+		meta, err := store.Get(id)
+		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
+			return
+		}
+		if !requireSandboxState(w, meta, session.StateWarm) {
 			return
 		}
 
@@ -109,7 +120,10 @@ func ShellSandbox(store *session.Store) http.HandlerFunc {
 		}
 		defer conn.Close()
 
-		store.UpdateState(id, session.StateExecuting)
+		if err := store.UpdateState(id, session.StateExecuting); err != nil {
+			_ = conn.WriteMessage(websocket.TextMessage, []byte("error: "+err.Error()+"\n"))
+			return
+		}
 		defer store.UpdateState(id, session.StateWarm)
 
 		// Start a bash shell (or sh as fallback).

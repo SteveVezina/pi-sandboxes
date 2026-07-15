@@ -11,26 +11,19 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pi-sandbox/pi/pkg/api"
 	"github.com/pi-sandbox/pi/pkg/daemon"
+	"github.com/pi-sandbox/pi/pkg/session"
 )
 
 func TestExecSandbox(t *testing.T) {
 	store, _ := newTestStore(t)
 
-	// Create a sandbox
-	reqBody := `{"name":"exec-test","template":"base","mode":"fast"}`
-	req := httptest.NewRequest("POST", "/v1/sandboxes", bytes.NewBufferString(reqBody))
-	w := httptest.NewRecorder()
-	api.CreateSandbox(store)(w, req)
-
-	var createResp map[string]string
-	json.NewDecoder(w.Body).Decode(&createResp)
-	id := createResp["id"]
+	id := makeWarmExecSandbox(t, store, "exec-test")
 
 	// Execute via router
 	execBody := `{"command":"echo hello world","timeoutMs":5000}`
-	req = httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(execBody))
+	req := httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(execBody))
 	router := daemon.NewRouter(store)
-	w = httptest.NewRecorder()
+	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -54,19 +47,12 @@ func TestExecSandbox(t *testing.T) {
 func TestExecSandbox_AcceptsValidNetworkMode(t *testing.T) {
 	store, _ := newTestStore(t)
 
-	reqBody := `{"name":"exec-network","template":"base","mode":"fast"}`
-	req := httptest.NewRequest("POST", "/v1/sandboxes", bytes.NewBufferString(reqBody))
-	w := httptest.NewRecorder()
-	api.CreateSandbox(store)(w, req)
-
-	var createResp map[string]string
-	json.NewDecoder(w.Body).Decode(&createResp)
-	id := createResp["id"]
+	id := makeWarmExecSandbox(t, store, "exec-network")
 
 	execBody := `{"command":"echo network ok","timeoutMs":5000,"network":"restricted"}`
-	req = httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(execBody))
+	req := httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(execBody))
 	router := daemon.NewRouter(store)
-	w = httptest.NewRecorder()
+	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -77,19 +63,12 @@ func TestExecSandbox_AcceptsValidNetworkMode(t *testing.T) {
 func TestExecSandbox_RejectsInvalidNetworkMode(t *testing.T) {
 	store, _ := newTestStore(t)
 
-	reqBody := `{"name":"exec-network","template":"base","mode":"fast"}`
-	req := httptest.NewRequest("POST", "/v1/sandboxes", bytes.NewBufferString(reqBody))
-	w := httptest.NewRecorder()
-	api.CreateSandbox(store)(w, req)
-
-	var createResp map[string]string
-	json.NewDecoder(w.Body).Decode(&createResp)
-	id := createResp["id"]
+	id := makeWarmExecSandbox(t, store, "exec-network")
 
 	execBody := `{"command":"echo no","network":"wide-open"}`
-	req = httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(execBody))
+	req := httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(execBody))
 	router := daemon.NewRouter(store)
-	w = httptest.NewRecorder()
+	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusBadRequest {
@@ -97,6 +76,38 @@ func TestExecSandbox_RejectsInvalidNetworkMode(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "invalid network mode") {
 		t.Fatalf("response = %s, want invalid network mode error", w.Body.String())
+	}
+}
+
+func TestExecSandbox_RejectsNonWarmState(t *testing.T) {
+	store, _ := newTestStore(t)
+
+	id, err := store.CreateWithOptions(session.CreateOptions{
+		Name:     "busy-session",
+		Template: "base",
+		Mode:     "fast",
+	})
+	if err != nil {
+		t.Fatalf("CreateWithOptions failed: %v", err)
+	}
+	if err := store.UpdateState(id, session.StateWarm); err != nil {
+		t.Fatalf("UpdateState warm failed: %v", err)
+	}
+	if err := store.UpdateState(id, session.StateExecuting); err != nil {
+		t.Fatalf("UpdateState executing failed: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(`{"command":"echo no"}`))
+	req = mux.SetURLVars(req, map[string]string{"id": id})
+	w := httptest.NewRecorder()
+
+	api.ExecSandbox(store)(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Fatalf("Expected 409, got %d: %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "WARM") {
+		t.Fatalf("response = %s, want required WARM state", w.Body.String())
 	}
 }
 
@@ -116,25 +127,33 @@ func TestExecSandbox_NotFound(t *testing.T) {
 func TestExecSandbox_BadRequest(t *testing.T) {
 	store, _ := newTestStore(t)
 
-	// Create a sandbox first
-	reqBody := `{"name":"test","template":"base","mode":"fast"}`
-	req := httptest.NewRequest("POST", "/v1/sandboxes", bytes.NewBufferString(reqBody))
-	w := httptest.NewRecorder()
-	api.CreateSandbox(store)(w, req)
-
-	var createResp map[string]string
-	json.NewDecoder(w.Body).Decode(&createResp)
-	id := createResp["id"]
+	id := makeWarmExecSandbox(t, store, "test")
 
 	// Bad exec request (invalid JSON)
-	req = httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(`{invalid`))
+	req := httptest.NewRequest("POST", "/v1/sandboxes/"+id+"/exec", bytes.NewBufferString(`{invalid`))
 	req = mux.SetURLVars(req, map[string]string{"id": id})
-	w = httptest.NewRecorder()
+	w := httptest.NewRecorder()
 	api.ExecSandbox(store)(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("Expected 400, got %d", w.Code)
 	}
+}
+
+func makeWarmExecSandbox(t *testing.T, store *session.Store, name string) string {
+	t.Helper()
+	id, err := store.CreateWithOptions(session.CreateOptions{
+		Name:     name,
+		Template: "base",
+		Mode:     "fast",
+	})
+	if err != nil {
+		t.Fatalf("CreateWithOptions failed: %v", err)
+	}
+	if err := store.UpdateState(id, session.StateWarm); err != nil {
+		t.Fatalf("UpdateState warm failed: %v", err)
+	}
+	return id
 }
 
 func TestExecRouter(t *testing.T) {

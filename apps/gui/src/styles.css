@@ -3423,6 +3423,35 @@ body {
     #101216;
 }
 
+.session-state-gate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(18, 20, 24, 0.82);
+  color: var(--muted);
+  padding: 9px 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.session-state-gate.ready {
+  border-color: rgba(52, 211, 153, 0.24);
+  color: var(--green);
+}
+
+.session-state-gate.locked {
+  border-color: rgba(217, 163, 74, 0.28);
+  color: var(--amber);
+}
+
+.session-tab-content input:disabled,
+.session-tab-content select:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 @media (max-width: 720px) {
   .topbar-actions {
     width: auto;

@@ -57,6 +57,9 @@ func ExecSandbox(store *session.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
 			return
 		}
+		if !requireSandboxState(w, meta, session.StateWarm) {
+			return
+		}
 
 		// Parse request
 		var req ExecRequest
@@ -89,8 +92,15 @@ func ExecSandbox(store *session.Store) http.HandlerFunc {
 			execReq.Cwd = "/workspace"
 		}
 
-		store.UpdateLastUsed(id)
-		store.UpdateState(id, session.StateExecuting)
+		if err := store.UpdateLastUsed(id); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		if err := store.UpdateState(id, session.StateExecuting); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		defer store.UpdateState(id, session.StateWarm)
 
 		ctx, cancel := contextWithTimeout(r.Context(), execReq.Timeout)
 		defer cancel()
@@ -128,8 +138,6 @@ func ExecSandbox(store *session.Store) http.HandlerFunc {
 				})
 			}
 		}
-
-		store.UpdateState(id, session.StateWarm)
 	}
 }
 

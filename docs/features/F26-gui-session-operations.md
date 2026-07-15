@@ -36,6 +36,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | `apps/gui/` | Dashboard, session detail, command runner, logs, diff, artifacts, snapshots |
 | `pi-sandboxd` API | Source of session operations and streaming exec |
 | `sdk/typescript/` | Shared client/types for session operations |
+| Session lifecycle state | GUI action availability and daemon conflict responses |
 
 ## Security Considerations
 
@@ -119,6 +120,25 @@ Build GUI session state around daemon API responses and streaming channels. The 
 **Files:** `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`
 **Size:** M
 **Depends on:** T26.2, F6, F8, F14
+
+### T26.4: State-gated session controls ✅
+
+**Description:** Gate GUI actions by daemon lifecycle state so users cannot start commands or destructive workspace operations while a session is creating, executing, destroying, or destroyed.
+
+**Acceptance criteria:**
+- [x] Exec and clone controls are enabled only when the selected session is `WARM`
+- [x] Artifact pull/pack and snapshot create/rollback/delete controls are enabled only when the selected session is `WARM`
+- [x] Destroy is disabled for `DESTROYING` and `DESTROYED` sessions
+- [x] Session detail explains why controls are disabled for non-ready states
+- [x] Daemon exec and shell routes reject non-`WARM` sessions with HTTP 409 before starting execution
+
+**Verification:**
+- [x] `npm run build` passes in `apps/gui`
+- [x] API tests verify exec rejects non-ready session state
+
+**Files:** `apps/gui/src/main.tsx`, `apps/gui/src/styles.css`, `pkg/api/sandbox_exec.go`, `pkg/api/sandbox_shell.go`, `tests/api/exec_test.go`
+**Size:** S
+**Depends on:** T26.2, F4
 
 ## Verification Plan
 

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
+	"github.com/pi-sandbox/pi/pkg/runtime/detect"
 	"github.com/pi-sandbox/pi/pkg/session"
 	"github.com/pi-sandbox/pi/pkg/template"
 	"gopkg.in/yaml.v3"
@@ -43,7 +44,15 @@ func CreateSandbox(store *session.Store) http.HandlerFunc {
 			req.Template = "base"
 		}
 		if req.Mode == "" {
-			req.Mode = "fast"
+			req.Mode = detect.BestMode("")
+			if req.Mode == "unknown" {
+				writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "no sandbox runtime available"})
+				return
+			}
+		}
+		if err := validateRuntimeMode(req.Mode); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
 		}
 		workspaceMode := req.Workspace.Mode
 		if workspaceMode == "" {
@@ -159,6 +168,24 @@ func validateWorkspaceSource(mode, source string) error {
 		}
 	}
 	return nil
+}
+
+func validateRuntimeMode(mode string) error {
+	known := map[string]bool{
+		"secure":  true,
+		"fast":    true,
+		"compat":  true,
+		"microvm": true,
+	}
+	if !known[mode] {
+		return fmt.Errorf("unsupported runtime mode %s", mode)
+	}
+	for _, available := range detect.AvailableRuntimes("") {
+		if available == mode {
+			return nil
+		}
+	}
+	return fmt.Errorf("runtime mode %s is unavailable on this host", mode)
 }
 
 type unsafeWorkspaceSource struct {

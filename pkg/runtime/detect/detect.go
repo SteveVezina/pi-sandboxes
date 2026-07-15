@@ -1,13 +1,15 @@
 // Package detect provides runtime selection and fallback logic.
-// It tries runtimes in order of security: gvisor → fast → compat.
+// It tries runtimes in order of security: microvm → secure → fast → compat.
 package detect
 
 import (
 	"fmt"
+	"os/exec"
 
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 	"github.com/pi-sandbox/pi/pkg/runtime/fast"
 	"github.com/pi-sandbox/pi/pkg/runtime/gvisor"
+	"github.com/pi-sandbox/pi/pkg/runtime/microvm"
 )
 
 // Runtime represents any available sandbox runtime.
@@ -19,8 +21,8 @@ type Runtime interface {
 	GetSecurityLevel() int
 }
 
-// Priority defines the order in which runtimes are tried.
-var priority = []string{"gvisor", "fast", "compat"}
+// Priority defines the order in which user-facing runtime modes are tried.
+var priority = []string{"microvm", "secure", "fast", "compat"}
 
 // Detect tries each runtime in priority order and returns the first available one.
 // If no runtime is available, returns an error describing what was tried.
@@ -42,12 +44,18 @@ func Detect(rootDir string) (Runtime, error) {
 // tryRuntime attempts to create and validate a runtime by name.
 func tryRuntime(name, rootDir string) (Runtime, error) {
 	switch name {
-	case "gvisor":
+	case "secure", "gvisor":
 		rt := gvisor.Default(rootDir)
 		if rt.IsAvailable() {
 			return rt, nil
 		}
 		return nil, fmt.Errorf("gVisor not available")
+	case "microvm":
+		rt := microvm.NewRuntime(microvm.DefaultCapabilityChecker())
+		if rt.IsAvailable() {
+			return rt, nil
+		}
+		return nil, rt.Availability().Error()
 	case "fast":
 		if err := fast.Validate(); err != nil {
 			return nil, fmt.Errorf("fast backend not available: %w", err)
@@ -58,10 +66,29 @@ func tryRuntime(name, rootDir string) (Runtime, error) {
 		if rt == nil {
 			return nil, fmt.Errorf("no OCI runtime available")
 		}
+		if err := validateCompatRuntime(rt); err != nil {
+			return nil, err
+		}
 		return &compatRuntime{detected: rt}, nil
 	default:
 		return nil, fmt.Errorf("unknown runtime: %s", name)
 	}
+}
+
+func validateCompatRuntime(rt *compat.DetectedRuntime) error {
+	switch rt.Name {
+	case compat.RuntimeDocker:
+		if err := exec.Command(rt.Path, "info").Run(); err != nil {
+			return fmt.Errorf("docker runtime unavailable: %w", err)
+		}
+	case compat.RuntimePodman:
+		if err := exec.Command(rt.Path, "info").Run(); err != nil {
+			return fmt.Errorf("podman runtime unavailable: %w", err)
+		}
+	default:
+		return fmt.Errorf("unsupported compat runtime: %s", rt.Name)
+	}
+	return nil
 }
 
 // fastRuntime is a minimal wrapper for the fast backend.
@@ -109,7 +136,7 @@ func AvailableRuntimes(rootDir string) []string {
 func AllRuntimes(rootDir string) []RuntimeInfo {
 	var result []RuntimeInfo
 	runtimeDescriptions := map[string]string{
-		"gvisor":  "gVisor sandboxed runtime — strong isolation, may have syscall compatibility issues",
+		"secure":  "gVisor sandboxed runtime — strong isolation, may have syscall compatibility issues",
 		"fast":    "Native Linux namespaces/cgroups — fastest path, Linux-only",
 		"compat":  "OCI container runtime (runc/podman) — best compatibility",
 		"microvm": "Firecracker/Cloud Hypervisor microVM — highest isolation",
@@ -126,15 +153,6 @@ func AllRuntimes(rootDir string) []RuntimeInfo {
 			info.SecurityLevel = rt.GetSecurityLevel()
 		}
 		result = append(result, info)
-	}
-	// Add microvm separately (not in priority but a known backend)
-	if _, err := tryRuntime("microvm", rootDir); err == nil {
-		result = append(result, RuntimeInfo{
-			Name:          "microvm",
-			Available:     true,
-			SecurityLevel: 10,
-			Description:   "Firecracker/Cloud Hypervisor microVM — highest isolation",
-		})
 	}
 	return result
 }

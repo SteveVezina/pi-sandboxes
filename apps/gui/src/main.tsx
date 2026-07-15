@@ -68,8 +68,8 @@ const DAEMON_URL_STORAGE_KEY = "pi.gui.daemonUrl.v2";
 const ALLOWED_FOLDERS_STORAGE_KEY = "pi.gui.allowedFolders.v1";
 const GUI_DEFAULTS_STORAGE_KEY = "pi.gui.defaults.v1";
 const TEMPLATES = ["base", "node", "python", "go", "rust", "node-python", "polyglot"];
-const MODES = ["fast", "compat", "secure", "microvm"];
 const DEFAULT_RUNTIME_MODE = "compat";
+const MODES = ["microvm", "secure", "fast", "compat"];
 const NETWORK_MODES = ["restricted", "none", "open"];
 
 const NAV_ITEMS = [
@@ -170,6 +170,29 @@ function bestRuntimeMode(runtimeInfo: RuntimeInfo | null, current?: string): str
   if (current && modes.includes(current)) return current;
   if (runtimeInfo?.best && modes.includes(runtimeInfo.best)) return runtimeInfo.best;
   return modes[0] || DEFAULT_RUNTIME_MODE;
+}
+
+function sessionState(session: SandboxInfo): string {
+  return (session.state || "").toUpperCase();
+}
+
+function canRunSession(session: SandboxInfo): boolean {
+  return sessionState(session) === "WARM";
+}
+
+function canDestroySession(session: SandboxInfo): boolean {
+  const state = sessionState(session);
+  return state === "WARM" || state === "EXECUTING";
+}
+
+function sessionGateMessage(session: SandboxInfo): string {
+  const state = sessionState(session);
+  if (state === "WARM") return "Ready for commands and workspace operations.";
+  if (state === "EXECUTING") return "Command is running. Workspace operations unlock when the session returns to WARM.";
+  if (state === "CREATING") return "Session is still being created. Controls unlock when the daemon reports WARM.";
+  if (state === "DESTROYING") return "Session is being destroyed. Controls are locked.";
+  if (state === "DESTROYED") return "Session is destroyed. This view is read-only.";
+  return "Session is not ready for mutating operations.";
 }
 
 function redactGuiLogMessage(message: string): string {
@@ -471,7 +494,9 @@ function DashboardView({
   runtimeInfo: RuntimeInfo | null;
   onSelectSession: (id: string) => void;
 }) {
-  const activeSessions = sessions.filter((s) => s.state === "WARM" || s.state === "EXECUTING");
+  const readySessions = sessions.filter((s) => s.state === "WARM" || s.state === "EXECUTING");
+  const warmSessions = sessions.filter((s) => s.state === "WARM");
+  const executingSessions = sessions.filter((s) => s.state === "EXECUTING");
   const availableBackends = runtimeInfo?.available.length ?? 0;
   const recentSessions = [...sessions].sort((a, b) => {
     const aTime = new Date(a.last_used || a.updated_at || a.created_at || 0).getTime();
@@ -486,7 +511,7 @@ function DashboardView({
           <span className="eyebrow">Dashboard</span>
           <h2>Sandbox control</h2>
           <p>
-            {activeSessions.length} active session{activeSessions.length === 1 ? "" : "s"} · {sessions.length} total · best runtime {runtimeInfo?.best || "unknown"}
+            {warmSessions.length} ready · {executingSessions.length} executing · {sessions.length} total · best runtime {runtimeInfo?.best || "unknown"}
           </p>
         </div>
       </section>
@@ -510,7 +535,7 @@ function DashboardView({
         <div>
           <MonitorPlay size={17} />
           <span>Sessions</span>
-          <strong>{systemStatus?.active_sandboxes ?? activeSessions.length}</strong>
+          <strong>{systemStatus?.active_sandboxes ?? readySessions.length}</strong>
         </div>
       </section>
 
@@ -526,8 +551,8 @@ function DashboardView({
         </div>
         <div className="metric-row">
           <MonitorPlay size={18} />
-          <span>Active sessions</span>
-          <strong>{activeSessions.length}</strong>
+          <span>Ready sessions</span>
+          <strong>{readySessions.length}</strong>
         </div>
         <div className="metric-row">
           <Gauge size={18} />
@@ -538,17 +563,17 @@ function DashboardView({
 
       <section className="sessions-panel dashboard-sessions-panel">
         <div className="section-heading">
-          <h3>Active sessions</h3>
-          <span>{activeSessions.length} active · {sessions.length} total</span>
+          <h3>Ready sessions</h3>
+          <span>{warmSessions.length} warm · {executingSessions.length} executing · {sessions.length} total</span>
         </div>
         <div className="session-list">
-          {activeSessions.length === 0 ? (
+          {readySessions.length === 0 ? (
             <div className="empty-state dashboard-empty">
               <MonitorPlay size={22} />
               <strong>No live sessions</strong>
               <span>Create a sandbox to start a warm workbench session.</span>
             </div>
-          ) : activeSessions.map((session) => (
+          ) : readySessions.map((session) => (
             <button
               className="session-row active"
               key={session.id}
@@ -682,6 +707,9 @@ function SessionDetailView({
   const [artifactPullOutput, setArtifactPullOutput] = useState<string | null>(null);
   const [artifactPackOutput, setArtifactPackOutput] = useState<string | null>(null);
   const [deletingSnapshot, setDeletingSnapshot] = useState<string | null>(null);
+  const isSessionReady = canRunSession(session);
+  const canDestroy = canDestroySession(session);
+  const controlsLocked = isBusy || !isSessionReady;
 
   const loadTab = useCallback(
     async (tabId: TabId) => {
@@ -764,6 +792,10 @@ function SessionDetailView({
 
   const runCommand = useCallback(async () => {
     if (!command.trim()) return;
+    if (!isSessionReady) {
+      setError(sessionGateMessage(session));
+      return;
+    }
     setIsBusy(true);
     setError(null);
     setExecResult(null);
@@ -795,10 +827,14 @@ function SessionDetailView({
     } finally {
       setIsBusy(false);
     }
-  }, [command, executionNetwork, session.id, client, onRefresh]);
+  }, [command, executionNetwork, isSessionReady, session, client, onRefresh]);
 
   const cloneRepo = useCallback(async () => {
     if (!repoUrl.trim()) return;
+    if (!isSessionReady) {
+      setError(sessionGateMessage(session));
+      return;
+    }
     setIsBusy(true);
     setError(null);
     setCloneResult(null);
@@ -811,9 +847,13 @@ function SessionDetailView({
     } finally {
       setIsBusy(false);
     }
-  }, [repoUrl, session.id, client, onRefresh]);
+  }, [repoUrl, isSessionReady, session, client, onRefresh]);
 
   const pullArtifacts = useCallback(async () => {
+    if (!isSessionReady) {
+      setError(sessionGateMessage(session));
+      return;
+    }
     setIsBusy(true);
     setError(null);
     setArtifactPullOutput(null);
@@ -825,9 +865,13 @@ function SessionDetailView({
     } finally {
       setIsBusy(false);
     }
-  }, [session.id, client, artifactDestination]);
+  }, [isSessionReady, session, client, artifactDestination]);
 
   const packArtifacts = useCallback(async () => {
+    if (!isSessionReady) {
+      setError(sessionGateMessage(session));
+      return;
+    }
     setIsBusy(true);
     setError(null);
     setArtifactPackOutput(null);
@@ -840,9 +884,13 @@ function SessionDetailView({
     } finally {
       setIsBusy(false);
     }
-  }, [session.id, client]);
+  }, [isSessionReady, session, client]);
 
   const createSnapshot = useCallback(async () => {
+    if (!isSessionReady) {
+      setError(sessionGateMessage(session));
+      return;
+    }
     setIsBusy(true);
     setError(null);
     try {
@@ -854,9 +902,13 @@ function SessionDetailView({
     } finally {
       setIsBusy(false);
     }
-  }, [session.id, client, snapshotName, loadTab, onRefresh]);
+  }, [isSessionReady, session, client, snapshotName, loadTab, onRefresh]);
 
   const rollbackSnapshot = useCallback(async (name = snapshotName) => {
+    if (!isSessionReady) {
+      setError(sessionGateMessage(session));
+      return;
+    }
     setIsBusy(true);
     setError(null);
     try {
@@ -868,10 +920,14 @@ function SessionDetailView({
     } finally {
       setIsBusy(false);
     }
-  }, [session.id, client, snapshotName, loadTab, onRefresh]);
+  }, [isSessionReady, session, client, snapshotName, loadTab, onRefresh]);
 
   const deleteSnapshot = useCallback(
     async (name: string) => {
+      if (!isSessionReady) {
+        setError(sessionGateMessage(session));
+        return;
+      }
       setDeletingSnapshot(name);
       try {
         await client.snapshotDelete(session.id, name);
@@ -883,10 +939,14 @@ function SessionDetailView({
         setDeletingSnapshot(null);
       }
     },
-    [session.id, client, loadTab, onRefresh]
+    [isSessionReady, session, client, loadTab, onRefresh]
   );
 
   const destroySession = useCallback(async () => {
+    if (!canDestroy) {
+      setError(sessionGateMessage(session));
+      return;
+    }
     setIsBusy(true);
     setError(null);
     try {
@@ -897,7 +957,7 @@ function SessionDetailView({
     } finally {
       setIsBusy(false);
     }
-  }, [session.id, client, onRefresh]);
+  }, [canDestroy, session, client, onRefresh]);
 
   const tabItems: { id: TabId; label: string; icon: typeof Command }[] = [
     { id: "exec", label: "Exec", icon: Play },
@@ -930,11 +990,16 @@ function SessionDetailView({
             <CircleDot size={12} />
             {session.state}
           </div>
-          <button className="danger-action" onClick={destroySession} disabled={isBusy}>
+          <button className="danger-action" onClick={destroySession} disabled={isBusy || !canDestroy}>
             <Trash2 size={16} />
             Destroy
           </button>
         </div>
+      </div>
+
+      <div className={`session-state-gate ${isSessionReady ? "ready" : "locked"}`}>
+        <CircleDot size={13} />
+        <span>{sessionGateMessage(session)}</span>
       </div>
 
       <div className="session-tabs">
@@ -967,9 +1032,10 @@ function SessionDetailView({
                 value={command}
                 onChange={(e) => setCommand(e.target.value)}
                 placeholder="Enter command to execute..."
-                onKeyDown={(e) => e.key === "Enter" && runCommand()}
+                disabled={!isSessionReady}
+                onKeyDown={(e) => e.key === "Enter" && isSessionReady && runCommand()}
               />
-              <button className="primary-action" onClick={runCommand} disabled={isBusy}>
+              <button className="primary-action" onClick={runCommand} disabled={controlsLocked}>
                 <Play size={16} />
                 Run
               </button>
@@ -979,6 +1045,7 @@ function SessionDetailView({
               <select
                 value={executionNetwork}
                 onChange={(e) => setExecutionNetwork(e.target.value)}
+                disabled={!isSessionReady}
               >
                 {NETWORK_MODES.map((mode) => (
                   <option key={mode} value={mode}>{mode}</option>
@@ -990,9 +1057,10 @@ function SessionDetailView({
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
                 placeholder="https://github.com/owner/repo.git"
-                onKeyDown={(e) => e.key === "Enter" && cloneRepo()}
+                disabled={!isSessionReady}
+                onKeyDown={(e) => e.key === "Enter" && isSessionReady && cloneRepo()}
               />
-              <button onClick={cloneRepo} disabled={isBusy}>
+              <button onClick={cloneRepo} disabled={controlsLocked}>
                 <Download size={16} />
                 Clone
               </button>
@@ -1159,13 +1227,14 @@ function SessionDetailView({
                     <input
                       value={artifactDestination}
                       onChange={(e) => setArtifactDestination(e.target.value)}
+                      disabled={!isSessionReady}
                     />
                   </label>
-                  <button onClick={pullArtifacts} disabled={isBusy}>
+                  <button onClick={pullArtifacts} disabled={controlsLocked}>
                     <Download size={14} />
                     Pull
                   </button>
-                  <button onClick={packArtifacts} disabled={isBusy}>
+                  <button onClick={packArtifacts} disabled={controlsLocked}>
                     Pack
                   </button>
                 </div>
@@ -1188,8 +1257,9 @@ function SessionDetailView({
                     value={snapshotName}
                     onChange={(e) => setSnapshotName(e.target.value)}
                     placeholder="Snapshot name..."
+                    disabled={!isSessionReady}
                   />
-                  <button onClick={createSnapshot} disabled={isBusy}>
+                  <button onClick={createSnapshot} disabled={controlsLocked}>
                     <Plus size={14} />
                     Create
                   </button>
@@ -1209,14 +1279,14 @@ function SessionDetailView({
                       <div className="snapshot-actions">
                         <button
                           onClick={() => void rollbackSnapshot(snap.name)}
-                          disabled={isBusy}
+                          disabled={controlsLocked}
                         >
                           <RotateCcw size={14} />
                           Rollback
                         </button>
                         <button
                           onClick={() => deleteSnapshot(snap.name)}
-                          disabled={isBusy || deletingSnapshot === snap.name}
+                          disabled={controlsLocked || deletingSnapshot === snap.name}
                           className="danger-action"
                         >
                           {deletingSnapshot === snap.name ? (

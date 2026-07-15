@@ -20,7 +20,7 @@ func main() {
 		*socketPath = filepath.Join(system.PiHome(), "sandboxd.sock")
 	}
 
-	// Create session store
+	// Create sandbox store
 	storeDir := filepath.Join(system.PiHome(), "sandboxes")
 	store := sandbox.NewStore(storeDir)
 	runStore := sandbox.NewAgentRunStore()

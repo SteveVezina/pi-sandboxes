@@ -26,7 +26,7 @@ import (
 var boxCmd = &cobra.Command{
 	Use:   "box",
 	Short: "Sandbox lifecycle management",
-	Long:  `Manage sandboxs: create, exec, clone, files, artifacts, etc.`,
+	Long:  `Manage sandboxes: create, exec, clone, files, artifacts, etc.`,
 }
 
 // Command is exported for initialization.
@@ -223,20 +223,38 @@ func remoteList(ctx pictx.Context, method, endpoint string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
+// shellJoin joins argv into a single sh -c command string, quoting each
+// argument so the original word boundaries and special characters survive
+// the daemon-side shell.
+func shellJoin(args []string) string {
+	quoted := make([]string, len(args))
+	for i, a := range args {
+		if a != "" && !strings.ContainsAny(a, " \t\n'\"\\$&;|<>(){}[]*?~#`!") {
+			quoted[i] = a
+			continue
+		}
+		quoted[i] = "'" + strings.ReplaceAll(a, "'", `'\''`) + "'"
+	}
+	return strings.Join(quoted, " ")
+}
+
 // createCmd creates a new sandbox.
 var createCmd = &cobra.Command{
-	Use:   "create [name] [template]",
+	Use:   "create [template]",
 	Short: "Create a new sandbox",
-	Args:  cobra.MaximumNArgs(2),
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		name := "default"
 		template := "base"
 		mode := "fast"
 		if len(args) > 0 {
-			name = args[0]
+			template = args[0]
 		}
-		if len(args) > 1 {
-			template = args[1]
+		if t, _ := cmd.Flags().GetString("template"); t != "" {
+			template = t
+		}
+		name, _ := cmd.Flags().GetString("name")
+		if name == "" {
+			name = template
 		}
 		if m, _ := cmd.Flags().GetString("mode"); m != "" {
 			mode = m
@@ -286,12 +304,14 @@ var createCmd = &cobra.Command{
 
 func init() {
 	createCmd.Flags().StringP("mode", "m", "fast", "Runtime mode: fast, compat, secure")
+	createCmd.Flags().StringP("name", "n", "", "Sandbox name (default: template name)")
+	createCmd.Flags().StringP("template", "t", "", "Template name (alternative to positional arg)")
 }
 
-// listCmd lists sandboxs.
+// listCmd lists sandboxes.
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List sandboxs",
+	Short: "List sandboxes",
 	Run: func(cmd *cobra.Command, args []string) {
 		sandboxes, err := callAPIList("GET", "/v1/sandboxes")
 		if err != nil {
@@ -404,7 +424,7 @@ var execCmd = &cobra.Command{
 			fmt.Fprintln(os.Stderr, "error: command required after --")
 			os.Exit(1)
 		}
-		command := strings.Join(os.Args[cmdIdx+1:], " ")
+		command := shellJoin(os.Args[cmdIdx+1:])
 		timeout := int64(120)
 		if t, _ := cmd.Flags().GetInt64("timeout"); t > 0 {
 			timeout = t
@@ -577,7 +597,7 @@ var filesListCmd = &cobra.Command{
 		if len(args) > 1 {
 			path = args[1]
 		}
-		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/files/read?path="+path, nil)
+		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/files/list?path="+path, nil)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: list files failed: %v\n", err)
 			os.Exit(1)
@@ -676,15 +696,15 @@ var artifactsListCmd = &cobra.Command{
 	Short: "List artifacts",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/artifacts/list", nil)
+		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/output", nil)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: list artifacts failed: %v\n", err)
 			os.Exit(1)
 		}
-		files, _ := result["files"].([]interface{})
-		for _, f := range files {
+		items, _ := result["items"].([]interface{})
+		for _, f := range items {
 			fileMap, _ := f.(map[string]interface{})
-			fmt.Printf("  %s (%d bytes)\n", fileMap["path"], fileMap["size"])
+			fmt.Printf("  %s (%v bytes)\n", fileMap["path"], fileMap["size"])
 		}
 	},
 }
@@ -695,9 +715,9 @@ var artifactsPullCmd = &cobra.Command{
 	Short: "Pull artifacts to host",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		payload := map[string]interface{}{"destination": args[1]}
+		payload := map[string]interface{}{"action": "pull", "dest": args[1]}
 		data, _ := json.Marshal(payload)
-		_, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/artifacts/pull", bytes.NewReader(data))
+		_, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/output", bytes.NewReader(data))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: pull artifacts failed: %v\n", err)
 			os.Exit(1)
@@ -716,14 +736,14 @@ var artifactsPackCmd = &cobra.Command{
 		if o, _ := cmd.Flags().GetString("output"); o != "" {
 			output = o
 		}
-		payload := map[string]interface{}{"output": output}
+		payload := map[string]interface{}{"action": "pack", "output": output}
 		data, _ := json.Marshal(payload)
-		result, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/artifacts/pack", bytes.NewReader(data))
+		result, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/output", bytes.NewReader(data))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: pack artifacts failed: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Printf("Packed artifacts to %s (%v bytes)\n", output, result["bytes"])
+		fmt.Printf("Packed artifacts to %s (%v bytes)\n", output, result["size"])
 	},
 }
 

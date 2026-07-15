@@ -12,21 +12,21 @@ import (
 )
 
 func main() {
-	sessionID := flag.String("session", "", "Sandbox session identifier")
+	sandboxID := flag.String("sandbox", "", "Sandbox identifier")
 	flag.Parse()
 
-	if *sessionID == "" {
-		fmt.Fprintln(os.Stderr, "session is required")
+	if *sandboxID == "" {
+		fmt.Fprintln(os.Stderr, "sandbox is required")
 		os.Exit(2)
 	}
-	if err := run(*sessionID, os.Stdin, os.Stdout); err != nil {
+	if err := run(*sandboxID, os.Stdin, os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(sessionID string, stdin io.Reader, stdout io.Writer) error {
-	if err := microvm.WriteReady(stdout, sessionID); err != nil {
+func run(sandboxID string, stdin io.Reader, stdout io.Writer) error {
+	if err := microvm.WriteReady(stdout, sandboxID); err != nil {
 		return fmt.Errorf("write ready: %w", err)
 	}
 
@@ -39,7 +39,7 @@ func run(sessionID string, stdin io.Reader, stdout io.Writer) error {
 		if err != nil {
 			return fmt.Errorf("decode control frame: %w", err)
 		}
-		if frame.Method == "shutdown" && frame.SessionID == sessionID {
+		if frame.Method == "shutdown" && frame.SandboxID == sandboxID {
 			return nil
 		}
 	}

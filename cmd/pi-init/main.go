@@ -9,22 +9,22 @@ import (
 )
 
 func main() {
-	sessionID := flag.String("session", "", "Sandbox session identifier")
+	sandboxID := flag.String("sandbox", "", "Sandbox identifier")
 	agentd := flag.String("agentd", "pi-agentd", "Path to pi-agentd")
 	flag.Parse()
 
-	if *sessionID == "" {
-		fmt.Fprintln(os.Stderr, "session is required")
+	if *sandboxID == "" {
+		fmt.Fprintln(os.Stderr, "sandbox is required")
 		os.Exit(2)
 	}
-	if err := run(context.Background(), *agentd, *sessionID); err != nil {
+	if err := run(context.Background(), *agentd, *sandboxID); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, agentd, sessionID string) error {
-	cmd := exec.CommandContext(ctx, agentd, "--session", sessionID)
+func run(ctx context.Context, agentd, sandboxID string) error {
+	cmd := exec.CommandContext(ctx, agentd, "--sandbox", sandboxID)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

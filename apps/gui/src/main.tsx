@@ -1437,8 +1437,8 @@ function CreateSandboxDialog({
                   })}
                 >
                   {runtimeModes.map((mode) => {
-                    const backend = runtimeBackends.find((rt) => rt.name === mode);
-                    const label = backend ? `${mode}${backend.name === runtimeInfo?.best ? " (best)" : ""}` : mode;
+                    const backend = runtimeBackends.find((rt) => rt.mode === mode);
+                    const label = backend ? `${mode}${backend.mode === runtimeInfo?.best ? " (best)" : ""}` : mode;
                     return <option key={mode} value={mode}>{label}</option>;
                   })}
                 </select>
@@ -2282,7 +2282,7 @@ function SettingsView({
             <span className="muted-text">No runtime information available.</span>
           ) : (
             runtimeInfo.backends.map((rt: RuntimeBackend) => (
-              <div className={`runtime-card ${rt.available ? "available" : "unavailable"}`} key={rt.name}>
+              <div className={`runtime-card ${rt.available ? "available" : "unavailable"}`} key={rt.mode}>
                 <div className="runtime-header">
                   <div className="runtime-status">
                     {rt.available ? (
@@ -2290,14 +2290,15 @@ function SettingsView({
                     ) : (
                       <XCircle size={18} className="runtime-fail" />
                     )}
-                    <strong>{rt.name}</strong>
+                    <strong>{rt.mode}</strong>
                   </div>
-                  {rt.available && (
-                    <span className="security-badge">Security level {rt.security_level}</span>
-                  )}
+                  <span className="security-badge">Isolation tier {rt.isolation_tier} · compat tier {rt.compat_tier}</span>
                 </div>
                 <p className="runtime-desc">{rt.description}</p>
-                {rt.available && rt.name === runtimeInfo.best && (
+                {!rt.available && rt.reason && (
+                  <p className="runtime-desc runtime-reason">{rt.reason}</p>
+                )}
+                {rt.available && rt.mode === runtimeInfo.best && (
                   <span className="best-runtime-badge">Best available</span>
                 )}
               </div>

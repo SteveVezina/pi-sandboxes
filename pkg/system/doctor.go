@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/pi-sandbox/pi/pkg/runtime/detect"
 )
@@ -184,7 +185,19 @@ func RunDoctor() *DoctorResult {
 	}
 
 	// ── Runtime backends ───────────────────────────────────────────────────
-	available := detect.AvailableRuntimes("")
+	reports := detect.Reports("")
+	var available []string
+	for _, rep := range reports {
+		if rep.Available {
+			available = append(available, rep.Mode)
+			continue
+		}
+		result.Issues = append(result.Issues, Issue{
+			Severity:       "info",
+			Message:        fmt.Sprintf("Runtime %s unavailable: %s", rep.Mode, rep.Reason),
+			Recommendation: fmt.Sprintf("Missing: %s", strings.Join(rep.Missing, ", ")),
+		})
+	}
 	if len(available) > 0 {
 		result.Issues = append(result.Issues, Issue{
 			Severity: "info",
@@ -192,7 +205,7 @@ func RunDoctor() *DoctorResult {
 		})
 		result.Issues = append(result.Issues, Issue{
 			Severity: "info",
-			Message:  fmt.Sprintf("Best available mode: %s", detect.BestMode("")),
+			Message:  fmt.Sprintf("Best available mode: %s", available[0]),
 		})
 	} else {
 		result.Issues = append(result.Issues, Issue{

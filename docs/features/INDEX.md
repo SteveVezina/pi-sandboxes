@@ -36,7 +36,7 @@ Dashboard of all features for this project.
 | [F16](F10-system-commands.md) | System Commands | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F8 |
 | [F17](F17-policy-enforcement.md) | Policy Enforcement | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F3, F4, F11 |
 | [F18](F18-secure-backend.md) | Secure Backend | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M4 | F4, F17, F19 |
-| [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M4 | F3, F4, F18 |
+| [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | 🟢 Reviewed | 🟡 2/3 tasks (T19.2 remaining) | M4 | F3, F4, F18 |
 | [F20](F20-microvm-backend.md) | MicroVM Backend | 🟢 Reviewed | ✅ Implemented | M5 | F19, F21 |
 | [F21](F21-microvm-guest-control-plane.md) | MicroVM Guest Control Plane | 🟢 Reviewed | ✅ Implemented | M5 | F20 |
 | [F22](F22-remote-daemon-contexts.md) | Remote Daemon Contexts | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M6 | F2, F23 |

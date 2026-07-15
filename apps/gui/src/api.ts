@@ -91,10 +91,13 @@ export type DoctorResultRaw = {
 };
 
 export type RuntimeBackend = {
-  name: string;
+  mode: string;
   available: boolean;
-  security_level: number;
+  reason?: string;
+  missing?: string[];
   description: string;
+  isolation_tier: number;
+  compat_tier: number;
 };
 
 export type RuntimeInfo = {

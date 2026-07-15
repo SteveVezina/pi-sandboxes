@@ -59,11 +59,6 @@ func (r *Runtime) IsAvailable() bool {
 	return false
 }
 
-// IsGvisor returns true.
-func (r *Runtime) IsGvisor() bool {
-	return true
-}
-
 // Create always returns an error on non-Linux.
 func (r *Runtime) Create(ctx context.Context, id, template string) error {
 	return fmt.Errorf("gVisor not available on non-Linux platforms")
@@ -137,11 +132,6 @@ func (r *Runtime) GetRootDir() string {
 // GetMode returns "secure".
 func (r *Runtime) GetMode() string {
 	return "secure"
-}
-
-// GetSecurityLevel returns 9.
-func (r *Runtime) GetSecurityLevel() int {
-	return 9
 }
 
 // DefaultCgroupConfig returns default cgroup limits.

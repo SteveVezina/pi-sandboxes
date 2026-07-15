@@ -1,178 +1,108 @@
 package detect_test
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
+	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 	"github.com/pi-sandbox/pi/pkg/runtime/detect"
 )
 
-func TestDetect(t *testing.T) {
-	tmpDir := t.TempDir()
-	rt, err := detect.Detect(tmpDir)
-	if err != nil {
-		t.Fatalf("Detect failed: %v", err)
+func TestReports_CoversAllModesInPriorityOrder(t *testing.T) {
+	reports := detect.Reports(t.TempDir())
+
+	want := []string{"microvm", "secure", "fast", "compat"}
+	if len(reports) != len(want) {
+		t.Fatalf("expected %d reports, got %d", len(want), len(reports))
 	}
-	if rt == nil {
-		t.Fatal("Expected non-nil runtime")
-	}
-	// Verify the runtime has a valid name
-	name := rt.Name()
-	if name == "" {
-		t.Error("Expected non-empty runtime name")
-	}
-	// Verify it's available
-	if !rt.IsAvailable() {
-		t.Error("Expected runtime to be available")
+	for i, mode := range want {
+		if reports[i].Mode != mode {
+			t.Errorf("report[%d].Mode = %s, want %s", i, reports[i].Mode, mode)
+		}
 	}
 }
 
-func TestDetect_ReturnsBestAvailable(t *testing.T) {
-	tmpDir := t.TempDir()
-	rt, err := detect.Detect(tmpDir)
-	if err != nil {
-		t.Fatalf("Detect failed: %v", err)
-	}
+func TestReports_UnavailableModeHasReason(t *testing.T) {
+	reports := detect.Reports(t.TempDir())
 
-	// The best runtime should have the highest security level
-	mode := rt.GetMode()
-	level := rt.GetSecurityLevel()
-
-	// At minimum, we should get something
-	if mode == "" {
-		t.Error("Expected non-empty mode")
-	}
-	if level <= 0 {
-		t.Errorf("Expected positive security level, got %d", level)
+	for _, rep := range reports {
+		if !rep.Available && rep.Reason == "" {
+			t.Errorf("unavailable mode %s must carry a reason", rep.Mode)
+		}
+		if rep.Description == "" {
+			t.Errorf("mode %s must carry a description", rep.Mode)
+		}
 	}
 }
 
-func TestDetect_CleanTempDir(t *testing.T) {
-	// Create a temp dir with files to ensure Detect handles it
-	tmpDir := t.TempDir()
-	testFile := filepath.Join(tmpDir, "test.txt")
-	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
-		t.Fatalf("WriteFile failed: %v", err)
-	}
+func TestReports_TiersAreSeparateAxes(t *testing.T) {
+	reports := detect.Reports(t.TempDir())
 
-	rt, err := detect.Detect(tmpDir)
-	if err != nil {
-		t.Fatalf("Detect failed: %v", err)
+	for _, rep := range reports {
+		if rep.IsolationTier < 1 || rep.IsolationTier > 4 {
+			t.Errorf("mode %s isolation tier out of range: %d", rep.Mode, rep.IsolationTier)
+		}
+		if rep.CompatTier < 1 {
+			t.Errorf("mode %s compat tier missing: %d", rep.Mode, rep.CompatTier)
+		}
 	}
-	_ = rt
-	// Detect should not be affected by stray files
 }
 
-func TestAvailableRuntimes(t *testing.T) {
+func TestAvailableRuntimes_MatchesReports(t *testing.T) {
 	tmpDir := t.TempDir()
 	available := detect.AvailableRuntimes(tmpDir)
+	reports := detect.Reports(tmpDir)
 
-	if len(available) == 0 {
-		t.Error("Expected at least one available runtime")
+	availFromReports := map[string]bool{}
+	for _, rep := range reports {
+		if rep.Available {
+			availFromReports[rep.Mode] = true
+		}
 	}
-
-	// Verify the best runtime mode is in the available list
-	best, err := detect.Detect(tmpDir)
-	if err != nil {
-		t.Fatalf("Detect failed: %v", err)
+	if len(available) != len(availFromReports) {
+		t.Fatalf("AvailableRuntimes %v disagrees with reports %v", available, availFromReports)
 	}
+	for _, mode := range available {
+		if !availFromReports[mode] {
+			t.Errorf("mode %s listed available but report says otherwise", mode)
+		}
+	}
+}
 
-	// The best runtime mode should be in the available list
-	bestMode := best.GetMode()
-	found := false
-	for _, name := range available {
-		if name == bestMode {
-			found = true
+func TestBestMode_IsFirstAvailableInPriorityOrder(t *testing.T) {
+	tmpDir := t.TempDir()
+	best := detect.BestMode(tmpDir)
+
+	reports := detect.Reports(tmpDir)
+	expected := "unknown"
+	for _, rep := range reports {
+		if rep.Available {
+			expected = rep.Mode
 			break
 		}
 	}
-	if !found {
-		t.Errorf("Best runtime mode %s not in available list %v", bestMode, available)
+	if best != expected {
+		t.Errorf("BestMode = %s, want first available %s", best, expected)
 	}
 }
 
-func TestBestMode(t *testing.T) {
+func TestBestMode_Consistency(t *testing.T) {
 	tmpDir := t.TempDir()
-	mode := detect.BestMode(tmpDir)
-
-	if mode == "" {
-		t.Error("Expected non-empty mode")
-	}
-	if mode == "unknown" {
-		t.Error("Expected a known mode, got 'unknown'")
+	if m1, m2 := detect.BestMode(tmpDir), detect.BestMode(tmpDir); m1 != m2 {
+		t.Errorf("expected consistent mode, got %s vs %s", m1, m2)
 	}
 }
 
-func TestBestSecurityLevel(t *testing.T) {
-	tmpDir := t.TempDir()
-	level := detect.BestSecurityLevel(tmpDir)
+func TestDefaultRegistry_ProbesByMode(t *testing.T) {
+	reg := detect.DefaultRegistry(t.TempDir())
 
-	if level <= 0 {
-		t.Errorf("Expected positive security level, got %d", level)
+	rep, ok := reg.Probe(t.Context(), pruntime.ModeCompat)
+	if !ok {
+		t.Fatal("expected compat prober registered")
 	}
-}
-
-func TestDetect_NoRootDir(t *testing.T) {
-	// Detect should work even with an empty root dir
-	rt, err := detect.Detect("")
-	if err != nil {
-		t.Fatalf("Detect with empty root dir failed: %v", err)
+	if rep.Mode != "compat" {
+		t.Errorf("expected compat report, got %s", rep.Mode)
 	}
-	if rt == nil {
-		t.Fatal("Expected non-nil runtime")
-	}
-}
-
-func TestDetect_MultipleRuns(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Run Detect multiple times — should be consistent
-	rt1, err := detect.Detect(tmpDir)
-	if err != nil {
-		t.Fatalf("First Detect failed: %v", err)
-	}
-
-	rt2, err := detect.Detect(tmpDir)
-	if err != nil {
-		t.Fatalf("Second Detect failed: %v", err)
-	}
-
-	if rt1.Name() != rt2.Name() {
-		t.Errorf("Expected consistent runtime name, got %s vs %s", rt1.Name(), rt2.Name())
-	}
-}
-
-func TestDetect_AvailableRuntimesConsistency(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Run AvailableRuntimes twice — should be consistent
-	avail1 := detect.AvailableRuntimes(tmpDir)
-	avail2 := detect.AvailableRuntimes(tmpDir)
-
-	if len(avail1) != len(avail2) {
-		t.Errorf("Expected consistent available count, got %d vs %d", len(avail1), len(avail2))
-	}
-}
-
-func TestDetect_BestModeConsistency(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	mode1 := detect.BestMode(tmpDir)
-	mode2 := detect.BestMode(tmpDir)
-
-	if mode1 != mode2 {
-		t.Errorf("Expected consistent mode, got %s vs %s", mode1, mode2)
-	}
-}
-
-func TestDetect_BestSecurityLevelConsistency(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	level1 := detect.BestSecurityLevel(tmpDir)
-	level2 := detect.BestSecurityLevel(tmpDir)
-
-	if level1 != level2 {
-		t.Errorf("Expected consistent security level, got %d vs %d", level1, level2)
+	if !rep.OCIImages {
+		t.Error("compat mode must report OCI image support")
 	}
 }

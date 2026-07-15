@@ -16,13 +16,6 @@ func TestRuntimeName(t *testing.T) {
 	}
 }
 
-func TestRuntimeIsGvisor(t *testing.T) {
-	rt := gvisor.Default("/tmp/gvisor-test")
-	if !rt.IsGvisor() {
-		t.Error("Expected IsGvisor() to be true")
-	}
-}
-
 func TestRuntimeIsAvailable(t *testing.T) {
 	rt := gvisor.Default("/tmp/gvisor-test")
 	// On macOS, gVisor stub returns false
@@ -57,14 +50,6 @@ func TestRuntimeGetMode(t *testing.T) {
 	rt := gvisor.Default("/tmp/gvisor-test")
 	if rt.GetMode() != "secure" {
 		t.Errorf("Expected mode 'secure', got '%s'", rt.GetMode())
-	}
-}
-
-func TestRuntimeGetSecurityLevel(t *testing.T) {
-	rt := gvisor.Default("/tmp/gvisor-test")
-	level := rt.GetSecurityLevel()
-	if level != 9 {
-		t.Errorf("Expected security level 9, got %d", level)
 	}
 }
 

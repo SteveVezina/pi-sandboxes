@@ -96,9 +96,7 @@ func NewRuntime(checker CapabilityChecker) *Runtime {
 
 func (r *Runtime) Name() string               { return RuntimeName }
 func (r *Runtime) IsAvailable() bool          { return r.availability.Available }
-func (r *Runtime) IsGvisor() bool             { return false }
 func (r *Runtime) GetMode() string            { return RuntimeName }
-func (r *Runtime) GetSecurityLevel() int      { return 9 }
 func (r *Runtime) Availability() Availability { return r.availability }
 
 func joinReasons(reasons []string) string {

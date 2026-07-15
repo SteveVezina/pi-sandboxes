@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -96,12 +97,16 @@ func TimeAgo(t time.Time) string {
 	return fmt.Sprintf("%dd ago", d/(24*time.Hour))
 }
 
-// RuntimeBackend holds detailed info about a single runtime backend.
+// RuntimeBackend holds detailed info about a single runtime backend,
+// mirroring the daemon's capability report (SPEC.md §14.7.5).
 type RuntimeBackend struct {
-	Name          string `json:"name"`
-	Available     bool   `json:"available"`
-	SecurityLevel int    `json:"security_level"`
-	Description   string `json:"description"`
+	Name          string   `json:"mode"`
+	Available     bool     `json:"available"`
+	Reason        string   `json:"reason,omitempty"`
+	Missing       []string `json:"missing,omitempty"`
+	Description   string   `json:"description"`
+	IsolationTier int      `json:"isolation_tier"`
+	CompatTier    int      `json:"compat_tier"`
 }
 
 // RuntimeInfo holds runtime backend information from the daemon.
@@ -169,8 +174,14 @@ func PrintRuntimes(info *RuntimeInfo) {
 				status += " (best)"
 			}
 		}
-		fmt.Printf("  %-12s %s  (security level %d)\n", rt.Name, status, rt.SecurityLevel)
+		fmt.Printf("  %-12s %s  (isolation tier %d, compat tier %d)\n", rt.Name, status, rt.IsolationTier, rt.CompatTier)
 		fmt.Printf("             %s\n", rt.Description)
+		if !rt.Available && rt.Reason != "" {
+			fmt.Printf("             reason: %s\n", rt.Reason)
+			if len(rt.Missing) > 0 {
+				fmt.Printf("             missing: %s\n", strings.Join(rt.Missing, ", "))
+			}
+		}
 	}
 	fmt.Println("────────────────────────────────────────────────────────────────")
 	fmt.Printf("Best available mode: %s\n", info.Best)

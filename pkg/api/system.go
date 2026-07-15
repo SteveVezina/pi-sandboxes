@@ -51,11 +51,11 @@ func SystemDoctor() http.HandlerFunc {
 func SystemRuntimes() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		available := detect.AvailableRuntimes("")
-		runtimes := detect.AllRuntimes("")
+		reports := detect.Reports("")
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"available": available,
 			"best":      detect.BestMode(""),
-			"backends":  runtimes,
+			"backends":  reports,
 		})
 	}
 }

@@ -1,78 +1,173 @@
-// Package detect provides runtime selection and fallback logic.
-// It tries runtimes in order of security: microvm → secure → fast → compat.
+// Package detect wires the runtime registry with probers for every
+// backend and derives availability answers from capability reports
+// (SPEC.md §14.7.5, ADR-005). Probes actually execute their checks;
+// a runtime is never summarized by a single security integer.
 package detect
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 
+	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 	"github.com/pi-sandbox/pi/pkg/runtime/fast"
 	"github.com/pi-sandbox/pi/pkg/runtime/gvisor"
 	"github.com/pi-sandbox/pi/pkg/runtime/microvm"
 )
 
-// Runtime represents any available sandbox runtime.
-type Runtime interface {
-	Name() string
-	IsAvailable() bool
-	IsGvisor() bool
-	GetMode() string
-	GetSecurityLevel() int
+// DefaultRegistry returns the registry with all known probers registered
+// in priority order: microvm, secure, fast, compat.
+func DefaultRegistry(rootDir string) *pruntime.Registry {
+	reg := pruntime.NewRegistry()
+	// Registration order = priority order; Register only errors on
+	// duplicate modes, which cannot happen here.
+	_ = reg.Register(microvmProber{})
+	_ = reg.Register(secureProber{rootDir: rootDir})
+	_ = reg.Register(fastProber{})
+	_ = reg.Register(compatProber{})
+	return reg
 }
 
-// Priority defines the order in which user-facing runtime modes are tried.
-var priority = []string{"microvm", "secure", "fast", "compat"}
-
-// Detect tries each runtime in priority order and returns the first available one.
-// If no runtime is available, returns an error describing what was tried.
-func Detect(rootDir string) (Runtime, error) {
-	var tried []string
-
-	for _, name := range priority {
-		rt, err := tryRuntime(name, rootDir)
-		if err != nil {
-			tried = append(tried, name)
-			continue
-		}
-		return rt, nil
-	}
-
-	return nil, fmt.Errorf("no sandbox runtime available (tried: %v)", tried)
+// Reports probes every backend and returns capability reports in
+// priority order.
+func Reports(rootDir string) []pruntime.CapabilityReport {
+	return DefaultRegistry(rootDir).Reports(context.Background())
 }
 
-// tryRuntime attempts to create and validate a runtime by name.
-func tryRuntime(name, rootDir string) (Runtime, error) {
-	switch name {
-	case "secure", "gvisor":
-		rt := gvisor.Default(rootDir)
-		if rt.IsAvailable() {
-			return rt, nil
+// AvailableRuntimes returns the available mode names in priority order.
+func AvailableRuntimes(rootDir string) []string {
+	var available []string
+	for _, rep := range Reports(rootDir) {
+		if rep.Available {
+			available = append(available, rep.Mode)
 		}
-		return nil, fmt.Errorf("gVisor not available")
-	case "microvm":
-		rt := microvm.NewRuntime(microvm.DefaultCapabilityChecker())
-		if rt.IsAvailable() {
-			return rt, nil
-		}
-		return nil, rt.Availability().Error()
-	case "fast":
-		if err := fast.Validate(); err != nil {
-			return nil, fmt.Errorf("fast backend not available: %w", err)
-		}
-		return &fastRuntime{rootDir: rootDir}, nil
-	case "compat":
-		rt := compat.Best()
-		if rt == nil {
-			return nil, fmt.Errorf("no OCI runtime available")
-		}
-		if err := validateCompatRuntime(rt); err != nil {
-			return nil, err
-		}
-		return &compatRuntime{detected: rt}, nil
-	default:
-		return nil, fmt.Errorf("unknown runtime: %s", name)
 	}
+	return available
+}
+
+// BestMode returns the first available mode in priority order, or
+// "unknown" when no backend is available.
+func BestMode(rootDir string) string {
+	for _, rep := range Reports(rootDir) {
+		if rep.Available {
+			return rep.Mode
+		}
+	}
+	return "unknown"
+}
+
+// ── Probers ────────────────────────────────────────────────────────────
+
+type microvmProber struct{}
+
+func (microvmProber) Mode() pruntime.Mode { return pruntime.ModeMicroVM }
+
+func (microvmProber) Probe(ctx context.Context) pruntime.CapabilityReport {
+	avail := microvm.CheckAvailability(microvm.DefaultCapabilityChecker())
+	rep := pruntime.CapabilityReport{
+		Mode:             string(pruntime.ModeMicroVM),
+		Available:        avail.Available,
+		Missing:          avail.Reasons,
+		Description:      "Firecracker/Cloud Hypervisor microVM — VM kernel boundary, snapshot-first",
+		KernelBoundary:   true,
+		HardwareVirt:     true,
+		NetworkNamespace: true,
+		Snapshot:         true,
+		WarmExec:         true,
+		IsolationTier:    4,
+		CompatTier:       2,
+	}
+	if err := avail.Error(); err != nil {
+		rep.Reason = err.Error()
+	}
+	return rep
+}
+
+type secureProber struct {
+	rootDir string
+}
+
+func (secureProber) Mode() pruntime.Mode { return pruntime.ModeSecure }
+
+func (p secureProber) Probe(ctx context.Context) pruntime.CapabilityReport {
+	rep := pruntime.CapabilityReport{
+		Mode:             string(pruntime.ModeSecure),
+		Description:      "gVisor (runsc) — userspace application kernel, OCI-compatible",
+		Seccomp:          true,
+		NetworkNamespace: true,
+		OCIImages:        true,
+		WarmExec:         true,
+		IsolationTier:    2,
+		CompatTier:       2,
+	}
+	if _, err := exec.LookPath("runsc"); err != nil {
+		rep.Reason = "runsc not found on PATH"
+		rep.Missing = []string{"runsc"}
+		return rep
+	}
+	rep.Available = gvisor.Default(p.rootDir).IsAvailable()
+	if !rep.Available {
+		rep.Reason = "runsc found but not operational"
+	}
+	return rep
+}
+
+type fastProber struct{}
+
+func (fastProber) Mode() pruntime.Mode { return pruntime.ModeFast }
+
+func (fastProber) Probe(ctx context.Context) pruntime.CapabilityReport {
+	rep := pruntime.CapabilityReport{
+		Mode:          string(pruntime.ModeFast),
+		Description:   "Native Linux namespaces/cgroups/seccomp/Landlock — fastest path, Linux-only",
+		Rootless:      true,
+		UserNamespace: true,
+		Seccomp:       true,
+		Landlock:      true,
+		WarmExec:      true,
+		IsolationTier: 1,
+		CompatTier:    3,
+	}
+	if err := fast.Validate(); err != nil {
+		rep.Reason = err.Error()
+		rep.Missing = []string{"linux user namespaces"}
+		return rep
+	}
+	rep.Available = true
+	return rep
+}
+
+type compatProber struct{}
+
+func (compatProber) Mode() pruntime.Mode { return pruntime.ModeCompat }
+
+func (compatProber) Probe(ctx context.Context) pruntime.CapabilityReport {
+	rep := pruntime.CapabilityReport{
+		Mode:             string(pruntime.ModeCompat),
+		Description:      "OCI container runtime (Docker/Podman) — best tool compatibility",
+		Seccomp:          true,
+		NetworkNamespace: true,
+		OCIImages:        true,
+		WarmExec:         true,
+		IsolationTier:    1,
+		CompatTier:       4,
+	}
+	rt := compat.Best()
+	if rt == nil {
+		rep.Reason = "no OCI runtime found on PATH"
+		rep.Missing = []string{"docker or podman"}
+		return rep
+	}
+	if err := validateCompatRuntime(rt); err != nil {
+		rep.Reason = err.Error()
+		rep.Missing = []string{fmt.Sprintf("%s daemon", rt.Name)}
+		return rep
+	}
+	rep.Available = true
+	rep.Rootless = rt.Name == compat.RuntimePodman
+	rep.Description = fmt.Sprintf("OCI container runtime (%s) — best tool compatibility", rt.Name)
+	return rep
 }
 
 func validateCompatRuntime(rt *compat.DetectedRuntime) error {
@@ -89,88 +184,4 @@ func validateCompatRuntime(rt *compat.DetectedRuntime) error {
 		return fmt.Errorf("unsupported compat runtime: %s", rt.Name)
 	}
 	return nil
-}
-
-// fastRuntime is a minimal wrapper for the fast backend.
-type fastRuntime struct {
-	rootDir string
-}
-
-func (f *fastRuntime) Name() string          { return "fast" }
-func (f *fastRuntime) IsAvailable() bool     { return true }
-func (f *fastRuntime) IsGvisor() bool        { return false }
-func (f *fastRuntime) GetMode() string       { return "fast" }
-func (f *fastRuntime) GetSecurityLevel() int { return 5 }
-
-// compatRuntime is a minimal wrapper for the compat backend.
-type compatRuntime struct {
-	detected *compat.DetectedRuntime
-}
-
-func (c *compatRuntime) Name() string          { return string(c.detected.Name) }
-func (c *compatRuntime) IsAvailable() bool     { return true }
-func (c *compatRuntime) IsGvisor() bool        { return false }
-func (c *compatRuntime) GetMode() string       { return "compat" }
-func (c *compatRuntime) GetSecurityLevel() int { return 3 }
-
-// RuntimeInfo holds detailed information about a single runtime backend.
-type RuntimeInfo struct {
-	Name          string `json:"name"`
-	Available     bool   `json:"available"`
-	SecurityLevel int    `json:"security_level"`
-	Description   string `json:"description"`
-}
-
-// AvailableRuntimes returns a list of all available runtime names.
-func AvailableRuntimes(rootDir string) []string {
-	var available []string
-	for _, name := range priority {
-		if _, err := tryRuntime(name, rootDir); err == nil {
-			available = append(available, name)
-		}
-	}
-	return available
-}
-
-// AllRuntimes returns detailed info for every known runtime backend.
-func AllRuntimes(rootDir string) []RuntimeInfo {
-	var result []RuntimeInfo
-	runtimeDescriptions := map[string]string{
-		"secure":  "gVisor sandboxed runtime — strong isolation, may have syscall compatibility issues",
-		"fast":    "Native Linux namespaces/cgroups — fastest path, Linux-only",
-		"compat":  "OCI container runtime (runc/podman) — best compatibility",
-		"microvm": "Firecracker/Cloud Hypervisor microVM — highest isolation",
-	}
-	for _, name := range priority {
-		rt, err := tryRuntime(name, rootDir)
-		info := RuntimeInfo{
-			Name:          name,
-			Available:     err == nil,
-			SecurityLevel: 0,
-			Description:   runtimeDescriptions[name],
-		}
-		if err == nil {
-			info.SecurityLevel = rt.GetSecurityLevel()
-		}
-		result = append(result, info)
-	}
-	return result
-}
-
-// BestMode returns the best available mode string.
-func BestMode(rootDir string) string {
-	rt, err := Detect(rootDir)
-	if err != nil {
-		return "unknown"
-	}
-	return rt.GetMode()
-}
-
-// BestSecurityLevel returns the best available security level.
-func BestSecurityLevel(rootDir string) int {
-	rt, err := Detect(rootDir)
-	if err != nil {
-		return 0
-	}
-	return rt.GetSecurityLevel()
 }

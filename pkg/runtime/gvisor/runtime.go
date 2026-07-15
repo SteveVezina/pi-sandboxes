@@ -64,11 +64,6 @@ func (r *Runtime) IsAvailable() bool {
 	return err == nil
 }
 
-// IsGvisor returns true (always, since this is the gvisor runtime).
-func (r *Runtime) IsGvisor() bool {
-	return true
-}
-
 // Create provisions a new sandbox session using gVisor.
 func (r *Runtime) Create(ctx context.Context, id, template string) error {
 	if !r.IsAvailable() {
@@ -227,11 +222,6 @@ func (r *Runtime) GetRootDir() string {
 // GetMode returns the runtime mode.
 func (r *Runtime) GetMode() string {
 	return "secure"
-}
-
-// GetSecurityLevel returns the security level (0-10). gVisor is high.
-func (r *Runtime) GetSecurityLevel() int {
-	return 9
 }
 
 // generateConfig generates a minimal OCI spec for runsc.

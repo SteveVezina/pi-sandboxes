@@ -1,7 +1,7 @@
 # F19: Runtime Selection & Fallback
 
 > Source: `SPEC.md` §6 Features F19
-> Status: ⚠️ Needs re-verify *(2026-07-14: PROP-008 replaces detection interface and priority list — see ADR-005)*
+> Status: 🟡 Partially implemented (T19.2 remaining) *(2026-07-14: PROP-008 cascade — T19.1 re-verified, T19.2 selection engine pending)*
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -66,19 +66,21 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Tasks
 
-### T19.1: Runtime registry and detection ⚠️ *(2026-07-14: AC updated per PROP-008 — capability reports replace security levels)*
+### T19.1: Runtime registry and detection ✅ *(2026-07-14: re-verified per PROP-008 — capability reports + registry landed)*
 
 **Acceptance criteria:**
-- [ ] Detect fast, compat, secure, and microVM backend availability via `Driver.Probe`
-- [ ] `Probe` returns a structured `CapabilityReport` (availability, reason, missing prerequisites, capability flags, isolation/compat tiers)
-- [ ] Probes actually execute their checks (no always-true validation)
-- [ ] `pi-box system doctor` renders capability reports instead of `security_level` integers
+- [x] Detect fast, compat, secure, and microVM backend availability via registered probers (`pkg/runtime.Registry`)
+- [x] `Probe` returns a structured `CapabilityReport` (availability, reason, missing prerequisites, capability flags, isolation/compat tiers)
+- [x] Probes actually execute their checks (no always-true validation)
+- [x] Doctor and `GET /v1/system/runtimes` render capability reports instead of `security_level` integers (GUI updated to match)
 
 **Verification:**
-- [ ] Unit tests for runtime probing per driver
-- [ ] `pi-box system doctor` includes runtime capability table
+- [x] Unit tests for registry ordering, duplicate rejection, probe execution (`tests/runtime/registry_test.go`)
+- [x] Unit tests for per-mode reports (`tests/runtime/detect/detect_test.go`)
+- [x] API test: `/v1/system/runtimes` backends carry `isolation_tier`/`compat_tier`, never `security_level` (`tests/api/system_test.go`)
+- [x] Doctor surfaces unavailable-mode reasons and missing prerequisites
 
-**Files:** `pkg/runtime/registry.go`, `pkg/runtime/capabilities.go`, `pkg/system/doctor.go`
+**Files:** `pkg/runtime/capabilities.go`, `pkg/runtime/driver.go`, `pkg/runtime/registry.go`, `pkg/runtime/detect/detect.go`, `pkg/system/doctor.go`, `pkg/system/system.go`, `pkg/api/system.go`, `apps/gui/src/api.ts`, `apps/gui/src/main.tsx`
 **Size:** M
 **Depends on:** F3, F15, F18
 

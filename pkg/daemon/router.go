@@ -48,6 +48,8 @@ func NewRouter(store *sandbox.Store, runStores ...*sandbox.AgentRunStore) *mux.R
 	router.HandleFunc("/v1/sandboxes/{id}/files/list", api.FilesListSandbox(store)).Methods("GET")
 	router.HandleFunc("/v1/sandboxes/{id}/files/read", api.FilesReadSandbox(store)).Methods("GET")
 	router.HandleFunc("/v1/sandboxes/{id}/files/write", api.FilesWriteSandbox(store)).Methods("POST")
+	router.HandleFunc("/v1/sandboxes/{id}/files/pull", api.FilesPullSandbox(store)).Methods("POST")
+	router.HandleFunc("/v1/sandboxes/{id}/files/push", api.FilesPushSandbox(store)).Methods("POST")
 
 	// Diff
 	router.HandleFunc("/v1/sandboxes/{id}/diff", api.DiffSandbox(store)).Methods("GET")

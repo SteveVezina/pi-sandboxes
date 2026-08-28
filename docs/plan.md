@@ -5,8 +5,8 @@
 
 ## Active Cursor
 
-**Current phase:** PROP-008 runtime driver contract (applied 2026-07-14, ADR-005) — F4/T15.2, F3, F5 complete
-**Next work:** F1/F2/F8/F4/F3/F5 re-verified and reviewed (2026-08-28). Remaining ⚠️ Needs re-verify features per INDEX: F6 (Workspace & File Ops, unblocked by F8/F5), F9, F10, F11, F12, F13, F14, F15(SDKs), F16, F17, F18, F22. Next candidate: F6 Workspace & File Operations.
+**Current phase:** PROP-008 runtime driver contract (applied 2026-07-14, ADR-005) — F4/T15.2, F3, F5, F6 complete
+**Next work:** F1/F2/F8/F4/F3/F5/F6 re-verified and reviewed (2026-08-28). F6/T6.4 was a real gap (files pull/push had no code) — implemented `pkg/api/sandbox_files_pull.go`/`sandbox_files_push.go`. Remaining ⚠️ Needs re-verify features per INDEX: F9 (Output Delivery, unblocked by F6), F10, F11, F12, F13, F14, F15(SDKs), F16, F17, F18, F22. Next candidate: F9 Output Delivery.
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph

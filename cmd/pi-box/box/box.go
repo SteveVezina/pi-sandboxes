@@ -40,7 +40,7 @@ func init() {
 	boxCmd.PersistentFlags().Bool("json", false, "Output as JSON")
 
 	// Files subcommands
-	filesCmd.AddCommand(filesListCmd, filesReadCmd, filesWriteCmd)
+	filesCmd.AddCommand(filesListCmd, filesReadCmd, filesWriteCmd, filesPullCmd, filesPushCmd)
 
 	// Artifacts subcommands
 	artifactsCmd.AddCommand(artifactsListCmd, artifactsPullCmd, artifactsPackCmd)
@@ -647,6 +647,40 @@ var filesWriteCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		fmt.Printf("Wrote %v bytes to %s\n", result["bytes"], args[1])
+	},
+}
+
+// filesPullCmd copies a workspace path to a host destination.
+var filesPullCmd = &cobra.Command{
+	Use:   "pull <name> <src> <dest>",
+	Short: "Copy a file/directory from the sandbox workspace to a host path",
+	Args:  cobra.ExactArgs(3),
+	Run: func(cmd *cobra.Command, args []string) {
+		payload := map[string]interface{}{"src": args[1], "dest": args[2]}
+		data, _ := json.Marshal(payload)
+		_, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/files/pull", bytes.NewReader(data))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: pull files failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Pulled %s to %s\n", args[1], args[2])
+	},
+}
+
+// filesPushCmd copies a host path into the sandbox workspace.
+var filesPushCmd = &cobra.Command{
+	Use:   "push <name> <src> <dest>",
+	Short: "Copy a host file/directory into the sandbox workspace",
+	Args:  cobra.ExactArgs(3),
+	Run: func(cmd *cobra.Command, args []string) {
+		payload := map[string]interface{}{"src": args[1], "dest": args[2]}
+		data, _ := json.Marshal(payload)
+		_, err := callAPI("POST", "/v1/sandboxes/"+args[0]+"/files/push", bytes.NewReader(data))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: push files failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Pushed %s to %s\n", args[1], args[2])
 	},
 }
 

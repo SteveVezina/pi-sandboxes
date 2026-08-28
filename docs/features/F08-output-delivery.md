@@ -77,7 +77,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| F6: Workspace & File Ops | Internal feature | Needs re-verify |
+| F6: Workspace & File Ops | Internal feature | ✅ Implemented |
 
 ## Implementation Approach
 

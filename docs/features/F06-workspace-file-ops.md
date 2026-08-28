@@ -1,7 +1,7 @@
 # F6: Workspace & File Operations
 
 > Source: `SPEC.md` §6 Features F6
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Reviewed *(2026-08-28: re-verified — T6.4 pull/push were undocumented gaps, now implemented; file paths corrected from stale pkg/workspace,pkg/git to actual pkg/api/sandbox_*.go)*
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -51,8 +51,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-6.2: `pi-box box files read <id> <path>` reads a file from sandbox
 - [x] AC-6.3: `pi-box box files write <id> <path>` writes a file to sandbox
 - [x] AC-6.4: `pi-box box diff <id>` shows workspace diff
-- [x] AC-6.5: `pi-box box patch <id>` shows workspace patch as a read-only view *(2026-07-15: AC updated per PROP-009; re-verify)*
-- [ ] AC-6.8: `POST /v1/sandboxes/{id}/output` delivers patches and artifacts through the single output channel *(2026-07-15: added per PROP-009)*
+- [x] AC-6.5: `pi-box box patch <id>` shows workspace patch as a read-only view *(2026-07-15: AC updated per PROP-009; re-verified 2026-08-28)*
+- [x] AC-6.8: `POST /v1/sandboxes/{id}/output` delivers patches and artifacts through the single output channel *(2026-07-15: added per PROP-009; `pkg/api/sandbox_output.go` delivers workspace.patch alongside artifact sources)*
 - [x] AC-6.6: Clone supports HTTPS and SSH URLs
 - [x] AC-6.7: SSH credentials brokered (not blindly mounted)
 
@@ -65,8 +65,7 @@ Each criterion must be:
 
 | Component | Impact |
 |-----------|--------|
-| `pkg/workspace/` | Workspace management |
-| `pkg/git/` | Git operations (clone, diff, patch) |
+| `pkg/api/sandbox_clone.go`, `sandbox_diff.go`, `sandbox_patch.go`, `sandbox_files_*.go`, `sandbox_output.go` | Workspace and git operations (run inside the sandbox container via `workspaceExec`) |
 | F2: Daemon API | Workspace endpoints |
 | F8: Sandbox Lifecycle | Workspace directory management |
 
@@ -91,8 +90,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Category | Meaning |
 |----------|---------|
-| **Service-layer** | Go workspace/git packages |
-| **Integration** | Git CLI for clone/diff/patch operations |
+| **Service-layer** | Go API handlers in `pkg/api/` (workspace ops run via container exec) |
+| **Integration** | Git CLI inside the sandbox container for clone/diff/patch operations |
 
 **ADR references:** None yet.
 **ADR gaps:** None identified.
@@ -112,11 +111,11 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Workspace directory created if missing
 
 **Verification:**
-- [x] `go build ./pkg/workspace/...`
+- [x] `go build ./pkg/api/...`
 - [x] Integration test: clone HTTPS repository
 - [x] Integration test: clone SSH repository with brokered credentials
 
-**Files:** `pkg/workspace/clone.go`, `pkg/git/clone.go`
+**Files:** `pkg/api/sandbox_clone.go`
 **Size:** M
 **Depends on:** F8 (Sandbox Lifecycle — workspace directory)
 
@@ -132,15 +131,15 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Large files streamed (not loaded entirely into memory)
 
 **Verification:**
-- [x] `go build ./pkg/workspace/...`
+- [x] `go build ./pkg/api/...`
 - [x] Unit tests for path traversal prevention
 - [x] Integration test: read/write files in sandbox
 
-**Files:** `pkg/workspace/files_read.go`, `pkg/workspace/files_write.go`
+**Files:** `pkg/api/sandbox_files_read.go`, `pkg/api/sandbox_files_write.go`
 **Size:** M
 **Depends on:** F8 (Sandbox Lifecycle)
 
-### T6.3: Diff and patch ⚠️
+### T6.3: Diff and patch ✅ *(2026-08-28: re-verified against PROP-009 output-channel semantics)*
 
 **Description:** Implement git diff and patch read-only views from workspace. Patch delivery uses the output channel. *(2026-07-15: AC updated per PROP-009.)*
 
@@ -152,40 +151,41 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Empty workspace returns empty diff/patch
 
 **Verification:**
-- [x] `go build ./pkg/workspace/...`
+- [x] `go build ./pkg/api/...`
 - [x] Integration test: diff shows changes after file write
 - [x] Integration test: patch applies cleanly with `git apply`
 
-**Files:** `pkg/workspace/diff.go`, `pkg/workspace/patch.go`, `pkg/git/diff.go`, `pkg/git/patch.go`
+**Files:** `pkg/api/sandbox_diff.go`, `pkg/api/sandbox_patch.go`
 **Size:** S
 **Depends on:** T6.1 (clone — workspace must have a repo)
 
-### T6.4: Pull and push ⚠️
+### T6.4: Pull and push ✅ *(2026-08-28: implemented — was marked done with no code behind it; added `files/pull` and `files/push` API endpoints + CLI commands)*
 
 **Description:** Implement debug/inspection file pull (sandbox → host) and push (host → sandbox) operations. Pull is not a deliverable export channel. *(2026-07-15: export semantics updated per PROP-009.)*
 
 **Acceptance criteria:**
 - [x] `pi-box box files pull <id> <src> <dest>` copies files from sandbox to host
 - [x] `pi-box box files push <id> <src> <dest>` copies files from host to sandbox
-- [x] Directories copied recursively
-- [x] Progress reported for large transfers
+- [x] Directories copied recursively (via `docker cp` semantics in `Container.CopyFrom`/`CopyTo`)
+- [ ] Progress reported for large transfers *(not implemented — `docker cp` gives no progress hook; deferred, see Spec Gaps)*
 
 **Verification:**
-- [x] `go build ./pkg/workspace/...`
-- [x] Integration test: pull/push files
+- [x] `go build ./pkg/api/... ./cmd/pi-box/...`
+- [x] Integration test (real Docker container): `TestFilesPullPush_E2E`, `tests/integration/files_pull_push_test.go` — write a file, pull it to host, push a host file, read it back through the sandbox
+- [x] Integration test: `TestFilesPullPush_RejectsNonCompatMode` — 400 for non-container-backed sandboxes
 
-**Files:** `pkg/workspace/files_pull.go`, `pkg/workspace/files_push.go`
+**Files:** `pkg/api/sandbox_files_pull.go`, `pkg/api/sandbox_files_push.go`, `pkg/daemon/router.go`, `cmd/pi-box/box/box.go`
 **Size:** S
 **Depends on:** T6.2 (file read/write)
 
 ## Verification Plan
 
-- [x] `go build ./pkg/workspace/...` succeeds
+- [x] `go build ./pkg/api/...` succeeds
 - [x] Clone works for HTTPS and SSH repositories
 - [x] File read/write works with path validation
 - [x] Diff/patch works for staged and unstaged changes
 - [x] Pull/push works for files and directories
-- [ ] Deliverable export uses `POST /v1/sandboxes/{id}/output`, not file pull
+- [x] Deliverable export uses `POST /v1/sandboxes/{id}/output`, not file pull
 - [x] SSH credentials never appear in sandbox environment
 
 ## Spec Gaps
@@ -195,6 +195,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
 | SSH credential broker mechanism not specified | §16 Secrets model | Add: "Use credential-helper or ssh-agent forwarding scoped to git" |
+| `files pull`/`push` progress reporting for large transfers not achievable with current `docker cp`-based copy | §12.6 Files | Either drop the requirement or switch to a streaming copy implementation that exposes progress |
 
 ### ADR gaps (needs architectural decision)
 

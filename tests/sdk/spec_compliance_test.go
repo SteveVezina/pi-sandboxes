@@ -119,6 +119,8 @@ func TestDaemonRouterHasAllSPECRoutes(t *testing.T) {
 		`"/v1/sandboxes/{id}/exec"`,
 		`"/v1/sandboxes/{id}/files/write"`,
 		`"/v1/sandboxes/{id}/files/read"`,
+		`"/v1/sandboxes/{id}/files/pull"`,
+		`"/v1/sandboxes/{id}/files/push"`,
 		`"/v1/sandboxes/{id}/diff"`,
 		`"/v1/sandboxes/{id}/patch"`,
 		`"/v1/sandboxes/{id}/output"`,

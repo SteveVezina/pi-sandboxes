@@ -1,7 +1,7 @@
 # F5: Template System
 
 > Source: `SPEC.md` §6 Features F5
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Reviewed *(2026-08-28: re-verified — T7.1-T7.3 implemented, 7 templates correct, build+tests pass)*
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -107,7 +107,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Dependency | Type | Status |
 |-----------|------|--------|
 | F3: Fast Backend | Internal feature | ✅ Implemented |
-| F4: Compat Backend | Internal feature | ⚠️ Templates define images for compat backend |
+| F4: Compat Backend | Internal feature | ✅ Implemented |
 
 ## Implementation Approach
 

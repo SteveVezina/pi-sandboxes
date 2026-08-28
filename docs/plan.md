@@ -5,8 +5,8 @@
 
 ## Active Cursor
 
-**Current phase:** PROP-008 runtime driver contract (applied 2026-07-14, ADR-005) — F4/T15.2, F3 complete
-**Next work:** F1/F2/F8/F4/F3 re-verified and reviewed (2026-08-28). Remaining ⚠️ Needs re-verify features per INDEX: F5 (Template System, now unblocked by F3), F6, F9, F10, F11, F12, F13, F14, F15(SDKs), F16, F17, F18, F22. Next candidate: F5 Template System.
+**Current phase:** PROP-008 runtime driver contract (applied 2026-07-14, ADR-005) — F4/T15.2, F3, F5 complete
+**Next work:** F1/F2/F8/F4/F3/F5 re-verified and reviewed (2026-08-28). Remaining ⚠️ Needs re-verify features per INDEX: F6 (Workspace & File Ops, unblocked by F8/F5), F9, F10, F11, F12, F13, F14, F15(SDKs), F16, F17, F18, F22. Next candidate: F6 Workspace & File Operations.
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph

@@ -1,7 +1,7 @@
 # F03: Fast Backend
 
 > Source: `SPEC.md` §6 Features F3
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Reviewed *(2026-08-28: re-verified — all T3.1-T3.5 tasks implemented, build+tests pass, terminology/paths current)*
 > Category: Infrastructure
 
 ## Definition (from block spec)
@@ -76,7 +76,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| F8: Sandbox Lifecycle | Internal feature | ⚠️ Partially — backend needs sandbox context |
+| F8: Sandbox Lifecycle | Internal feature | ✅ Implemented |
 | Linux kernel namespaces | OS feature | Linux-only |
 | cgroup v2 | OS feature | Linux-only |
 | seccomp | OS feature | Linux-only |

@@ -101,7 +101,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| F3: Fast Backend | Internal feature | ⚠️ Partially — exec needs backend to run in |
+| F3: Fast Backend | Internal feature | ✅ Implemented |
 | F8: Sandbox Lifecycle | Internal feature | Available |
 
 ## Implementation Approach

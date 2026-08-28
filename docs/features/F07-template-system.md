@@ -106,7 +106,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| F3: Fast Backend | Internal feature | ⚠️ Templates define mounts for fast backend |
+| F3: Fast Backend | Internal feature | ✅ Implemented |
 | F4: Compat Backend | Internal feature | ⚠️ Templates define images for compat backend |
 
 ## Implementation Approach

@@ -1,7 +1,7 @@
 # F8: Sandbox Lifecycle
 
 > Source: `SPEC.md` §6 Features F8
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Reviewed
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -103,7 +103,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Tasks
 
-### T4.1: Sandbox metadata store ⚠️
+### T4.1: Sandbox metadata store
 
 **Description:** Implement sandbox metadata store under `~/.pi-box/sandboxes/<id>/meta.json`. CRUD operations for sandbox state. *(2026-07-15: terminology and package path updated per PROP-009; re-verify against `pkg/sandbox/`.)*
 
@@ -121,10 +121,10 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/sandbox/store.go`, `pkg/sandbox/meta.go`
 **Size:** S
-**Status:** ⚠️ Needs re-verify
+**Status:** ✅ Implemented
 **Depends on:** None
 
-### T4.2: Sandbox state machine ⚠️
+### T4.2: Sandbox state machine
 
 **Description:** Implement sandbox state machine with lifecycle transitions. State validation prevents invalid transitions. *(2026-07-15: lifecycle terminology updated per PROP-009.)*
 
@@ -140,10 +140,10 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/sandbox/state.go`
 **Size:** S
-**Status:** ⚠️ Needs re-verify
+**Status:** ✅ Implemented
 **Depends on:** T4.1 (metadata store)
 
-### T4.3: TTL expiration ⚠️
+### T4.3: TTL expiration
 
 **Description:** Implement background TTL checker. Runs every 60 seconds, destroys sandboxes past their TTL. *(2026-07-15: lifecycle terminology updated per PROP-009.)*
 
@@ -160,10 +160,10 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/sandbox/ttl.go`
 **Size:** S
-**Status:** ⚠️ Needs re-verify
+**Status:** ✅ Implemented
 **Depends on:** T4.2 (state machine)
 
-### T4.4: Orphan cleanup on restart ⚠️
+### T4.4: Orphan cleanup on restart
 
 **Description:** On daemon start, scan for sandboxes in non-terminal states (CREATING, EXECUTING) that have no running backend process. Mark them as DESTROYED. *(2026-07-15: lifecycle terminology updated per PROP-009.)*
 
@@ -179,7 +179,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 **Files:** `pkg/sandbox/orphans.go`
 **Size:** S
-**Status:** ⚠️ Needs re-verify
+**Status:** ✅ Implemented
 **Depends on:** T4.1 (metadata store), T4.2 (state machine)
 
 ## Verification Plan

@@ -1,7 +1,7 @@
 # F01: CLI Entry Point
 
 > Source: `SPEC.md` §6 Features F1
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Reviewed
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -75,7 +75,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| F2: Daemon API | Internal feature | 🔴 Not started |
+| F2: Daemon API | Internal feature | ✅ Implemented |
 | Cobra (Go CLI library) | External dependency | Available |
 
 ## Implementation Approach

@@ -1,7 +1,7 @@
 # F02: Daemon API
 
 > Source: `SPEC.md` §6 Features F2
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Reviewed
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -86,7 +86,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| F8: Sandbox Lifecycle | Internal feature | ⚠️ Partially — API needs lifecycle but can be stubbed |
+| F8: Sandbox Lifecycle | Internal feature | ✅ Implemented |
 | Cobra (Go CLI library) | External dependency | Available |
 | Unix socket library (Go stdlib) | Standard library | Available |
 
@@ -170,7 +170,7 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 
 **Acceptance criteria:**
 - [x] `POST /v1/sandboxes/{id}/exec` accepts command, streams stdout/stderr, returns exit code/duration/truncated/timedOut
-- [ ] `POST /v1/sandboxes/{id}/output` delivers artifacts or patches through the output channel *(2026-07-15: AC updated per PROP-009)*
+- [x] `POST /v1/sandboxes/{id}/output` delivers artifacts or patches through the output channel *(2026-07-15: AC updated per PROP-009)*
 - [x] `POST /v1/sandboxes/{id}/snapshot` creates snapshot
 - [x] `POST /v1/sandboxes/{id}/rollback` restores snapshot
 - [x] `GET /v1/sandboxes/{id}/logs` returns command history
@@ -179,8 +179,9 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 - [x] `go build ./cmd/pi-sandboxd/...`
 - [x] Integration tests
 
-**Files:** `pkg/api/sandbox_exec.go`, `pkg/api/artifacts_export.go`, `pkg/api/sandbox_snapshot.go`, `pkg/api/sandbox_rollback.go`, `pkg/api/sandbox_logs.go`
+**Files:** `pkg/api/sandbox_exec.go`, `pkg/api/sandbox_output.go`, `pkg/api/sandbox_snapshot.go`, `pkg/api/sandbox_rollback.go`, `pkg/api/sandbox_logs.go`
 **Size:** M
+**Status:** ✅ Implemented
 **Depends on:** F7 (Command Execution), F9 (Output Delivery), F13 (Snapshot & Rollback), F10 (Logs & History)
 
 ## Verification Plan

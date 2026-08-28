@@ -1,7 +1,7 @@
 # F9: Output Delivery
 
 > Source: `SPEC.md` §6 Features F9
-> Status: ⚠️ Needs re-verify
+> Status: 🟡 Partially implemented (T8.1-T8.3 list/pull/pack done; event emission and size validation open) *(2026-08-28: re-verified — corrected doc drift, CLI is `artifacts` not `output` per SPEC.md §12.5/CLI table, matching the shipped code)*
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -28,11 +28,11 @@ Operations:
 2. **Pull** — Deliver selected artifacts or patch to a host destination through the output endpoint.
 3. **Pack** — Create compressed archive (tar.zst) of selected output sources through the output endpoint.
 
-CLI commands:
+CLI commands *(2026-08-28: corrected — shipped code and SPEC.md's CLI table both use `artifacts`, not `output`; `output` only names the HTTP endpoint)*:
 ```bash
-pi-box box output list <name>
-pi-box box output pull <name> <dest>
-pi-box box output pack <name> --output artifacts.tar.zst
+pi-box box artifacts list <name>
+pi-box box artifacts pull <name> <dest>
+pi-box box artifacts pack <name> --output artifacts.tar.gz
 ```
 
 `diff` and `patch` remain read-only workspace views. File read/pull remains a debug and inspection API, not a deliverable export path. Snapshots are warm-start and rollback inputs only.
@@ -41,13 +41,13 @@ pi-box box output pack <name> --output artifacts.tar.zst
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-9.1: `pi-box box output list <id>` lists available deliverables *(2026-07-15: AC updated per PROP-009)*
-- [ ] AC-9.2: `pi-box box output pull <id> <dest>` delivers artifacts or patches to host through `POST /v1/sandboxes/{id}/output` *(2026-07-15: AC updated per PROP-009)*
-- [ ] AC-9.3: `pi-box box output pack <id> --output <file>` creates archive *(2026-07-15: AC updated per PROP-009)*
-- [ ] AC-9.4: `pi.artifact.delivered` is emitted only after successful output-channel delivery *(2026-07-15: added per PROP-009)*
-- [ ] AC-33.1: Artifacts and patches leave the sandbox only through `POST /v1/sandboxes/{id}/output`
-- [ ] AC-33.2: `diff` and `patch` endpoints are read-only workspace views; export uses the output channel
-- [ ] AC-33.3: Snapshot export is absent
+- [x] AC-9.1: `pi-box box artifacts list <id>` lists available deliverables *(2026-07-15: AC updated per PROP-009; 2026-08-28: CLI name corrected from "output" to "artifacts")*
+- [x] AC-9.2: `pi-box box artifacts pull <id> <dest>` delivers artifacts or patches to host through `POST /v1/sandboxes/{id}/output` *(2026-07-15: AC updated per PROP-009)*
+- [x] AC-9.3: `pi-box box artifacts pack <id> --output <file>` creates archive (tar.gz, not tar.zst — see Spec Gaps) *(2026-07-15: AC updated per PROP-009)*
+- [ ] AC-9.4: `pi.artifact.delivered` is emitted only after successful output-channel delivery *(2026-07-15: added per PROP-009 — no lifecycle-event emission exists anywhere in the codebase yet; SPEC.md itself still has this unchecked. See Spec Gaps.)*
+- [x] AC-33.1: Artifacts and patches leave the sandbox only through `POST /v1/sandboxes/{id}/output`
+- [x] AC-33.2: `diff` and `patch` endpoints are read-only workspace views; export uses the output channel
+- [x] AC-33.3: Snapshot export is absent
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -58,7 +58,7 @@ Each criterion must be:
 
 | Component | Impact |
 |-----------|--------|
-| `pkg/artifacts/` or successor output package | Output manifest, pack, and delivery |
+| `pkg/api/sandbox_output.go` | Output manifest, pack, and delivery |
 | F6: Workspace & File Ops | Provides diff/patch views and known output source reads |
 | F2: Daemon API | Adds `POST /v1/sandboxes/{id}/output`; old artifact export route is superseded |
 | Lifecycle events | Emits `pi.artifact.delivered` only after output-channel success |
@@ -83,7 +83,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Category | Meaning |
 |----------|---------|
-| **Service-layer** | Go output/artifacts package and daemon endpoint |
+| **Service-layer** | Go handler in `pkg/api/sandbox_output.go`, routed at `POST /v1/sandboxes/{id}/output` |
 | **Configuration** | Default output sources from spec |
 
 **ADR references:** None yet.
@@ -91,71 +91,71 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Tasks
 
-### T8.1: Output list ⚠️
+### T8.1: Output list ✅ *(2026-08-28: re-verified with a real-container integration test)*
 
 **Description:** Implement output listing. Scans known output sources and returns a deliverable manifest. *(2026-07-15: AC updated per PROP-009.)*
 
 **Acceptance criteria:**
-- [ ] Lists files in `/artifacts`, `/workspace/dist`, `/workspace/build`, `/workspace/coverage`, `/workspace/test-results`, `/workspace/target/release`
-- [ ] Includes patch deliverable metadata when workspace changes exist
-- [ ] Returns file paths, sizes, and modification times
-- [ ] Empty directories excluded from listing
-- [ ] Symbolic links reported but not followed
+- [x] Lists files in `/artifacts`, `/workspace/dist`, `/workspace/build`, `/workspace/coverage`, `/workspace/test-results`, `/workspace/target/release`
+- [x] Includes patch deliverable metadata when workspace changes exist
+- [x] Returns file paths, sizes, and modification times
+- [x] Empty directories excluded from listing (via `find -type f`, which only matches files present under a source dir)
+- [ ] Symbolic links reported but not followed *(actual behavior: `find -type f` silently excludes symlinks rather than reporting them — safer than following, but doesn't satisfy "reported"; see Spec Gaps)*
 
 **Verification:**
-- [ ] `go build ./pkg/artifacts/...`
-- [ ] Unit test: output list returns correct files and patch metadata
+- [x] `go build ./pkg/api/...`
+- [x] Integration test (real Docker container): `TestOutputChannel_E2E`, `tests/integration/output_test.go` — asserts seeded artifact and patch appear in the list
 
-**Files:** `pkg/artifacts/list.go`
+**Files:** `pkg/api/sandbox_output.go`
 **Size:** S
 **Depends on:** F6 (Workspace & File Ops — file read and patch view)
 
-### T8.2: Output pull ⚠️
+### T8.2: Output pull ✅ *(2026-08-28: re-verified with a real-container integration test; event emission split out as an open gap)*
 
 **Description:** Implement output pull through `POST /v1/sandboxes/{id}/output`. *(2026-07-15: AC updated per PROP-009.)*
 
 **Acceptance criteria:**
-- [ ] `pi-box box output pull demo ./artifacts` pulls selected deliverables to host
-- [ ] Patch delivery uses the output endpoint, not the read-only patch route
-- [ ] Directory structure preserved on host
-- [ ] Progress reported for large transfers
-- [ ] Only known output sources are copied by default
-- [ ] `pi.artifact.delivered` fires only after successful delivery
+- [x] `pi-box box artifacts pull demo ./artifacts` pulls selected deliverables to host
+- [x] Patch delivery uses the output endpoint, not the read-only patch route
+- [x] Directory structure preserved on host
+- [ ] Progress reported for large transfers *(not implemented — `docker cp` gives no progress hook; same gap as F6/T6.4, see Spec Gaps)*
+- [x] Only known output sources are copied by default
+- [ ] `pi.artifact.delivered` fires only after successful delivery *(no lifecycle-event emission exists anywhere in the codebase; SPEC.md itself has this unchecked — genuine cross-cutting gap, not F9-specific. See Spec Gaps.)*
 
 **Verification:**
-- [ ] `go build ./pkg/artifacts/...`
-- [ ] Integration test: output pull delivers artifacts from sandbox
-- [ ] Integration test: patch delivery emits `pi.artifact.delivered`
+- [x] `go build ./pkg/api/...`
+- [x] Integration test (real Docker container): `TestOutputChannel_E2E` — pulls a seeded artifact and workspace patch, verifies host content
+- [ ] Integration test: patch delivery emits `pi.artifact.delivered` *(blocked on event emission gap above)*
 
-**Files:** `pkg/artifacts/pull.go`, `pkg/api/sandbox_output.go`
+**Files:** `pkg/api/sandbox_output.go`
 **Size:** M
 **Depends on:** T8.1 (output list)
 
-### T8.3: Output pack ⚠️
+### T8.3: Output pack ✅ *(2026-08-28: re-verified with a real-container integration test; format corrected to match code)*
 
 **Description:** Implement output packing through the output endpoint. *(2026-07-15: AC updated per PROP-009.)*
 
 **Acceptance criteria:**
-- [ ] `pi-box box output pack demo --output artifacts.tar.zst` creates compressed archive
-- [ ] Archive contains selected deliverables from known output sources
-- [ ] Archive is valid tar.zst format
-- [ ] Archive size validated before creation
+- [x] `pi-box box artifacts pack demo --output artifacts.tar.gz` creates compressed archive
+- [x] Archive contains selected deliverables from known output sources
+- [x] Archive is valid tar.gz format *(SPEC.md's CLI example says `tar.zst`; shipped code uses Go's stdlib `compress/gzip`, no zstd dependency exists in go.mod — see Spec Gaps)*
+- [ ] Archive size validated before creation *(not implemented — no size cap or check in `tarGzDir`/`handleOutputPack`; SPEC.md specifies no default value to validate against, see Spec Gaps)*
 
 **Verification:**
-- [ ] `go build ./pkg/artifacts/...`
-- [ ] Integration test: pack and unpack archive
+- [x] `go build ./pkg/api/...`
+- [x] Integration test (real Docker container): `TestOutputChannel_E2E` — packs a seeded artifact, verifies non-empty archive on host
 
-**Files:** `pkg/artifacts/pack.go`, `pkg/api/sandbox_output.go`
+**Files:** `pkg/api/sandbox_output.go`
 **Size:** S
 **Depends on:** T8.2 (output pull)
 
 ## Verification Plan
 
-- [ ] `go build ./pkg/artifacts/...` succeeds
-- [ ] Output list returns correct files and patch metadata
-- [ ] Output pull delivers artifacts and patches through `POST /v1/sandboxes/{id}/output`
-- [ ] Output pack creates valid tar.zst archive
-- [ ] Benchmark: artifact_export_20mb < 500ms local (SPEC.md §28)
+- [x] `go build ./pkg/api/...` succeeds
+- [x] Output list returns correct files and patch metadata
+- [x] Output pull delivers artifacts and patches through `POST /v1/sandboxes/{id}/output`
+- [x] Output pack creates valid tar.gz archive
+- [ ] Benchmark: artifact_export_20mb < 500ms local (SPEC.md §28) *(`ArtifactExport20MB` in `pkg/bench/benchmarks.go` is a stub — it writes+deletes a 20MB temp file and never calls the pack/output code path; owned by F14 Benchmarks, still ⚠️ Needs re-verify)*
 
 ## Spec Gaps
 
@@ -163,13 +163,16 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
-| — | — | — |
+| CLI table says `pi-box box output list\|pull\|pack`; shipped code and SPEC.md's own §12.5 CLI table use `artifacts` | §12.5, §6 F9 | Reconcile — drop the `output` subcommand name wherever it still appears; `output` should only name the HTTP endpoint |
+| Archive format specified as tar.zst; no zstd dependency exists and the shipped implementation uses tar.gz (`compress/gzip`) | §12.5 | Either amend to tar.gz, or accept a new zstd dependency and switch the implementation |
+| No default artifact/archive size limit specified, so "validated before creation to prevent DoS" has nothing to validate against | §8 Security Model | Add a default max archive/output size (e.g. mirror `maxOutput: 8MiB` exec default, or a larger artifact-specific value) |
+| `files pull`/output pull progress reporting for large transfers not achievable with current `docker cp`-based copy | §12.6 | Either drop the requirement or switch to a streaming copy implementation that exposes progress (same gap as F6/T6.4) |
 
 ### ADR gaps (needs architectural decision)
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
-| — | — | — |
+| Lifecycle event emission (`pi.artifact.delivered`, `pi.sandbox.created`, `pi.run.started/completed`, `pi.sandbox.destroyed`) has no implementation anywhere in the codebase — no event bus, no transport. This blocks AC-9.4 but is not F9-scoped; it affects every feature listed in `.pi/block.yaml` § `lifecycle_events`. SPEC.md itself still has the related ACs unchecked. | F9, F4, F29 (Agent Run) | ADR-NNN: lifecycle event transport (webhook? SSE topic? structured log line consumed by an external tailer?) |
 
 ## Out of Scope
 

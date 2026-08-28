@@ -1,7 +1,7 @@
 # F4: Compat Backend
 
 > Source: `SPEC.md` §6 Features F4
-> Status: 🟡 Partially implemented (T15.2c remaining) *(2026-07-14: PROP-008 cascade — T15.2a engine + T15.2b hardening done)*
+> Status: ✅ Implemented *(2026-08-28: T15.2c lifecycle recovery — container reconciliation implemented and verified)*
 > Category: Infrastructure
 
 ## Definition (from block spec)
@@ -9,8 +9,6 @@
 | Feature ID | Name | Description | Milestone |
 |------------|------|-------------|-----------|
 | F4 | Compat Backend | OCI container backend (runc/containerd/Podman) for maximum compatibility | M1 |
-
-> Status: ✅ Implemented *(2026-07-15: PROP-008 T15.2c lifecycle recovery complete)*
 
 ## Expanded Specification
 
@@ -172,7 +170,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Size:** M
 **Depends on:** T15.2a
 
-### T15.2c: Lifecycle recovery — no --rm + reconciliation ✅ *(2026-07-15: PROP-008 complete)*
+### T15.2c: Lifecycle recovery — no --rm + reconciliation ✅ *(2026-08-28: reconciliation implemented — compat.Reconcile wired into daemon startup)*
 
 **Acceptance criteria:**
 - [x] No `--rm`; container survives daemon crash for post-mortem inspection
@@ -180,10 +178,10 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Orphaned containers (no sandbox) are garbage-collected
 
 **Verification:**
-- [ ] Integration test: daemon restart reconciles existing containers
-- [ ] Integration test: orphan container is garbage-collected
+- [x] Integration test: daemon restart reconciles existing containers (`TestReconcile_RemovesOrphanAndReportsMissing`, `tests/runtime/compat/reconcile_test.go`)
+- [x] Integration test: orphan container is garbage-collected (`TestReconcile_RemovesOrphanAndReportsMissing`, `tests/runtime/compat/reconcile_test.go`)
 
-**Files:** `pkg/runtime/oci/*.go`, `pkg/runtime/compat/lifecycle.go`, `pkg/daemon/`
+**Files:** `pkg/runtime/oci/*.go`, `pkg/runtime/compat/lifecycle.go`, `pkg/runtime/compat/reconcile.go`, `pkg/daemon/daemon.go`
 **Size:** M
 **Depends on:** T15.2a
 

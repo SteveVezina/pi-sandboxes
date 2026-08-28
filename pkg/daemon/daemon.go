@@ -3,12 +3,15 @@ package daemon
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
+	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
+	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
@@ -52,6 +55,11 @@ func (d *Daemon) Start() error {
 	// Run orphan cleanup on startup (PROP-008 D7: reconciliation)
 	sandbox.OrphanCleanup(d.store, d.store.Dir())
 
+	// Reconcile compat-mode containers against the sandbox store
+	// (PROP-008 T15.2c): drop containers with no active sandbox, and
+	// mark sandboxes DESTROYED if their container vanished out-of-band.
+	d.reconcileCompatContainers()
+
 	// Create Unix socket listener
 	unixListener, err := net.Listen("unix", d.socketPath)
 	if err != nil {
@@ -87,6 +95,51 @@ func (d *Daemon) Start() error {
 	}
 
 	return nil
+}
+
+// reconcileCompatContainers reconciles live OCI containers against
+// WARM/EXECUTING compat-mode sandboxes in the store (PROP-008 T15.2c).
+func (d *Daemon) reconcileCompatContainers() {
+	ids, err := d.store.List()
+	if err != nil {
+		log.Printf("daemon: reconcile: list sandboxes: %v", err)
+		return
+	}
+
+	var activeIDs []string
+	for _, id := range ids {
+		meta, err := d.store.Get(id)
+		if err != nil {
+			continue
+		}
+		if meta.Mode != string(pruntime.ModeCompat) {
+			continue
+		}
+		if meta.State != sandbox.StateWarm && meta.State != sandbox.StateExecuting {
+			continue
+		}
+		activeIDs = append(activeIDs, id)
+	}
+
+	if len(activeIDs) == 0 {
+		return
+	}
+
+	result, err := compat.Reconcile(context.Background(), activeIDs)
+	if err != nil {
+		log.Printf("daemon: reconcile: compat containers: %v", err)
+		return
+	}
+
+	for _, name := range result.RemovedContainers {
+		log.Printf("daemon: reconcile: removed orphaned container %s", name)
+	}
+	for _, id := range result.MissingSandboxIDs {
+		log.Printf("daemon: reconcile: sandbox %s container missing, marking DESTROYED", id)
+		if err := d.store.UpdateState(id, sandbox.StateDestroyed); err != nil {
+			log.Printf("daemon: reconcile: update state for %s: %v", id, err)
+		}
+	}
 }
 
 // Stop gracefully shuts down the daemon.

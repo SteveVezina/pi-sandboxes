@@ -5,8 +5,8 @@
 
 ## Active Cursor
 
-**Current phase:** PROP-008 runtime driver contract (applied 2026-07-14, ADR-005)
-**Next work:** P2 — shared OCI engine + compat hardening fixes (F4/T15.2); then P3 secure rebuild on OCI engine (F18/T18.1). Done: P0 fast build fix (T3.1), P1 capability registry + selection engine (T19.1/T19.2).
+**Current phase:** PROP-008 runtime driver contract (applied 2026-07-14, ADR-005) — F4/T15.2 complete
+**Next work:** F1/F2/F8/F4 re-verified and reviewed (2026-08-28). Remaining ⚠️ Needs re-verify features per INDEX: F3, F5, F6, F9, F10, F11, F12, F13, F14, F15(SDKs), F16, F17, F18, F22. Next candidate: pick highest-leverage ⚠️ feature (e.g. F3 Fast Backend, blocking F5 Template System) and re-verify against current code.
 **Blockers:** None
 
 ## Cross-Feature Dependency Graph

@@ -89,7 +89,7 @@ func CreateContainer(spec *ContainerSpec) (*Container, error) {
 		return nil, fmt.Errorf("container image is required")
 	}
 	if spec.Name == "" {
-		spec.Name = "pi-sandbox-" + spec.ID[:min(8, len(spec.ID))]
+		spec.Name = ContainerName(spec.ID)
 	}
 
 	// Hardened defaults
@@ -126,6 +126,11 @@ func CreateContainer(spec *ContainerSpec) (*Container, error) {
 		Ready:           true,
 		Host:            spec.Workspace,
 	}, nil
+}
+
+// ContainerName derives the OCI container name for a sandbox ID.
+func ContainerName(sandboxID string) string {
+	return "pi-sandbox-" + sandboxID[:min(8, len(sandboxID))]
 }
 
 // min returns the minimum of two integers.

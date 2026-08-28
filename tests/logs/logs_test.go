@@ -280,11 +280,13 @@ func TestTimestamp(t *testing.T) {
 	}
 }
 
+// newTestManager isolates NewManager's ~/.pi-box/sandboxes/<id>/logs join
+// to a scratch HOME so tests never write into the real user's Pi Box home
+// (NewManager takes a sandbox ID, not a directory — passing a full tmp
+// path here would leak files under ~/.pi-box/sandboxes/<tmp-path>/logs).
 func newTestManager(t *testing.T) *logs.Manager {
-	tmpDir := filepath.Join(os.TempDir(), "pi-logs-test-"+randomID())
-	os.MkdirAll(tmpDir, 0755)
-	t.Cleanup(func() { os.RemoveAll(tmpDir) })
-	return logs.NewManager(tmpDir)
+	t.Setenv("HOME", t.TempDir())
+	return logs.NewManager("test-sandbox-" + randomID())
 }
 
 func randomID() string {

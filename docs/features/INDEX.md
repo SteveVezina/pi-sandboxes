@@ -27,7 +27,7 @@ Dashboard of all features for this project.
 | [F7](F05-command-execution.md) | Command Execution | 🟢 Reviewed | ✅ Implemented | M1 | F3, F8 |
 | [F8](F04-sandbox-lifecycle.md) | Sandbox Lifecycle | 🟢 Reviewed | ✅ Implemented | M1 | — |
 | [F9](F08-output-delivery.md) | Output Delivery | 🟢 Reviewed | 🟡 list/pull/pack done (event emission, size validation open) | M1 | F6 |
-| [F10](F09-logs-history.md) | Logs & Command History | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F7 |
+| [F10](F09-logs-history.md) | Logs & Command History | 🟢 Reviewed | ✅ Implemented | M1 | F7 |
 | [F11](F12-secrets-network.md) | Secrets & Network Model | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F17, F30 |
 | [F12](F13-cache-model.md) | Cache Model | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F5, F16 |
 | [F13](F14-snapshot-rollback.md) | Snapshot & Rollback | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F8 |

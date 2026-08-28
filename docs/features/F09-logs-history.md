@@ -1,7 +1,7 @@
 # F10: Logs & Command History
 
 > Source: `SPEC.md` §6 Features F10
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Reviewed *(2026-08-28: re-verified — `history` CLI command and full-content `logs` output were undocumented gaps, now implemented; also fixed a pre-existing test bug that leaked log directories into the real user's ~/.pi-box)*
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -56,8 +56,8 @@ pi-box box metrics <name>
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-10.1: `pi-box box logs <id>` shows command logs
-- [x] AC-10.2: `pi-box box history <id>` shows command history
+- [x] AC-10.1: `pi-box box logs <id>` shows command logs *(2026-08-28: was only printing a one-line summary, not full stdout/stderr content per the Expanded Specification — fixed)*
+- [x] AC-10.2: `pi-box box history <id>` shows command history *(2026-08-28: command didn't exist at all — implemented, backed by the existing `/logs/history` endpoint)*
 - [x] AC-10.3: Each log entry includes: command, exit code, duration, timeout status, output truncation
 
 Each criterion must be:
@@ -119,27 +119,27 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Size:** S
 **Depends on:** F5 (Command Execution — produces log data)
 
-### T9.2: Log listing and history
+### T9.2: Log listing and history ✅ *(2026-08-28: implemented — `history` command and full-content `logs` output didn't exist; added both plus a real test)*
 
 **Description:** Implement log listing and command history retrieval.
 
 **Acceptance criteria:**
 - [x] `pi-box box logs <id>` shows full log entries with stdout/stderr
 - [x] `pi-box box history <id>` shows summary (command, exit code, duration)
-- [x] Logs ordered by sequence number (newest first)
-- [x] Empty sandbox shows "no commands executed" message
+- [x] Logs ordered by sequence number (newest first) (`Manager.List`/`History` sort descending by sequence)
+- [x] Empty sandbox shows "no commands executed" message (both `logsCmd` and `historyCmd`)
 
 **Verification:**
-- [x] `go build ./pkg/logs/...`
-- [x] Integration test: logs and history work
+- [x] `go build ./pkg/api/... ./cmd/pi-box/...`
+- [x] Integration test: `TestLogsAndHistory`, `tests/api/logs_test.go` — execs a command, asserts `/logs`, `/logs/history`, and stdout/stderr content routes all return correct data
 
-**Files:** `pkg/logs/list.go`, `cmd/pi-box/box/logs.go`
+**Files:** `pkg/logs/list.go`, `pkg/api/sandbox_logs.go`, `cmd/pi-box/box/box.go`
 **Size:** S
 **Depends on:** T9.1 (log entry storage)
 
 ## Verification Plan
 
-- [x] `go build ./pkg/logs/...` succeeds
+- [x] `go build ./pkg/api/... ./cmd/pi-box/...` succeeds
 - [x] Log entries created for each exec command
 - [x] Logs and history commands display correct data
 - [x] stdout/stderr content accessible from log entries

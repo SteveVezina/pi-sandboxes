@@ -5,8 +5,8 @@
 
 ## Active Cursor
 
-**Current phase:** PROP-008 runtime driver contract (applied 2026-07-14, ADR-005) — F4/T15.2, F3, F5, F6 complete; F9 partially (list/pull/pack done, 2 open gaps)
-**Next work:** F1/F2/F8/F4/F3/F5/F6/F9 re-verified (2026-08-28). F9 surfaced a cross-cutting gap: lifecycle event emission (`pi.*` events) has zero implementation anywhere — needs an ADR on transport before AC-9.4 and similar ACs elsewhere can close; also no archive/output size cap exists (needs a spec-defined default first). Both logged in F9's Spec Gaps rather than worked around. Remaining ⚠️ Needs re-verify features per INDEX: F10, F11, F12, F13, F14, F15(SDKs), F16, F17, F18, F22. Next candidate: F10 Logs & Command History.
+**Current phase:** PROP-008 runtime driver contract (applied 2026-07-14, ADR-005) — F4/T15.2, F3, F5, F6, F10 complete; F9 partially (list/pull/pack done, 2 open gaps)
+**Next work:** F1/F2/F8/F4/F3/F5/F6/F9/F10 re-verified (2026-08-28). F10 gap: `history` CLI command didn't exist, `logs` only printed a one-line summary instead of full stdout/stderr — both implemented. Also fixed a pre-existing test bug (`tests/logs/logs_test.go`) that was leaking log directories into the real ~/.pi-box on every test run (passed a tmp path as a sandbox ID, which NewManager's home-join turned into `~/.pi-box/sandboxes/var/folders/...`); ~2MB of accumulated leftovers cleaned up manually. Note: ~44 stray UUID-named dirs also sit under ~/.pi-box/sandboxes/ from tests/api/* runs (Manager always resolves via the real $HOME, not test-isolated) — not fixed, out of scope, flagging for awareness. Remaining ⚠️ Needs re-verify features per INDEX: F11, F12, F13, F14, F15(SDKs), F16, F17, F18, F22. Next candidate: F11 Secrets & Network Model.
 **Blockers:** Lifecycle event transport ADR needed before AC-9.4 (and F4/F29's related lifecycle-event ACs) can close.
 
 ## Cross-Feature Dependency Graph

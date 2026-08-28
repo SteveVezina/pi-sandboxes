@@ -34,7 +34,7 @@ var Command = boxCmd
 
 func init() {
 	cli.AddCommand(boxCmd)
-	boxCmd.AddCommand(createCmd, listCmd, inspectCmd, destroyCmd, cloneCmd, execCmd, shellCmd, filesCmd, diffCmd, patchCmd, artifactsCmd, snapshotCmd, logsCmd)
+	boxCmd.AddCommand(createCmd, listCmd, inspectCmd, destroyCmd, cloneCmd, execCmd, shellCmd, filesCmd, diffCmd, patchCmd, artifactsCmd, snapshotCmd, logsCmd, historyCmd)
 
 	// Persistent JSON flag available on all box subcommands (AC-1.5).
 	boxCmd.PersistentFlags().Bool("json", false, "Output as JSON")
@@ -195,6 +195,26 @@ func callAPIList(method, endpoint string) ([]interface{}, error) {
 		return nil, fmt.Errorf("decode list response: %w", err)
 	}
 	return result, nil
+}
+
+// callAPIText makes an HTTP call and returns the raw response body as
+// text, for endpoints that respond with Content-Type: text/plain (e.g.
+// log stdout/stderr) rather than JSON.
+func callAPIText(method, endpoint string) (string, error) {
+	ctx, err := resolveContext()
+	if err != nil {
+		return "", fmt.Errorf("context: %w", err)
+	}
+	var data []byte
+	if ctx.Transport == pictx.TransportUnix {
+		data, err = curlList(method, endpoint)
+	} else {
+		data, err = remoteList(ctx, method, endpoint)
+	}
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimRight(string(data), "\n"), nil
 }
 
 func curlList(method, endpoint string) ([]byte, error) {
@@ -857,10 +877,10 @@ var snapshotDeleteCmd = &cobra.Command{
 	},
 }
 
-// logsCmd shows sandbox logs.
+// logsCmd shows full sandbox log entries, including stdout/stderr content.
 var logsCmd = &cobra.Command{
 	Use:   "logs <name>",
-	Short: "Show sandbox logs",
+	Short: "Show sandbox logs (full entries with stdout/stderr)",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/logs", nil)
@@ -869,12 +889,61 @@ var logsCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		entries, _ := result["entries"].([]interface{})
+		if len(entries) == 0 {
+			fmt.Println("no commands executed")
+			return
+		}
 		for _, e := range entries {
 			entryMap, _ := e.(map[string]interface{})
 			seq := entryMap["sequence"]
-			cmd := entryMap["command"]
+			command := entryMap["command"]
 			exitCode := entryMap["exitCode"]
-			fmt.Printf("[%v] %s (exit: %v)\n", seq, cmd, exitCode)
+			durationMs := entryMap["durationMs"]
+			fmt.Printf("[%v] %s (exit: %v, %vms)\n", seq, command, exitCode, durationMs)
+
+			seqQuery := fmt.Sprintf("%v", seq)
+			if stdout, err := callAPIText("GET", "/v1/sandboxes/"+args[0]+"/logs?action=stdout&sequence="+seqQuery); err == nil && stdout != "" {
+				fmt.Println("--- stdout ---")
+				fmt.Println(stdout)
+			}
+			if stderr, err := callAPIText("GET", "/v1/sandboxes/"+args[0]+"/logs?action=stderr&sequence="+seqQuery); err == nil && stderr != "" {
+				fmt.Println("--- stderr ---")
+				fmt.Println(stderr)
+			}
+		}
+	},
+}
+
+// historyCmd shows a command history summary (no stdout/stderr content).
+var historyCmd = &cobra.Command{
+	Use:   "history <name>",
+	Short: "Show command history summary",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/logs/history", nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: history failed: %v\n", err)
+			os.Exit(1)
+		}
+		entries, _ := result["entries"].([]interface{})
+		if len(entries) == 0 {
+			fmt.Println("no commands executed")
+			return
+		}
+		for _, e := range entries {
+			entryMap, _ := e.(map[string]interface{})
+			seq := entryMap["sequence"]
+			command := entryMap["command"]
+			exitCode := entryMap["exitCode"]
+			durationMs := entryMap["durationMs"]
+			status := ""
+			if timedOut, _ := entryMap["timedOut"].(bool); timedOut {
+				status += " [timed out]"
+			}
+			if truncated, _ := entryMap["truncated"].(bool); truncated {
+				status += " [truncated]"
+			}
+			fmt.Printf("[%v] %s (exit: %v, %vms)%s\n", seq, command, exitCode, durationMs, status)
 		}
 	},
 }

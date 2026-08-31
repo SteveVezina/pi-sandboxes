@@ -1,7 +1,7 @@
 # F17: Policy Enforcement
 
 > Source: `SPEC.md` §6 Features F17
-> Status: ⚠️ Needs re-verify
+> Status: 🟡 Partially implemented (T17.1/T17.2 secrets+egress-proxy items blocked on egress-enforcement ADR)
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -78,7 +78,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-17.6: Exec output limited to 8MiB by default
 - [x] AC-17.7: Exec timeout 120s by default
 - [x] AC-17.8: Max processes 256 by default
-- [ ] AC-34.1: No sandbox has a writable bind mount of any host directory by default *(2026-07-15: added per PROP-009)*
+- [x] AC-34.1: No sandbox has a writable bind mount of any host directory by default *(2026-07-15: added per PROP-009; 2026-08-31 verified: compat create/exec derive workspace, artifacts, and cache sources from daemon-managed named volumes (`managedVolumeName`); host paths surface only when the caller explicitly sets `WorkspaceMode: "bind"`. `CreateRequest` exposes no arbitrary-mount field. Regression guard: `pkg/api/mounts_internal_test.go`)*
 - [ ] AC-34.3: Secrets are represented as egress-proxy injection rules and are not stored as plaintext files under `~/.pi-box` *(2026-07-15: added per PROP-009)*
 
 Each criterion must be:
@@ -124,7 +124,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Tasks
 
-### T17.1: Policy engine ⚠️
+### T17.1: Policy engine 🟡 (secrets/egress-proxy items blocked on egress-enforcement ADR)
 
 **Description:** Implement policy engine. Default policy loading, per-sandbox overrides, policy validation. *(2026-07-15: secrets/cache host-decoupling policy updated per PROP-009.)*
 
@@ -133,9 +133,9 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Filesystem defaults: hostHomeMount=false, workspace=rw, artifacts=rw, caches=scoped, root=readonly
 - [x] Process defaults: maxProcesses=256, defaultTimeout=120s, maxOutput=8MiB
 - [x] Network defaults: mode=restricted, deny list, allow list
-- [ ] Secrets defaults: env=deny-by-default, sshAgent=opt-in-through-egress-proxy, gitCredentials=egress-proxy-injected
+- [ ] Secrets defaults: env=deny-by-default, sshAgent=opt-in-through-egress-proxy, gitCredentials=egress-proxy-injected *(blocked on egress-enforcement ADR — see F11/F30)*
 - [x] Per-sandbox overrides merge with defaults (override cannot relax defaults)
-- [ ] Policy rejects writable host cache bind mounts by default
+- [x] Policy rejects writable host cache bind mounts by default *(2026-08-31: structural — cache sources are always daemon-managed named volumes; no request field can inject a host cache path. Guard test in `pkg/api/mounts_internal_test.go`)*
 - [x] Policy validated on sandbox creation
 
 **Verification:**
@@ -147,7 +147,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Size:** M
 **Depends on:** None
 
-### T17.2: Backend policy enforcement
+### T17.2: Backend policy enforcement ✅ (host-mount/limit ACs verified 2026-08-31)
 
 **Description:** Implement backend-specific policy enforcement. Fast backend applies namespaces/cgroups/seccomp. Compat backend applies container hardening.
 
@@ -156,7 +156,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Compat backend enforces: no privileged, no host network, caps dropped, seccomp
 - [x] Docker socket never mounted
 - [x] Host home never mounted
-- [ ] Writable host cache bind mounts are rejected by default
+- [x] Writable host cache bind mounts are rejected by default *(2026-08-31: cache mounts are always daemon-managed named volumes; guard test `pkg/api/mounts_internal_test.go`)*
 - [x] Cloud metadata never accessible
 - [x] Process limits enforced (maxProcesses=256)
 - [x] Output limits enforced (maxOutput=8MiB)

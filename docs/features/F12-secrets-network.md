@@ -1,7 +1,7 @@
 # F11: Secrets & Network Model
 
 > Source: `SPEC.md` §6 Features F11
-> Status: 🔴 Not enforced — policy decision logic exists as an unwired library (2026-08-28: re-verified). Network mode (none/restricted/open) and default-deny targets are accepted and syntax-validated by the exec API but never applied to real sandbox network access: sandbox containers are always created with Docker's default `bridge` network regardless of declared mode, `exec.Request.NetworkMode` is stored but never read by the exec engine, and `Policy.IsAllowed`/`EgressProxy` (the actual enforcement/decision code in `pkg/network/`) are called from nowhere outside their own package and tests. This is the same architectural gap as F30 Egress Proxy (🔴 Not started) — real enforcement needs that proxy to exist. See Spec Gaps and ADR gaps below; previously-checked ACs in this doc overstated what the code does and have been reset.
+> Status: 🟢 Reviewed — ready for planning (ADR-006 Accepted 2026-08-31). The network/secrets *model* (modes, default-deny, allowlist, `exposeTo`, no-plaintext-secrets) is specified and its decision logic (`pkg/network`, `pkg/secrets`) is built and unit-tested. Runtime *enforcement* is delivered by F30 Egress Proxy tasks T30.1–T30.8 (ADR-006). F11's own tasks below now trace to those F30 tasks rather than duplicating them. The AC boxes stay unchecked until the F30 tasks land and the integration/security tests pass.
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -97,12 +97,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | **Service-layer** | Go network/secrets packages |
 | **Infrastructure** | Network namespace policy, container network policy |
 
-**ADR references:** ADR-006 (Egress Enforcement and Credential Delivery) — Proposed 2026-08-31. Answers all three open questions below: (1) `restricted` mode makes the daemon proxy the only routable outbound endpoint, set per-driver via `NetworkSpec` on `Driver.Create`; (2) proxy resolves `credential id → real value` from an in-memory `CredentialStore` fed by OS keychain / daemon env / off-`~/.pi-box` file; (3) network mode is per-sandbox (fixed at create), not per-exec.
-**ADR gaps:** Resolved by ADR-006 (pending human acceptance). Tasks stay 🔴 until Accepted + cascaded.
+**ADR references:** ADR-006 (Egress Enforcement and Credential Delivery) — Accepted 2026-08-31. Answers all three open questions below: (1) `restricted` mode makes the daemon proxy the only routable outbound endpoint, set per-driver via `NetworkSpec` on `Driver.Create`; (2) proxy resolves `credential id → real value` from an in-memory `CredentialStore` fed by OS keychain / daemon env / off-`~/.pi-box` file; (3) network mode is per-sandbox (fixed at create), not per-exec. Enforcement work is tracked as F30 T30.1–T30.8.
+**ADR gaps:** None — resolved by ADR-006.
 
 ## Tasks
 
-### T12.1: Network policy engine ⚠️ *(2026-08-28: reset — decision logic exists and is unit-tested; runtime enforcement does not exist. "Integration test" claims below were unit tests of the decision function, not tests against a real sandbox's network access — corrected.)*
+### T12.1: Network policy engine 🔴 *(2026-08-31: decision logic done + unit-tested; runtime enforcement is F30 T30.1–T30.5 per ADR-006. This task closes when those land and the "real sandbox" integration tests below pass.)*
 
 **Description:** Implement network policy engine. Domain allowlist, default deny, network mode enforcement.
 
@@ -121,11 +121,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [ ] Integration test: `restricted` mode allows only allowed domains from a real sandbox — **does not exist**
 - [ ] Integration test: `open` mode allows all network from a real sandbox — **does not exist**
 
-**Files:** `pkg/network/policy.go`, `pkg/network/modes.go`, `pkg/network/egress_policy.go`, `pkg/network/egress_proxy.go` (all unwired — no caller outside `pkg/network/` and its tests)
+**Files:** `pkg/network/policy.go`, `pkg/network/modes.go`, `pkg/network/egress_policy.go`, `pkg/network/egress_proxy.go`
 **Size:** M
-**Depends on:** F17 (Policy Enforcement — policy foundation), F30 (Egress Proxy — 🔴 Not started; real enforcement needs this to exist)
+**Depends on:** F17 (Policy Enforcement), F30 T30.1–T30.5 (Egress Proxy — 🟢 Reviewed, ADR-006)
+**Implemented by:** F30 T30.1 (policy assembly), T30.2 (proxy listener), T30.3/T30.4 (driver single-endpoint egress), T30.5 (proxy env), T30.6 (denial logging)
 
-### T12.2: Egress-proxy credential injection ⚠️ *(2026-08-28: re-verified — building blocks exist as unwired, unit-tested libraries; nothing calls them during a real clone)*
+### T12.2: Egress-proxy credential injection 🔴 *(2026-08-31: implemented by F30 T30.7 (credential registration + daemon sources) and T30.8 (injection into approved requests) per ADR-006)*
 
 **Description:** Implement egress-proxy credential injection for Git credentials. SSH agent and token use are scoped to approved outbound requests, and credentials are never readable from inside the sandbox. *(2026-07-15: AC updated per PROP-009.)*
 
@@ -141,9 +142,10 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [ ] Integration test: injected credentials not visible in sandbox environment or filesystem
 - [ ] Integration test: Git clone works with brokered credentials *(2026-08-28: reset — no such test exists; `pkg/api/sandbox_clone.go` calls plain `git clone` inside the container with no credential broker involved at all, and `EgressProxy.injectCredentials` doesn't even resolve a real secret value — it writes the literal string `"[credential-injected]"`)*
 
-**Files:** `pkg/secrets/broker.go`, `pkg/secrets/ssh.go`, `pkg/secrets/token.go`, `pkg/secrets/inject.go`, `pkg/secrets/rules.go` (all unwired — no caller outside `pkg/secrets/` and its tests)
+**Files:** `pkg/secrets/broker.go`, `pkg/secrets/ssh.go`, `pkg/secrets/token.go`, `pkg/secrets/inject.go`, `pkg/secrets/rules.go`
 **Size:** M
-**Depends on:** F17 (Policy Enforcement), F30 (Egress Proxy — 🔴 Not started)
+**Depends on:** F17 (Policy Enforcement), F30 T30.7–T30.8 (Egress Proxy — 🟢 Reviewed, ADR-006)
+**Implemented by:** F30 T30.7, T30.8
 
 ## Verification Plan
 
@@ -166,7 +168,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
 | ~~How to enforce domain allowlist in fast mode (no proxy)?~~ | F11 | **ADR-006:** fast mode also routes through the daemon proxy — network namespace `nftables` default-drop with a single accept rule for `ProxyAddr`. No separate namespace-local filter. |
-| ~~No enforcement point exists at all yet~~ (three sub-questions on network attachment, real secret resolution, per-sandbox vs per-exec) | F11, F30 | **ADR-006 (Proposed 2026-08-31):** sandbox egress enforcement architecture. Blocks F11 AC-11.1-11.5 and F30 in full until Accepted + cascaded. |
+| ~~No enforcement point exists at all yet~~ (three sub-questions on network attachment, real secret resolution, per-sandbox vs per-exec) | F11, F30 | **ADR-006 (Accepted 2026-08-31):** sandbox egress enforcement architecture. Blocks F11 AC-11.1-11.5 and F30 in full until Accepted + cascaded. |
 
 ## Out of Scope
 

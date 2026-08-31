@@ -1,7 +1,7 @@
 # F17: Policy Enforcement
 
 > Source: `SPEC.md` §6 Features F17
-> Status: 🟡 Partially implemented (T17.1/T17.2 secrets+egress-proxy items blocked on egress-enforcement ADR)
+> Status: 🟡 Partially implemented — host-mount + process/output limits enforced; AC-17.5 / AC-34.3 (git creds via egress proxy; secrets as injection rules) delivered by F30 T30.7–T30.8 per ADR-006 (Accepted 2026-08-31)
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -74,12 +74,12 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-17.2: Docker socket not mounted by default
 - [x] AC-17.3: Cloud metadata credentials not accessible
 - [x] AC-17.4: SSH private keys not mounted by default
-- [ ] AC-17.5: Git credentials brokered through the egress proxy (not dumped into environment) *(2026-07-15: AC updated per PROP-009)*
+- [ ] AC-17.5: Git credentials brokered through the egress proxy (not dumped into environment) *(2026-07-15: AC updated per PROP-009; 2026-08-31: implemented by F30 T30.8 per ADR-006)*
 - [x] AC-17.6: Exec output limited to 8MiB by default
 - [x] AC-17.7: Exec timeout 120s by default
 - [x] AC-17.8: Max processes 256 by default
 - [x] AC-34.1: No sandbox has a writable bind mount of any host directory by default *(2026-07-15: added per PROP-009; 2026-08-31 verified: compat create/exec derive workspace, artifacts, and cache sources from daemon-managed named volumes (`managedVolumeName`); host paths surface only when the caller explicitly sets `WorkspaceMode: "bind"`. `CreateRequest` exposes no arbitrary-mount field. Regression guard: `pkg/api/mounts_internal_test.go`)*
-- [ ] AC-34.3: Secrets are represented as egress-proxy injection rules and are not stored as plaintext files under `~/.pi-box` *(2026-07-15: added per PROP-009)*
+- [ ] AC-34.3: Secrets are represented as egress-proxy injection rules and are not stored as plaintext files under `~/.pi-box` *(2026-07-15: added per PROP-009; 2026-08-31: implemented by F30 T30.7 per ADR-006 — in-memory `CredentialStore`, daemon-side value sources, nothing under `~/.pi-box`)*
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -119,12 +119,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | **Service-layer** | Go policy engine in `pkg/policy/` |
 | **Infrastructure** | Backend-specific policy enforcement |
 
-**ADR references:** ADR-006 (Egress Enforcement and Credential Delivery) — Proposed 2026-08-31; governs AC-17.5 and AC-34.3 (git creds via egress proxy; secrets as injection rules, no plaintext under `~/.pi-box`).
-**ADR gaps:** AC-17.5 / AC-34.3 blocked on ADR-006 acceptance + cascade.
+**ADR references:** ADR-006 (Egress Enforcement and Credential Delivery) — Accepted 2026-08-31; governs AC-17.5 and AC-34.3, implemented by F30 T30.7–T30.8.
+**ADR gaps:** None.
 
 ## Tasks
 
-### T17.1: Policy engine 🟡 (secrets/egress-proxy items blocked on egress-enforcement ADR)
+### T17.1: Policy engine 🟡 (secrets/egress-proxy items delivered by F30 T30.7–T30.8 per ADR-006)
 
 **Description:** Implement policy engine. Default policy loading, per-sandbox overrides, policy validation. *(2026-07-15: secrets/cache host-decoupling policy updated per PROP-009.)*
 
@@ -133,7 +133,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Filesystem defaults: hostHomeMount=false, workspace=rw, artifacts=rw, caches=scoped, root=readonly
 - [x] Process defaults: maxProcesses=256, defaultTimeout=120s, maxOutput=8MiB
 - [x] Network defaults: mode=restricted, deny list, allow list
-- [ ] Secrets defaults: env=deny-by-default, sshAgent=opt-in-through-egress-proxy, gitCredentials=egress-proxy-injected *(blocked on egress-enforcement ADR — see F11/F30)*
+- [ ] Secrets defaults: env=deny-by-default, sshAgent=opt-in-through-egress-proxy, gitCredentials=egress-proxy-injected *(2026-08-31: ADR-006 Accepted; delivered by F30 T30.7–T30.8)*
 - [x] Per-sandbox overrides merge with defaults (override cannot relax defaults)
 - [x] Policy rejects writable host cache bind mounts by default *(2026-08-31: structural — cache sources are always daemon-managed named volumes; no request field can inject a host cache path. Guard test in `pkg/api/mounts_internal_test.go`)*
 - [x] Policy validated on sandbox creation

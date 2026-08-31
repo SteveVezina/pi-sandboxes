@@ -5,13 +5,14 @@
 
 ## Active Cursor
 
-**Current phase:** PROP-008/009 re-verify sweep — F1/F2/F3/F4/F5/F6/F8/F10 complete; F9 partial (2 open gaps); F17 re-verified 2026-08-31 (host-mount/limits enforced, secrets/egress-proxy ACs blocked on ADR); F11 downgraded to Not Enforced (egress ADR blocker)
+**Current phase:** PROP-008/009 re-verify sweep + M8 unblock — F1/F2/F3/F4/F5/F6/F8/F10/F16 complete; F9 partial (2 open gaps); F13 partial (cache scoping gap); F17 re-verified; ADR-006 (egress enforcement) Accepted + cascaded → F11/F30 unblocked, F30 tasks authored
 **Next work:** F1/F2/F8/F4/F3/F5/F6/F9/F10/F11 re-verified (2026-08-28). F10 gap: `history` CLI command didn't exist, `logs` only printed a one-line summary instead of full stdout/stderr — both implemented. Also fixed a pre-existing test bug (`tests/logs/logs_test.go`) that was leaking log directories into the real ~/.pi-box on every test run; ~2MB of accumulated leftovers cleaned up manually. Note: ~44 stray UUID-named dirs also sit under ~/.pi-box/sandboxes/ from tests/api/* runs (Manager always resolves via the real $HOME, not test-isolated) — not fixed, out of scope, flagging for awareness.
 F11 was significantly overstated: network mode (none/restricted/open) and default-deny targets are validated as strings and unit-tested as pure decision logic in `pkg/network/`, but nothing in the daemon ever calls that logic — sandbox containers always get Docker's default `bridge` network, `exec.Request.NetworkMode` is stored but never read, and `EgressProxy`/`Broker`/SSH/token helpers in `pkg/network` and `pkg/secrets` have zero callers outside their own tests. Downgraded F11 to 🔴 Not enforced / ⏸️ Blocked rather than implementing enforcement under time pressure — this is genuinely the same architecture gap as F30 Egress Proxy (still 🔴 Not started) and needs an ADR first (how sandboxes attach to a mode-appropriate network; how real secret values get resolved instead of the current `"[credential-injected]"` placeholder; whether network mode is per-sandbox or per-exec). Did not touch F30 or attempt enforcement — flagged as a blocker instead.
 F17 re-verified 2026-08-31: partly the same story as F11 but not entirely. The host-mount and process-limit ACs are genuinely enforced — compat create/exec always derive workspace/artifacts/cache sources from daemon-managed named volumes (`managedVolumeName` in `pkg/api/sandbox_create.go`); `CreateRequest` exposes no arbitrary-mount field; host paths only via explicit `WorkspaceMode: "bind"` opt-in. Added regression guard `pkg/api/mounts_internal_test.go`. Closed AC-34.1 + the two "writable host cache bind mount rejected" sub-items. Still blocked: AC-17.5 (git creds via egress proxy) and AC-34.3 (secrets as egress-proxy injection rules, not plaintext under ~/.pi-box) — same egress-enforcement ADR blocker as F11/F30. F17 now 🟡 partial rather than ⚠️.
 2026-08-31 continued: (a) wrote **ADR-006** (egress enforcement + credential delivery, status Proposed) — resolves the ADR gap blocking F11/F17-remainder/F30; needs human acceptance + cascade. (b) **F16 System Commands re-verified → ✅ Implemented** (all 4 commands wired, 21 tests pass, no stale "session" terms). (c) **F13 Cache Model re-verified → 🟡 partial**: cache mounts are host-bind-free (Docker named volumes, AC-12.4 ✅) BUT scoped per sandbox ID → zero cross-sandbox cache reuse (AC-12.2/12.5 reset); `pkg/cache` (proper template/runtime/user scoping) is dead code imported only by its test — same unwired-library pattern as pre-ADR-006 `pkg/network`. Cached-install benchmarks can't pass until fixed. See F13 § Implementation gaps.
-Remaining ⚠️ Needs re-verify per INDEX: F14 (Benchmarks), F15 (SDKs), F18 (Secure Backend), F22 (Remote Contexts). Next candidates: (1) cache-scoping fix for F13 (needs small PROP/ADR on scope key + shared-layer/overlay), (2) continue sweep with F15/F18/F22, (3) wait on ADR-006 acceptance to unblock F11/F30.
-**Blockers:** Lifecycle event transport ADR needed before AC-9.4 (and F4/F29's related lifecycle-event ACs) can close. Sandbox egress enforcement: **ADR-006 written 2026-08-31 (status Proposed)** — needs human acceptance, then `pi-apply-prop`-style cascade into F11/F17/F30 tasks before F11/F30 implementation can start.
+2026-08-31 (ADR-006 accepted + cascaded): ADR-005 amended with `NetworkSpec` on `Driver.Create`; F30 tasks re-authored T30.1–T30.8 (S/M sizes, checkpoint after T30.4); F11 T12.1/T12.2 now trace to F30 tasks instead of duplicating; F17 AC-17.5/AC-34.3 point at F30 T30.7–T30.8. F11 ⏸️→🟢, F30 🟡→🟢.
+Remaining ⚠️ Needs re-verify per INDEX: F14 (Benchmarks), F15 (SDKs), F18 (Secure Backend), F22 (Remote Contexts). Next candidates: (1) `/skill:pi-review-plan` on F30 T30.1–T30.8 then execute — first real M8 feature work; (2) cache-scoping fix for F13 (needs small PROP/ADR on scope key + shared-layer/overlay); (3) continue re-verify sweep F15/F18/F22.
+**Blockers:** Lifecycle event transport ADR needed before AC-9.4 (and F4/F29's related lifecycle-event ACs) can close. Sandbox egress enforcement: **ADR-006 Accepted 2026-08-31 and cascaded** — F11 → 🟢 Reviewed, F30 → 🟢 Reviewed with tasks T30.1–T30.8 authored, `Driver.Create` contract note added to ADR-005. F30 implementation is now unblocked; recommend `/skill:pi-review-plan` on the F30 task list before executing.
 
 ## Cross-Feature Dependency Graph
 
@@ -99,6 +100,11 @@ F10/F17/F19 ──────────────────────�
 32. **F26** GUI Sandbox Operations ✅
 33. **F27** GUI Settings and Diagnostics ✅
 
+### 🔵 Phase 10 — M8 agent loop and egress
+34. **F30** Egress Proxy — 🟢 Reviewed, tasks T30.1–T30.8 authored (ADR-006). NEXT: review + execute.
+35. **F29** Agent Run — 🟡 Spec written. Depends on F8, F9, F30.
+36. **F11** Secrets & Network Model — enforcement lands with F30 tasks.
+
 ## Risk Tracking
 
 | Risk | Status | Mitigation |
@@ -109,3 +115,5 @@ F10/F17/F19 ──────────────────────�
 | OCI runtime detection | New | Try multiple runtimes in priority order |
 | GUI API metadata gaps | New | Specify missing read-only daemon endpoints before coding GUI operations |
 | Desktop security drift | New | Keep GUI as thin client; daemon policy remains authoritative |
+| Egress proxy baseline does not intercept TLS — allowlisted TLS conn can carry arbitrary bytes | Active | Accepted per ADR-006 (domain-level allowlist is the stated F11 model); transparent redirect + TLS MITM is a documented follow-up |
+| `restricted`-mode single-endpoint networking differs per backend (nftables / OCI network / guest firewall) | Active | ADR-006 isolates it to each driver's `Create`; checkpoint after F30 T30.4 verifies metadata-IP unreachable in both fast and compat |

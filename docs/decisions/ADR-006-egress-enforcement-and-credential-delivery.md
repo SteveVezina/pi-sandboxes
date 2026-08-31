@@ -2,13 +2,18 @@
 
 ## Status
 
-Proposed (2026-08-31) — awaiting human acceptance.
+Accepted (2026-08-31, human-accepted).
 
-Blocks: F11 (Secrets & Network Model), F30 (Egress Proxy), and the secrets /
+Unblocks: F11 (Secrets & Network Model), F30 (Egress Proxy), and the secrets /
 egress-proxy acceptance criteria of F17 (Policy Enforcement). No block-spec
 amendment is required — `SPEC.md` §6 (F11, F30) and §8 already mandate the
-behaviour; this ADR only chooses the backend-neutral mechanism, which is the
+behaviour; this ADR only chooses the backend-neutral mechanism, which was the
 open ADR gap recorded in F11, F17, and F30.
+
+Cascade (2026-08-31): `Driver.Create` contract extended with `NetworkSpec`
+(amends ADR-005 §1); F30 tasks T30.1–T30.3 unblocked; F11 tasks re-scoped and
+unblocked; F17 AC-17.5 / AC-34.3 unblocked. F11 INDEX status ⏸️ Blocked →
+🟢 Reviewed; F30 spec status 🟡 Spec written → 🟢 Reviewed.
 
 ## Context
 

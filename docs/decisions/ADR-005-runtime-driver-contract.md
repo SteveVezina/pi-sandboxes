@@ -29,6 +29,8 @@ F19 specified runtime detection and selection but never specified a driver lifec
 
 *(Updated 2026-07-15 per PROP-009: lifecycle identity is named sandbox ID in the public/runtime-neutral contract; connection-scoped protocols may still use "session" when that is their domain term.)*
 
+*(Updated 2026-08-31 per ADR-006: `Driver.Create` gains a `NetworkSpec{Mode, ProxyAddr}` input. Egress mode is the one security control that is a driver input rather than a daemon special case — each driver is responsible for making the daemon egress proxy the only routable outbound endpoint in `restricted` mode. Everything else about egress (allowlist evaluation, credential resolution, denial logging) stays runtime-neutral above the driver.)*
+
 ## References
 
 - `SPEC.md` §14.7.5 Runtime driver contract

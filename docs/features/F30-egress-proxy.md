@@ -1,7 +1,7 @@
 # F30: Egress Proxy
 
 > Source: `SPEC.md` §6 Features F30
-> Status: 🟡 Spec written
+> Status: 🟢 Reviewed — ready for planning (ADR-006 Accepted 2026-08-31)
 > Category: Service-layer / Security
 
 ## Definition (from block spec)
@@ -59,64 +59,159 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | **Security** | Credential injection rules and redaction |
 | **Runtime integration** | Route sandbox outbound traffic through proxy in restricted mode |
 
-**ADR references:** ADR-006 (Egress Enforcement and Credential Delivery) — Proposed 2026-08-31; tasks stay 🔴 until Accepted + cascaded.
-**ADR gaps:** Resolved by ADR-006 (pending acceptance).
+**ADR references:** ADR-006 (Egress Enforcement and Credential Delivery) — Accepted 2026-08-31. Governs proxy shape, `NetworkSpec` driver input, credential resolution, and the no-TLS-MITM baseline.
+**ADR gaps:** None — resolved by ADR-006.
 
 ## Tasks
 
-### T30.1: Proxy policy model
+> Re-scoped 2026-08-31 per ADR-006 (Accepted). Old T30.1–T30.3 (M/L/L) split
+> into XS–M tasks. All 🔴 Not started.
 
-**Description:** Define allowlist and credential-injection policy evaluated by the daemon-owned egress proxy.
+### T30.1: Per-sandbox egress policy assembly 🔴
+
+**Description:** Build an `EgressPolicy` per sandbox at create time from `DefaultAllowlist` minus `DefaultDeny` plus any per-sandbox allowlist additions, and store it on the sandbox record keyed by sandbox ID. Wire `Mode.IsAllowed` / `EgressPolicy.Evaluate` — currently callerless — into this path.
 
 **Acceptance criteria:**
-- [ ] Policy supports host/domain allowlist entries
-- [ ] Policy supports per-credential `exposeTo` rules
-- [ ] Policy rejects plaintext secret file storage under `~/.pi-box`
-- [ ] Policy decisions redact credentials in logs
+- [ ] `CreateRequest` accepts `network.mode` (`none`|`restricted`|`open`, default `restricted`) and optional `network.allow` extra hosts
+- [ ] Per-sandbox `EgressPolicy` built and retrievable by sandbox ID
+- [ ] `DefaultDeny` always subtracted, even if a user allow entry matches (cannot relax default deny — F17 consistency)
+- [ ] `open` requires explicit request; never chosen by default
 
 **Verification:**
-- [ ] Unit tests for allow/deny decisions
-- [ ] Unit tests for redaction
+- [ ] Unit: policy assembly (default, with extras, deny-wins)
+- [ ] `go test ./pkg/network/...`
 
-**Files:** `pkg/network/egress_policy.go`, `pkg/secrets/rules.go`
+**Files:** `pkg/network/egress_policy.go`, `pkg/api/sandbox_create.go`, `pkg/sandbox/meta.go`
+**Size:** S
+**Depends on:** None
+
+### T30.2: Daemon egress proxy listener 🔴
+
+**Description:** Start one `EgressProxy` HTTP/CONNECT listener per daemon, bound to a loopback/bridge address. Resolve the per-sandbox policy on each request via a sandbox-identifying token (proxy auth header or per-sandbox listener port). Refuse non-allowlisted hosts with `403`.
+
+**Acceptance criteria:**
+- [ ] Proxy listener starts with the daemon and is addressable as `ProxyAddr`
+- [ ] `CONNECT` (HTTPS tunnel) and plaintext HTTP forwarding both work
+- [ ] Each request is evaluated against the originating sandbox's policy
+- [ ] Non-allowlisted host → `403`, connection refused
+
+**Verification:**
+- [ ] Integration: allowlisted host reachable through proxy
+- [ ] Integration: non-allowlisted host refused
+
+**Files:** `pkg/network/egress_proxy.go`, `pkg/daemon/`
 **Size:** M
-**Depends on:** F17
-
-### T30.2: Restricted-mode proxy routing
-
-**Description:** Route restricted-mode sandbox outbound traffic through the daemon-owned proxy.
-
-**Acceptance criteria:**
-- [ ] Restricted-mode HTTP(S) egress reaches allowlisted domains through proxy
-- [ ] Non-allowlisted egress is denied
-- [ ] Denials are recorded in logs/history
-- [ ] Open and none modes preserve their specified semantics
-
-**Verification:**
-- [ ] Integration test: allowlisted Git/registry request succeeds
-- [ ] Integration test: non-allowlisted egress is denied and logged
-
-**Files:** `pkg/network/egress_proxy.go`, backend network integration files
-**Size:** L
 **Depends on:** T30.1
 
-### T30.3: Credential injection
+### T30.3: `NetworkSpec` driver contract + compat single-endpoint egress 🔴
 
-**Description:** Inject scoped credentials into approved outbound requests without exposing them inside the sandbox.
+**Description:** Add `NetworkSpec{Mode, ProxyAddr}` to `Driver.Create` (per ADR-006). Compat/secure (OCI) driver: attach the container to a daemon-managed network whose only reachable non-container endpoint is the proxy (or `--network none` + host proxy + egress firewall); keep `--cap-drop=ALL`, no `--network host`.
 
 **Acceptance criteria:**
-- [ ] Git token injection works for approved Git hosts
-- [ ] Registry auth injection works for approved registries
-- [ ] Credential is absent from sandbox environment, files, process args, and command output
-- [ ] Credential value is redacted from daemon logs
+- [ ] `NetworkSpec` on `Driver.Create`; all drivers compile against it
+- [ ] `restricted`: container can reach only `ProxyAddr`; `169.254.169.254`, host gateway, host localhost unreachable
+- [ ] `none`: no outbound route
+- [ ] `open`: unrestricted (opt-in only)
 
 **Verification:**
-- [ ] Security test: token not readable from inside sandbox
-- [ ] Integration test: authenticated Git clone succeeds through proxy
+- [ ] Integration (compat): `curl 169.254.169.254` from sandbox fails in `restricted`
+- [ ] Integration (compat): direct `curl https://example.com` fails; via proxy env succeeds for allowlisted host
 
-**Files:** `pkg/secrets/inject.go`, `pkg/network/egress_proxy.go`
-**Size:** L
+**Files:** `pkg/runtime/driver.go`, `pkg/runtime/compat/`, `pkg/runtime/oci/cli.go`, `pkg/api/sandbox_create.go`
+**Size:** M
 **Depends on:** T30.2
+
+### T30.4: Fast backend single-endpoint egress 🔴
+
+**Description:** Fast driver: sandbox network namespace with veth to a daemon-owned bridge; `nftables` default-drop egress with a single accept rule for `ProxyAddr`. `HTTP_PROXY`/`HTTPS_PROXY` env still set.
+
+**Acceptance criteria:**
+- [ ] `restricted`: namespace can reach only `ProxyAddr`
+- [ ] `none`: namespace has no external route
+- [ ] Metadata IP and host gateway unreachable in `restricted`
+
+**Verification:**
+- [ ] Integration (fast, Linux): same egress negative tests as T30.3
+
+**Files:** `pkg/runtime/fast/`, `pkg/runtime/fast/mounts.go`
+**Size:** M
+**Depends on:** T30.2
+
+### T30.5: Proxy env injection into exec 🔴
+
+**Description:** Inject `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`, and `GIT_*` proxy env into every exec in a `restricted` sandbox so proxy-aware tooling works without TLS interception.
+
+**Acceptance criteria:**
+- [ ] Restricted-mode exec environment contains proxy vars pointing at `ProxyAddr`
+- [ ] `none`/`open` modes do not inject proxy vars
+- [ ] User-supplied env cannot unset the proxy vars in `restricted`
+
+**Verification:**
+- [ ] Unit: env assembly per mode
+- [ ] Integration: `npm`/`pip` install through proxy for allowlisted registry
+
+**Files:** `pkg/api/sandbox_exec.go`, exec engine env assembly
+**Size:** S
+**Depends on:** T30.3
+
+### T30.6: Egress denial logging 🔴
+
+**Description:** Record each proxy denial (and optionally allow) as an entry in the originating sandbox's logs/history (F10), host only, credentials redacted via `secrets.Redact`.
+
+**Acceptance criteria:**
+- [ ] Denied egress appears in `pi-box logs`/`history` for that sandbox
+- [ ] No credential material in the log line
+- [ ] Allow decisions optionally recorded at debug level
+
+**Verification:**
+- [ ] Integration: denied request produces a redacted history entry
+
+**Files:** `pkg/network/egress_proxy.go`, `pkg/logs/` (or F10 log sink)
+**Size:** S
+**Depends on:** T30.2
+
+### T30.7: Credential registration API + daemon sources 🔴
+
+**Description:** `POST /v1/credentials` → `{id, type, hosts, injectAs}` + value held in the in-memory `CredentialStore` only. Daemon resolves real values from OS keychain / daemon env / off-`~/.pi-box` file (config-named). Nothing written under `~/.pi-box`.
+
+**Acceptance criteria:**
+- [ ] `POST /v1/credentials` registers a credential rule; value never persisted to disk
+- [ ] Daemon credential-source resolution order: keychain → daemon env → configured file path outside `~/.pi-box`
+- [ ] `GET`/list returns rules with values redacted
+- [ ] Sandbox create/exec references credentials by `id`
+
+**Verification:**
+- [ ] Unit: source resolution order, no-disk-write assertion
+- [ ] Integration: register → referenced by sandbox
+
+**Files:** `pkg/api/credentials.go` (new), `pkg/secrets/rules.go`, `pkg/secrets/broker.go`
+**Size:** M
+**Depends on:** None
+
+### T30.8: Credential injection into approved requests 🔴
+
+**Description:** Proxy resolves `id → value` at request time and injects: git-token via the in-sandbox git credential helper over the proxy control channel (scoped to approved host); registry-auth as the `Authorization` header on the forwarded request. Replace the `"[credential-injected]"` placeholder in `EgressProxy.injectCredentials`.
+
+**Acceptance criteria:**
+- [ ] Authenticated git clone of an approved private host succeeds through the proxy
+- [ ] Registry auth injected for approved registry host
+- [ ] Credential absent from sandbox env, files, process args, command output
+- [ ] Credential value redacted from daemon logs
+
+**Verification:**
+- [ ] Security test: token not readable from inside sandbox (env dump, `/proc`, fs scan)
+- [ ] Integration: authenticated git clone through proxy
+
+**Files:** `pkg/network/egress_proxy.go`, `pkg/secrets/inject.go`
+**Size:** M
+**Depends on:** T30.7, T30.3
+
+### Checkpoint: After T30.1–T30.4
+
+- [ ] All tests pass; build clean
+- [ ] `restricted` sandbox provably cannot reach `169.254.169.254` in both fast and compat
+- [ ] Contract compliance: `NetworkSpec` matches ADR-006
+- [ ] Human review before credential work (T30.7–T30.8)
 
 ## Verification Plan
 
@@ -137,7 +232,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
-| ~~Which backend-neutral mechanism routes all restricted-mode traffic through the proxy?~~ | F30, F3, F4, F18, F20 | **ADR-006 (Proposed 2026-08-31):** `NetworkSpec{Mode, ProxyAddr}` added to `Driver.Create`; each driver makes `ProxyAddr` the only routable outbound endpoint in `restricted` mode. |
+| ~~Which backend-neutral mechanism routes all restricted-mode traffic through the proxy?~~ | F30, F3, F4, F18, F20 | **ADR-006 (Accepted 2026-08-31):** `NetworkSpec{Mode, ProxyAddr}` added to `Driver.Create`; each driver makes `ProxyAddr` the only routable outbound endpoint in `restricted` mode. |
 
 ## Out of Scope
 

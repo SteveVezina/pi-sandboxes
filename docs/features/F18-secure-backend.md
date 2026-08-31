@@ -1,7 +1,7 @@
 # F18: Secure Backend
 
 > Source: `SPEC.md` §6 Features F18
-> Status: ✅ Implemented *(2026-07-15: PROP-008 T18.1 secure backend rebuilt on shared OCI engine)*
+> Status: ⚠️ Re-open (2026-08-31) — `pkg/runtime/gvisor/runtime.go` does not compile against the current `oci.Engine`. It references symbols removed in the PROP-008 OCI-engine refactor: `oci.NewEngine`, `oci.EngineConfig`, `oci.ImageRef`, `oci.ContainerSpec.{ImageID,UserNS,MountNS,PIDNS}`, `SandboxSpec.Workspace`. `GOOS=linux go build ./pkg/runtime/gvisor/` fails. The darwin test suite never caught this because the file is `//go:build linux`. The 2026-08-31 F18 "re-verify" was darwin-only and missed it. Needs a fix pass on a Linux host: migrate the gVisor driver onto the shared OCI engine like compat did (thin `runsc` runtime handler). *(Prior: 2026-07-15 PROP-008 T18.1 claimed rebuilt on shared OCI engine — the claim did not hold.)*
 > Category: Service-layer / Infrastructure
 
 ## Definition (from block spec)

@@ -64,27 +64,10 @@ func TestCreateContainer(t *testing.T) {
 	if c.Spec.Privileged {
 		t.Error("Container should not be privileged by default")
 	}
-	if c.Spec.NetworkMode != "bridge" {
-		t.Errorf("Expected network mode 'bridge', got '%s'", c.Spec.NetworkMode)
-	}
-}
-
-func TestCreateContainer_NetworkDefault(t *testing.T) {
-	requireLocalDockerImage(t, "debian:slim")
-
-	spec := &compat.ContainerSpec{
-		ID:    "test-net",
-		Image: "debian:slim",
-	}
-
-	c, err := compat.CreateContainer(spec)
-	if err != nil {
-		t.Fatalf("CreateContainer failed: %v", err)
-	}
-	defer c.Destroy()
-
-	if c.Spec.NetworkMode != "bridge" {
-		t.Errorf("Expected default network 'bridge', got '%s'", c.Spec.NetworkMode)
+	// Egress mode defaults to empty → bridge (see oci.egressArgs); explicit
+	// none/restricted come from the sandbox's persisted network policy.
+	if c.Spec.Network.Mode != "" {
+		t.Errorf("expected default (empty) egress mode, got %q", c.Spec.Network.Mode)
 	}
 }
 

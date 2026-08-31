@@ -19,13 +19,17 @@ const DefaultCommandTimeout = 2 * time.Minute
 // The caller owns sandbox identity; the engine returns the runtime
 // object ID and never mutates the caller's identifiers.
 type ContainerSpec struct {
-	Name        string
-	Image       string
-	Workspace   string
-	Artifacts   string
-	Caches      map[string]string
-	NetworkMode string
-	Limits      pruntime.ResourceLimits
+	// SandboxID is the stable user-facing sandbox identity. The engine
+	// uses it as the egress-proxy auth identity (ADR-006); it never
+	// becomes the runtime object ID.
+	SandboxID string
+	Name      string
+	Image     string
+	Workspace string
+	Artifacts string
+	Caches    map[string]string
+	Network   pruntime.NetworkSpec
+	Limits    pruntime.ResourceLimits
 }
 
 // ExecResult holds the result of a container exec.

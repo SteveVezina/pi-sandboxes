@@ -38,6 +38,15 @@ type ResourceLimits struct {
 	OpenFiles       int     `json:"open_files,omitempty"`
 }
 
+// NetworkSpec is the driver-facing egress configuration (ADR-006). In
+// restricted mode the driver must make ProxyAddr the only reachable
+// outbound endpoint; none removes all outbound routing; open is
+// unrestricted (opt-in).
+type NetworkSpec struct {
+	Mode      string `json:"mode"`                 // none | restricted | open
+	ProxyAddr string `json:"proxy_addr,omitempty"` // daemon egress proxy host:port; set iff Mode == restricted
+}
+
 // SandboxSpec is the driver-facing creation request. Policy evaluation,
 // template resolution, and path validation happen above this layer.
 type SandboxSpec struct {
@@ -48,7 +57,7 @@ type SandboxSpec struct {
 	ArtifactsPath string            `json:"artifacts_path"`
 	CachePaths    map[string]string `json:"cache_paths,omitempty"`
 	Env           map[string]string `json:"env,omitempty"`
-	NetworkMode   string            `json:"network_mode,omitempty"`
+	Network       NetworkSpec       `json:"network,omitempty"`
 	Limits        ResourceLimits    `json:"limits"`
 }
 

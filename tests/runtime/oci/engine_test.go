@@ -128,6 +128,82 @@ func TestCLIEngine_Create_UsesNamedVolumesWithoutHostWorkspaceBind(t *testing.T)
 	}
 }
 
+func TestCLIEngine_Create_EgressNoneUsesNetworkNone(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	binary, argsFile := fakeCLI(t, "echo abc\n")
+	eng := oci.NewDockerEngine(binary)
+
+	_, err := eng.Create(context.Background(), &oci.ContainerSpec{
+		SandboxID: "s1", Name: "pi-sandbox-s1", Image: "debian:bookworm-slim",
+		Network: pruntime.NetworkSpec{Mode: "none"},
+	})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	recorded := readFile(t, argsFile)
+	if !strings.Contains(recorded, "--network none") {
+		t.Errorf("none mode must use --network none; got: %s", recorded)
+	}
+	if strings.Contains(recorded, "HTTP_PROXY") {
+		t.Errorf("none mode must not inject proxy env; got: %s", recorded)
+	}
+}
+
+func TestCLIEngine_Create_EgressRestrictedInjectsSandboxScopedProxy(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	binary, argsFile := fakeCLI(t, "echo abc\n")
+	eng := oci.NewDockerEngine(binary)
+
+	_, err := eng.Create(context.Background(), &oci.ContainerSpec{
+		SandboxID: "sbx-42", Name: "pi-sandbox-sbx-42", Image: "debian:bookworm-slim",
+		Network: pruntime.NetworkSpec{Mode: "restricted", ProxyAddr: "127.0.0.1:9002"},
+	})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	recorded := readFile(t, argsFile)
+	for _, want := range []string{
+		"--network bridge",
+		"-e HTTP_PROXY=http://sbx-42:x@127.0.0.1:9002",
+		"-e HTTPS_PROXY=http://sbx-42:x@127.0.0.1:9002",
+		"-e NO_PROXY=localhost,127.0.0.1,::1",
+	} {
+		if !strings.Contains(recorded, want) {
+			t.Errorf("restricted mode missing %q; got: %s", want, recorded)
+		}
+	}
+}
+
+func TestCLIEngine_Create_EgressRestrictedWithoutProxyAddrIsBridgeOnly(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	binary, argsFile := fakeCLI(t, "echo abc\n")
+	eng := oci.NewDockerEngine(binary)
+
+	_, err := eng.Create(context.Background(), &oci.ContainerSpec{
+		SandboxID: "s1", Name: "pi-sandbox-s1", Image: "debian:bookworm-slim",
+		Network: pruntime.NetworkSpec{Mode: "restricted"},
+	})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	recorded := readFile(t, argsFile)
+	if strings.Contains(recorded, "HTTP_PROXY") {
+		t.Errorf("no ProxyAddr → no proxy env; got: %s", recorded)
+	}
+	if !strings.Contains(recorded, "--network bridge") {
+		t.Errorf("want --network bridge; got: %s", recorded)
+	}
+}
+
+func readFile(t *testing.T, p string) string {
+	t.Helper()
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatalf("read %s: %v", p, err)
+	}
+	return string(b)
+}
+
 func TestCLIEngine_Create_AppliesResourceLimits(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	binary, argsFile := fakeCLI(t, "echo abc\n")

@@ -105,21 +105,20 @@ func limitArgs(l pruntime.ResourceLimits) []string {
 // createArgs builds the container creation arguments — the single place
 // hardened defaults are encoded.
 func (e *CLIEngine) createArgs(spec *ContainerSpec) ([]string, error) {
-	networkMode := spec.NetworkMode
-	if networkMode == "" {
-		networkMode = "bridge"
-	}
+	dockerNet, proxyEnv := egressArgs(spec.SandboxID, spec.Network)
+
 	args := []string{
 		"run", "-d",
 		"--name", spec.Name,
 		"--label", "pi-sandbox=true",
-		"--network", networkMode,
+		"--network", dockerNet,
 		"--cap-drop", "ALL",
 		"--security-opt", "no-new-privileges",
 		"--read-only",
 		"--tmpfs", "/tmp:rw,nosuid,noexec",
 		"--tmpfs", "/home/agent:rw,nosuid",
 	}
+	args = append(args, proxyEnv...)
 
 	security, err := e.securityArgs()
 	if err != nil {
@@ -140,6 +139,38 @@ func (e *CLIEngine) createArgs(spec *ContainerSpec) ([]string, error) {
 	}
 
 	return append(args, spec.Image, "/bin/sh", "-c", "sleep infinity"), nil
+}
+
+// egressArgs maps a NetworkSpec onto the Docker/Podman network flag and
+// the proxy environment (ADR-006 / F30 T30.3).
+//
+//   - none:       --network none — no outbound routing.
+//   - restricted: --network bridge plus HTTP(S)_PROXY pointed at the daemon
+//     egress proxy, authenticated as the sandbox. Full L3 single-endpoint
+//     isolation (drop everything except the proxy) is added for Linux hosts
+//     in T30.4; until then restricted relies on the proxy env, so only
+//     proxy-aware tooling is constrained.
+//   - open / unset: --network bridge, no proxy.
+func egressArgs(sandboxID string, n pruntime.NetworkSpec) (dockerNet string, env []string) {
+	switch n.Mode {
+	case "none":
+		return "none", nil
+	case "restricted":
+		if n.ProxyAddr == "" || sandboxID == "" {
+			return "bridge", nil
+		}
+		proxyURL := fmt.Sprintf("http://%s:x@%s", sandboxID, n.ProxyAddr)
+		return "bridge", []string{
+			"-e", "HTTP_PROXY=" + proxyURL,
+			"-e", "HTTPS_PROXY=" + proxyURL,
+			"-e", "http_proxy=" + proxyURL,
+			"-e", "https_proxy=" + proxyURL,
+			"-e", "NO_PROXY=localhost,127.0.0.1,::1",
+			"-e", "no_proxy=localhost,127.0.0.1,::1",
+		}
+	default:
+		return "bridge", nil
+	}
 }
 
 func (e *CLIEngine) run(ctx context.Context, args ...string) (string, error) {

@@ -30,10 +30,9 @@ func TestCreateDockerContainer_TimesOutWhenRuntimeStalls(t *testing.T) {
 	})
 
 	spec := &ContainerSpec{
-		ID:          "timeout-test",
-		Name:        "pi-sandbox-timeout-test",
-		Image:       "debian:slim",
-		NetworkMode: "bridge",
+		ID:    "timeout-test",
+		Name:  "pi-sandbox-timeout-test",
+		Image: "debian:slim",
 	}
 
 	_, err := CreateContainer(spec)

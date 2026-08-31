@@ -158,6 +158,7 @@ func execInContainer(store *sandbox.Store, id string, meta *sandbox.Meta, ctx co
 		Image:     "debian:bookworm-slim",
 		Workspace: compatWorkspaceSource(id, meta),
 		Artifacts: compatArtifactsSource(id),
+		Network:   sandboxEgressNetwork(meta),
 		Mode:      meta.Mode,
 		Template:  meta.Template,
 	}

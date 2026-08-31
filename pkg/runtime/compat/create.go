@@ -16,17 +16,17 @@ var containerCommandTimeout = 2 * time.Minute
 
 // ContainerSpec represents a sandbox container configuration.
 type ContainerSpec struct {
-	ID          string
-	Name        string
-	Image       string
-	Workspace   string
-	Artifacts   string
-	Caches      map[string]string
-	NetworkMode string
-	Privileged  bool
-	Template    string
-	Mode        string
-	Limits      pruntime.ResourceLimits
+	ID         string
+	Name       string
+	Image      string
+	Workspace  string
+	Artifacts  string
+	Caches     map[string]string
+	Network    pruntime.NetworkSpec
+	Privileged bool
+	Template   string
+	Mode       string
+	Limits     pruntime.ResourceLimits
 }
 
 // defaultLimits are the SPEC.md §20/§22 sandbox defaults: 2 CPUs, 2 GiB
@@ -92,10 +92,6 @@ func CreateContainer(spec *ContainerSpec) (*Container, error) {
 		spec.Name = ContainerName(spec.ID)
 	}
 
-	// Hardened defaults
-	if spec.NetworkMode == "" {
-		spec.NetworkMode = "bridge"
-	}
 	spec.Privileged = false
 	if spec.Limits == (pruntime.ResourceLimits{}) {
 		spec.Limits = defaultLimits()
@@ -107,13 +103,14 @@ func CreateContainer(spec *ContainerSpec) (*Container, error) {
 	}
 
 	containerID, err := eng.Create(context.Background(), &oci.ContainerSpec{
-		Name:        spec.Name,
-		Image:       spec.Image,
-		Workspace:   spec.Workspace,
-		Artifacts:   spec.Artifacts,
-		Caches:      spec.Caches,
-		NetworkMode: spec.NetworkMode,
-		Limits:      spec.Limits,
+		SandboxID: spec.ID,
+		Name:      spec.Name,
+		Image:     spec.Image,
+		Workspace: spec.Workspace,
+		Artifacts: spec.Artifacts,
+		Caches:    spec.Caches,
+		Network:   spec.Network,
+		Limits:    spec.Limits,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create container: %w", err)

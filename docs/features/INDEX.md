@@ -35,7 +35,7 @@ Dashboard of all features for this project.
 | [F15](F16-sdk.md) | SDKs | 🟢 Reviewed | ✅ Implemented (re-verified 2026-08-31) | M3 | F2 |
 | [F16](F10-system-commands.md) | System Commands | 🟢 Reviewed | ✅ Implemented (re-verified 2026-08-31) | M1 | F8 |
 | [F17](F17-policy-enforcement.md) | Policy Enforcement | 🟡 Re-verified 2026-08-31 | 🟡 host-mount + limits enforced; AC-17.5/AC-34.3 delivered by F30 T30.7–T30.8 (ADR-006) | M2 | F3, F4, F11, F30 |
-| [F18](F18-secure-backend.md) | Secure Backend | 🟢 Reviewed | ✅ Implemented | M4 | F4, F17, F19 |
+| [F18](F18-secure-backend.md) | Secure Backend | ⚠️ Re-open 2026-08-31 | 🔴 `pkg/runtime/gvisor` doesn't compile on Linux (stale post-PROP-008) — needs Linux-host fix | M4 | F4, F17, F19 |
 | [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | 🟢 Reviewed | ✅ Implemented | M4 | F3, F4, F18 |
 | [F20](F20-microvm-backend.md) | MicroVM Backend | 🟢 Reviewed | ✅ Implemented | M5 | F19, F21 |
 | [F21](F21-microvm-guest-control-plane.md) | MicroVM Guest Control Plane | 🟢 Reviewed | ✅ Implemented | M5 | F20 |
@@ -46,7 +46,7 @@ Dashboard of all features for this project.
 | [F26](F26-gui-sandbox-operations.md) | GUI Sandbox Operations | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M7 | F7, F6, F9, F10, F13, F24 |
 | [F27](F27-gui-settings-diagnostics.md) | GUI Settings and Diagnostics | 🟢 Reviewed | ✅ Implemented | M7 | F16, F17, F19, F22, F24, F25 |
 | [F29](F29-agent-run.md) | Agent Run | 🟡 Spec written | 🔴 Not started | M8 | F8, F9, F30 |
-| [F30](F30-egress-proxy.md) | Egress Proxy | 🔵 In progress (ADR-006 Accepted 2026-08-31) | 🟡 2/8 tasks — T30.1 egress policy + T30.2 daemon proxy listener done | M8 | F11, F17 |
+| [F30](F30-egress-proxy.md) | Egress Proxy | 🔵 In progress (ADR-006 Accepted 2026-08-31) | 🟡 T30.1+T30.2 done, T30.3 partial (contract + none-mode + proxy-env); T30.4 L3 isolation needs Linux host | M8 | F11, F17 |
 
 ## Milestone Summary
 
@@ -55,7 +55,7 @@ Dashboard of all features for this project.
 | M1: Local Linux MVP | F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F14, F16 | 🟡 Only F9 open (output-delivery event emission + size validation) |
 | M2: Hardening & Cache | F11, F12, F13, F17 | ⚠️ F11 enforcement pending (F30 tasks), F13 cache-scoping gap, F17 partial |
 | M3: Agent Integrations | F15 | ✅ Implemented |
-| M4: Secure Backend | F18, F19 | ✅ Implemented |
+| M4: Secure Backend | F18, F19 | ⚠️ F19 done; F18 gVisor driver broken on Linux (found 2026-08-31) |
 | M5: MicroVM Backend | F20, F21 | ✅ Implemented |
 | M6: Remote Daemon Mode | F22, F23 | ✅ Implemented |
 | M7: Cross-Platform GUI Workbench | F24, F25, F26, F27 | ✅ Implemented |

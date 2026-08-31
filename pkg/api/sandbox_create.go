@@ -155,6 +155,9 @@ func createCompatContainer(store *sandbox.Store, sandboxID, templateName string)
 		Artifacts: compatArtifactsSource(sandboxID),
 		Caches:    caches,
 	}
+	if meta, err := store.Get(sandboxID); err == nil {
+		spec.Network = sandboxEgressNetwork(meta)
+	}
 
 	container, err := compat.CreateContainer(spec)
 	if err != nil {

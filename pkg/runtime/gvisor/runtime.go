@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pi-sandbox/pi/pkg/runtime/oci"
 	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
+	"github.com/pi-sandbox/pi/pkg/runtime/oci"
 )
 
 const (
@@ -73,19 +73,19 @@ func (r *Runtime) IsAvailable() bool {
 // Probe returns a capability report for this runtime.
 func (r *Runtime) Probe(ctx context.Context) pruntime.CapabilityReport {
 	report := pruntime.CapabilityReport{
-		Available:      r.IsAvailable(),
-		KernelBoundary: true,
-		Rootless:       false,
-		UserNamespace:  true,
-		Seccomp:        true,
+		Available:        r.IsAvailable(),
+		KernelBoundary:   true,
+		Rootless:         false,
+		UserNamespace:    true,
+		Seccomp:          true,
 		NetworkNamespace: true,
-		EgressPolicy:   true,
-		Snapshot:       true,
-		WarmExec:       true,
-		OCIImages:      true,
-		HardwareVirt:   false,
-		IsolationTier:  3,
-		CompatTier:     3,
+		EgressPolicy:     true,
+		Snapshot:         true,
+		WarmExec:         true,
+		OCIImages:        true,
+		HardwareVirt:     false,
+		IsolationTier:    3,
+		CompatTier:       3,
 	}
 	if !r.IsAvailable() {
 		report.Reason = "gVisor (runsc) not installed"
@@ -124,16 +124,16 @@ func (r *Runtime) Create(ctx context.Context, spec pruntime.SandboxSpec) (prunti
 
 	// Create the container using the shared OCI engine
 	containerID, err := r.eng.Create(ctx, oci.ContainerSpec{
-		ImageID:     imageID,
-		SandboxID:   spec.SandboxID,
-		Workspace:   spec.Workspace,
-		Artifacts:   spec.Artifacts,
-		Caches:      spec.Caches,
-		UserNS:      true,
-		MountNS:     true,
-		PIDNS:       true,
-		NetworkMode: spec.NetworkMode,
-		Limits:      spec.Limits,
+		ImageID:   imageID,
+		SandboxID: spec.SandboxID,
+		Workspace: spec.Workspace,
+		Artifacts: spec.Artifacts,
+		Caches:    spec.Caches,
+		UserNS:    true,
+		MountNS:   true,
+		PIDNS:     true,
+		Network:   spec.Network,
+		Limits:    spec.Limits,
 	})
 	if err != nil {
 		return pruntime.Handle{}, fmt.Errorf("create container: %w", err)
@@ -204,7 +204,7 @@ func (r *Runtime) Stats(ctx context.Context, h pruntime.Handle) (pruntime.Runtim
 		return pruntime.RuntimeStats{}, fmt.Errorf("stats: %w", err)
 	}
 	return pruntime.RuntimeStats{
-		MemoryUsageBytes: stats.MemoryUsageBytes,
+		MemoryUsageBytes:  stats.MemoryUsageBytes,
 		CPUUsageNanoCores: stats.CPUUsageNanoCores,
 	}, nil
 }

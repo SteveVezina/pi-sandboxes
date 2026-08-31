@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/pi-sandbox/pi/pkg/api"
 	"github.com/pi-sandbox/pi/pkg/network"
 	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
@@ -122,6 +123,7 @@ func (d *Daemon) Start() error {
 		} else {
 			proxy := network.NewProxyServer(d.egressPolicyResolver, nil)
 			d.proxyServer = &http.Server{Handler: proxy}
+			api.SetEgressProxyAddr(d.ProxyAddr())
 			go func() {
 				if err := d.proxyServer.Serve(proxyListener); err != nil && err != http.ErrServerClosed {
 					fmt.Fprintf(os.Stderr, "daemon: egress proxy serve error: %v\n", err)

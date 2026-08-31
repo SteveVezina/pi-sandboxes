@@ -1,7 +1,7 @@
 # F30: Egress Proxy
 
 > Source: `SPEC.md` §6 Features F30
-> Status: 🔵 In progress — T30.1 (per-sandbox egress policy) + T30.2 (daemon proxy listener) done; T30.3–T30.8 open (ADR-006 Accepted 2026-08-31)
+> Status: 🔵 In progress — T30.1 + T30.2 done; T30.3 partial (contract + none-mode + proxy-env; L3 isolation → T30.4); T30.4–T30.8 open. T30.4 needs a Linux host. (ADR-006 Accepted 2026-08-31)
 > Category: Service-layer / Security
 
 ## Definition (from block spec)
@@ -107,39 +107,45 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Size:** M
 **Depends on:** T30.1
 
-### T30.3: `NetworkSpec` driver contract + compat single-endpoint egress 🔴
+### T30.3: `NetworkSpec` driver contract + compat proxy wiring 🟡 *(2026-08-31 — contract + none-mode + proxy-env done; compat L3 isolation folded into T30.4)*
 
-**Description:** Add `NetworkSpec{Mode, ProxyAddr}` to `Driver.Create` (per ADR-006). Compat/secure (OCI) driver: attach the container to a daemon-managed network whose only reachable non-container endpoint is the proxy (or `--network none` + host proxy + egress firewall); keep `--cap-drop=ALL`, no `--network host`.
+**Description:** Add `NetworkSpec{Mode, ProxyAddr}` to the driver contract (ADR-006). Map egress mode onto the OCI create args.
 
 **Acceptance criteria:**
-- [ ] `NetworkSpec` on `Driver.Create`; all drivers compile against it
-- [ ] `restricted`: container can reach only `ProxyAddr`; `169.254.169.254`, host gateway, host localhost unreachable
-- [ ] `none`: no outbound route
-- [ ] `open`: unrestricted (opt-in only)
+- [x] `NetworkSpec` on `SandboxSpec` / `oci.ContainerSpec` / `compat.ContainerSpec`; darwin-buildable drivers compile against it *(gvisor/runsc was already non-compiling against the current `oci.Engine` before this task — see F18 note in plan.md; its one `NetworkMode`→`Network` line was updated but the file's other breakage is out of scope)*
+- [x] `none`: `--network none` — no outbound route (`oci.egressArgs`)
+- [x] `open` / unset: `--network bridge`, no proxy env
+- [x] `restricted` + `ProxyAddr`: `--network bridge` + `HTTP(S)_PROXY=http://<sandboxID>:x@<ProxyAddr>` + `NO_PROXY` injected into the container env; sandbox ID threads `create` → `meta` → `sandboxEgressNetwork` → `compat.ContainerSpec` → `oci.ContainerSpec`
+- [x] `restricted` without a running daemon proxy (`--egress-proxy-port` unset): `--network bridge`, no proxy env — no behaviour change by default
+- [ ] **`restricted` L3 single-endpoint isolation** (drop everything except `ProxyAddr` so non-proxy-aware clients and raw sockets also fail closed) — **moved to T30.4** for both compat and fast
 
 **Verification:**
-- [ ] Integration (compat): `curl 169.254.169.254` from sandbox fails in `restricted`
-- [ ] Integration (compat): direct `curl https://example.com` fails; via proxy env succeeds for allowlisted host
+- [x] Unit: `tests/runtime/oci/engine_test.go` — none → `--network none` + no proxy env; restricted+proxy → sandbox-scoped `HTTP_PROXY`; restricted without proxy → bridge only
+- [ ] Integration (compat, Linux+Docker): `curl 169.254.169.254` fails in `restricted` — needs T30.4
 
-**Files:** `pkg/runtime/driver.go`, `pkg/runtime/compat/`, `pkg/runtime/oci/cli.go`, `pkg/api/sandbox_create.go`
+**Files:** `pkg/runtime/driver.go`, `pkg/runtime/oci/{engine,cli}.go`, `pkg/runtime/compat/create.go`, `pkg/api/{network,sandbox_create,sandbox_exec}.go`, `pkg/daemon/daemon.go`
 **Size:** M
 **Depends on:** T30.2
 
-### T30.4: Fast backend single-endpoint egress 🔴
+### T30.4: L3 single-endpoint egress isolation (fast + compat) 🔴 — **Linux host required**
 
-**Description:** Fast driver: sandbox network namespace with veth to a daemon-owned bridge; `nftables` default-drop egress with a single accept rule for `ProxyAddr`. `HTTP_PROXY`/`HTTPS_PROXY` env still set.
+**Description:** Make `ProxyAddr` the *only* reachable outbound endpoint in `restricted` mode, at the network layer, so raw sockets and non-proxy-aware clients also fail closed (ADR-006). Two backends:
+- **fast**: sandbox network namespace with veth to a daemon-owned bridge; `nftables` default-drop egress + single accept rule for `ProxyAddr`.
+- **compat/secure**: daemon-managed Docker network containing only the proxy, or `--network none` + host proxy reachable via a single firewall rule; drop `169.254.169.254`, host gateway, host localhost.
 
 **Acceptance criteria:**
-- [ ] `restricted`: namespace can reach only `ProxyAddr`
-- [ ] `none`: namespace has no external route
-- [ ] Metadata IP and host gateway unreachable in `restricted`
+- [ ] `restricted`: sandbox can reach only `ProxyAddr` (fast + compat)
+- [ ] `none`: no external route (already true for compat via `--network none`; add for fast)
+- [ ] `169.254.169.254`, host gateway, host localhost unreachable in `restricted`
+- [ ] `HTTP_PROXY`/`HTTPS_PROXY` env still set (from T30.3) so proxy-aware tools work
 
 **Verification:**
-- [ ] Integration (fast, Linux): same egress negative tests as T30.3
+- [ ] Integration (fast, Linux): `curl 169.254.169.254` and direct `curl https://github.com` both fail; `curl` via `$HTTP_PROXY` to an allowlisted host succeeds
+- [ ] Integration (compat, Linux+Docker): same
 
-**Files:** `pkg/runtime/fast/`, `pkg/runtime/fast/mounts.go`
-**Size:** M
-**Depends on:** T30.2
+**Files:** `pkg/runtime/fast/`, `pkg/runtime/compat/`, `pkg/runtime/oci/`, daemon bridge/network setup
+**Size:** L → split when picked up on a Linux host
+**Depends on:** T30.3
 
 ### T30.5: Proxy env injection into exec 🔴
 

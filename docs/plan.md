@@ -6,7 +6,7 @@
 ## Active Cursor
 
 **Current phase:** PROP-008/009 re-verify sweep + M8 unblock — F1/F2/F3/F4/F5/F6/F8/F10/F16 complete; F9 partial (2 open gaps); F13 partial (cache scoping gap); F17 re-verified; ADR-006 (egress enforcement) Accepted + cascaded → F11/F30 unblocked, F30 tasks authored
-**Next work (2026-08-31):** re-verify backlog cleared; ADR-006 accepted + cascaded; F30 T30.1 + T30.2 + T30.3(partial) done. NEXT: T30.5 (proxy env into exec — already partly done via T30.3, formalize + test) or T30.6 (denial logging) or T30.7 (credential API); **T30.4 (L3 isolation) needs a Linux host — blocked on this darwin machine.**
+**Next work (2026-08-31):** re-verify backlog cleared; ADR-006 accepted + cascaded; F30 T30.1/T30.2/T30.6 done, T30.3/T30.5 partial. NEXT: **checkpoint review** (spec: after T30.1–T30.4, human review before credential work) — T30.4 is Linux-blocked, so review T30.1–T30.3+T30.6 now, then decide on T30.7/T30.8 (credential API + injection). T30.5 per-exec proxy-override guard is a quick XS. **T30.4 (L3 isolation) needs a Linux host.**
 
 **Known defect (found 2026-08-31, not fixed):** `pkg/runtime/gvisor/runtime.go` (linux-only, F18 Secure Backend) does not compile against the current `oci.Engine` — references removed symbols `oci.NewEngine`, `oci.EngineConfig`, `oci.ImageRef`, `oci.ContainerSpec.{ImageID,UserNS,MountNS,PIDNS}`, `SandboxSpec.Workspace`. `GOOS=linux go build ./pkg/runtime/gvisor/` fails. F18 was marked ✅ Implemented but its driver is stale post-PROP-008 OCI-engine refactor. Darwin test suite never caught it (build-tagged out). Needs F18 re-open on a Linux host. — Historical below.
 
@@ -106,7 +106,7 @@ F10/F17/F19 ──────────────────────�
 33. **F27** GUI Settings and Diagnostics ✅
 
 ### 🔵 Phase 10 — M8 agent loop and egress
-34. **F30** Egress Proxy — 🔵 In progress. T30.1 egress policy; T30.2 daemon forward proxy; T30.3 (partial) `NetworkSpec` contract + `oci.egressArgs` (none→`--network none`, restricted→bridge + sandbox-scoped `HTTP_PROXY` env, threaded create→meta→oci), `api.SetEgressProxyAddr` daemon wiring. 467 tests green. Deferred to T30.4 (Linux): L3 drop-all-but-proxy for fast + compat. NEXT: T30.5/T30.6/T30.7.
+34. **F30** Egress Proxy — 🔵 In progress. T30.1 egress policy; T30.2 daemon forward proxy; T30.3(partial) `NetworkSpec` contract + `oci.egressArgs`; T30.5(mostly) create-time proxy env; T30.6 denial logging (`logs.Manager.RecordEgress` → `egress.jsonl`, daemon sink, `GET /logs?action=egress`, `pi-box egress <name>`). 469 tests green. Deferred: T30.4 L3 drop-all-but-proxy (Linux); T30.7/T30.8 credential work (checkpoint review first); T30.5 per-exec `*_PROXY` override guard (XS).
 35. **F29** Agent Run — 🟡 Spec written. Depends on F8, F9, F30.
 36. **F11** Secrets & Network Model — enforcement lands with F30 tasks.
 

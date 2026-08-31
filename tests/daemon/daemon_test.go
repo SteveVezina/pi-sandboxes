@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pi-sandbox/pi/pkg/daemon"
+	"github.com/pi-sandbox/pi/pkg/logs"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
@@ -118,7 +119,11 @@ func TestDaemon_EgressProxy_EnforcesSandboxPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(tmpDir) })
-	store := sandbox.NewStore(filepath.Join(tmpDir, "sandboxes"))
+	// logs.NewManager resolves via $HOME/.pi-box/sandboxes/<id>/logs; point
+	// HOME here and put the store in the same tree so the egress log the
+	// daemon writes is the one this test reads.
+	t.Setenv("HOME", tmpDir)
+	store := sandbox.NewStore(filepath.Join(tmpDir, ".pi-box", "sandboxes"))
 
 	// One restricted sandbox (default allowlist) and one none-mode sandbox.
 	restrictedID, err := store.CreateWithOptions(sandbox.CreateOptions{
@@ -158,6 +163,24 @@ func TestDaemon_EgressProxy_EnforcesSandboxPolicy(t *testing.T) {
 	// none mode → everything 403.
 	if code := connectStatus(t, d.ProxyAddr(), noneID, "github.com:443"); code != 403 {
 		t.Errorf("none sandbox: want 403, got %d", code)
+	}
+
+	// T30.6: the denial was recorded in the sandbox's egress log.
+	events, err := logs.NewManager(restrictedID).EgressEvents()
+	if err != nil {
+		t.Fatalf("EgressEvents: %v", err)
+	}
+	var sawDenial bool
+	for _, e := range events {
+		if e.Host == "evil.example.com" && !e.Allowed {
+			sawDenial = true
+		}
+		if e.Allowed {
+			t.Errorf("egress log should hold only denials, got allow for %s", e.Host)
+		}
+	}
+	if !sawDenial {
+		t.Errorf("expected a recorded denial for evil.example.com, got %+v", events)
 	}
 }
 

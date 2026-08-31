@@ -45,6 +45,20 @@ func LogsSandbox(store *sandbox.Store) http.HandlerFunc {
 				"entries": entries,
 			})
 
+		case "egress":
+			// Egress-proxy decisions recorded for this sandbox (F30 T30.6).
+			events, err := lm.EgressEvents()
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "get egress log: " + err.Error()})
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"id":      id,
+				"action":  "egress",
+				"count":   len(events),
+				"entries": events,
+			})
+
 		case "history":
 			// Return history summary
 			history, err := lm.History()

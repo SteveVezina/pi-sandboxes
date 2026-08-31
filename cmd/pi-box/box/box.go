@@ -34,7 +34,7 @@ var Command = boxCmd
 
 func init() {
 	cli.AddCommand(boxCmd)
-	boxCmd.AddCommand(createCmd, listCmd, inspectCmd, destroyCmd, cloneCmd, execCmd, shellCmd, filesCmd, diffCmd, patchCmd, artifactsCmd, snapshotCmd, logsCmd, historyCmd)
+	boxCmd.AddCommand(createCmd, listCmd, inspectCmd, destroyCmd, cloneCmd, execCmd, shellCmd, filesCmd, diffCmd, patchCmd, artifactsCmd, snapshotCmd, logsCmd, historyCmd, egressCmd)
 
 	// Persistent JSON flag available on all box subcommands (AC-1.5).
 	boxCmd.PersistentFlags().Bool("json", false, "Output as JSON")
@@ -944,6 +944,30 @@ var historyCmd = &cobra.Command{
 				status += " [truncated]"
 			}
 			fmt.Printf("[%v] %s (exit: %v, %vms)%s\n", seq, command, exitCode, durationMs, status)
+		}
+	},
+}
+
+// egressCmd shows the egress-proxy decisions recorded for a sandbox
+// (denied outbound requests). F30 T30.6.
+var egressCmd = &cobra.Command{
+	Use:   "egress <name>",
+	Short: "Show recorded egress-proxy denials for a sandbox",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		result, err := callAPI("GET", "/v1/sandboxes/"+args[0]+"/logs?action=egress", nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: egress log failed: %v\n", err)
+			os.Exit(1)
+		}
+		entries, _ := result["entries"].([]interface{})
+		if len(entries) == 0 {
+			fmt.Println("no egress denials recorded")
+			return
+		}
+		for _, e := range entries {
+			m, _ := e.(map[string]interface{})
+			fmt.Printf("%v  DENY  %v  (%v)\n", m["timestamp"], m["host"], m["reason"])
 		}
 	},
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pi-sandbox/pi/pkg/api"
+	"github.com/pi-sandbox/pi/pkg/logs"
 	"github.com/pi-sandbox/pi/pkg/network"
 	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
@@ -42,6 +44,20 @@ func (d *Daemon) ProxyAddr() string {
 		return ""
 	}
 	return fmt.Sprintf("127.0.0.1:%d", d.proxyPort)
+}
+
+// egressDecisionSink routes egress-proxy decisions: denials are recorded
+// in the sandbox's egress log (F30 T30.6) and logged at info; allows stay
+// at debug in the daemon log only.
+func (d *Daemon) egressDecisionSink(dec network.Decision) {
+	if dec.Allowed {
+		slog.Debug("egress allowed", "sandbox_id", dec.SandboxID, "host", dec.Host)
+		return
+	}
+	slog.Info("egress denied", "sandbox_id", dec.SandboxID, "host", dec.Host, "reason", dec.Reason)
+	if err := logs.NewManager(dec.SandboxID).RecordEgress(dec.Host, false, dec.Reason); err != nil {
+		slog.Warn("record egress denial", "sandbox_id", dec.SandboxID, "err", err)
+	}
 }
 
 // egressPolicyResolver rebuilds a sandbox's egress policy from its
@@ -121,7 +137,7 @@ func (d *Daemon) Start() error {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "daemon: warning: could not start egress proxy: %v\n", err)
 		} else {
-			proxy := network.NewProxyServer(d.egressPolicyResolver, nil)
+			proxy := network.NewProxyServer(d.egressPolicyResolver, d.egressDecisionSink)
 			d.proxyServer = &http.Server{Handler: proxy}
 			api.SetEgressProxyAddr(d.ProxyAddr())
 			go func() {

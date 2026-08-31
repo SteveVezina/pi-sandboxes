@@ -263,6 +263,45 @@ func TestTruncatedFlag(t *testing.T) {
 	}
 }
 
+func TestRecordEgress_RoundTripNewestFirst(t *testing.T) {
+	m := newTestManager(t)
+
+	if err := m.RecordEgress("evil.example.com", false, "not allowlisted"); err != nil {
+		t.Fatalf("RecordEgress: %v", err)
+	}
+	if err := m.RecordEgress("169.254.169.254", false, "not allowlisted"); err != nil {
+		t.Fatalf("RecordEgress: %v", err)
+	}
+
+	events, err := m.EgressEvents()
+	if err != nil {
+		t.Fatalf("EgressEvents: %v", err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("want 2 events, got %d", len(events))
+	}
+	if events[0].Host != "169.254.169.254" {
+		t.Errorf("want newest-first ordering, got %q first", events[0].Host)
+	}
+	if events[0].Allowed {
+		t.Error("recorded event should be a denial")
+	}
+	if events[1].Host != "evil.example.com" {
+		t.Errorf("second event host = %q", events[1].Host)
+	}
+}
+
+func TestEgressEvents_EmptyWhenNoLog(t *testing.T) {
+	m := newTestManager(t)
+	events, err := m.EgressEvents()
+	if err != nil {
+		t.Fatalf("EgressEvents: %v", err)
+	}
+	if len(events) != 0 {
+		t.Fatalf("want empty, got %d", len(events))
+	}
+}
+
 func TestTimestamp(t *testing.T) {
 	m := newTestManager(t)
 

@@ -1,7 +1,7 @@
 # F30: Egress Proxy
 
 > Source: `SPEC.md` §6 Features F30
-> Status: 🔵 In progress — T30.1 + T30.2 done; T30.3 partial (contract + none-mode + proxy-env; L3 isolation → T30.4); T30.4–T30.8 open. T30.4 needs a Linux host. (ADR-006 Accepted 2026-08-31)
+> Status: 🔵 In progress — T30.1 + T30.2 + T30.6 done; T30.3 partial (contract + none-mode + proxy-env; L3 isolation → T30.4); T30.5 mostly done (create-time env; per-exec guard open); T30.4/T30.7/T30.8 open. T30.4 needs a Linux host; T30.7/T30.8 gated on checkpoint review. (ADR-006 Accepted 2026-08-31)
 > Category: Service-layer / Security
 
 ## Definition (from block spec)
@@ -147,36 +147,40 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Size:** L → split when picked up on a Linux host
 **Depends on:** T30.3
 
-### T30.5: Proxy env injection into exec 🔴
+### T30.5: Proxy env injection into exec 🟡 *(2026-08-31 — covered by T30.3 at container-create level; per-exec override guard remains)*
 
-**Description:** Inject `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`, and `GIT_*` proxy env into every exec in a `restricted` sandbox so proxy-aware tooling works without TLS interception.
+**Description:** Ensure `HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY` are present in `restricted`-mode sandbox processes so proxy-aware tooling works without TLS interception.
 
 **Acceptance criteria:**
-- [ ] Restricted-mode exec environment contains proxy vars pointing at `ProxyAddr`
-- [ ] `none`/`open` modes do not inject proxy vars
-- [ ] User-supplied env cannot unset the proxy vars in `restricted`
+- [x] Restricted-mode container env contains proxy vars pointing at `ProxyAddr` — injected via `docker run -e` in `oci.egressArgs` (T30.3); inherited by every `docker exec`
+- [x] `none`/`open` modes do not inject proxy vars
+- [ ] User-supplied per-exec env cannot unset the proxy vars in `restricted` — `ExecRequest.Env` is still applied verbatim by `docker exec -e`; add a guard that drops/ignores `*_PROXY` keys from caller env in restricted mode
+- [ ] `GIT_*` proxy hints (optional; git honours `HTTP_PROXY` already)
 
 **Verification:**
-- [ ] Unit: env assembly per mode
-- [ ] Integration: `npm`/`pip` install through proxy for allowlisted registry
+- [x] Unit: `tests/runtime/oci/engine_test.go` proves the create-time env
+- [ ] Unit: per-exec env guard
+- [ ] Integration: `npm`/`pip` install through proxy for an allowlisted registry (Linux+Docker)
 
 **Files:** `pkg/api/sandbox_exec.go`, exec engine env assembly
-**Size:** S
+**Size:** XS (remaining guard only)
 **Depends on:** T30.3
 
-### T30.6: Egress denial logging 🔴
+### T30.6: Egress denial logging ✅ *(2026-08-31)*
 
-**Description:** Record each proxy denial (and optionally allow) as an entry in the originating sandbox's logs/history (F10), host only, credentials redacted via `secrets.Redact`.
+**Description:** Record each proxy denial in the originating sandbox's egress log (F10), host + reason only, no credential material.
 
 **Acceptance criteria:**
-- [ ] Denied egress appears in `pi-box logs`/`history` for that sandbox
-- [ ] No credential material in the log line
-- [ ] Allow decisions optionally recorded at debug level
+- [x] Denied egress is recorded per-sandbox — `logs.Manager.RecordEgress` appends to `~/.pi-box/sandboxes/<id>/logs/egress.jsonl`; daemon `egressDecisionSink` writes on every `!Allowed` decision
+- [x] Exposed via API (`GET /v1/sandboxes/<id>/logs?action=egress`) and CLI (`pi-box egress <name>`)
+- [x] No credential material in the log line — only `{timestamp, host, allowed, reason}`; `reason` is a fixed internal label
+- [x] Allow decisions recorded only at daemon debug level, never in the sandbox egress log
 
 **Verification:**
-- [ ] Integration: denied request produces a redacted history entry
+- [x] Unit: `tests/logs/logs_test.go` — `RecordEgress`/`EgressEvents` round-trip, newest-first, empty-when-absent
+- [x] Integration: `tests/daemon/daemon_test.go::TestDaemon_EgressProxy_EnforcesSandboxPolicy` asserts the `evil.example.com` denial lands in the restricted sandbox's egress log and no allow entries appear
 
-**Files:** `pkg/network/egress_proxy.go`, `pkg/logs/` (or F10 log sink)
+**Files:** `pkg/logs/egress.go` (new), `pkg/daemon/daemon.go`, `pkg/api/sandbox_logs.go`, `cmd/pi-box/box/box.go`
 **Size:** S
 **Depends on:** T30.2
 

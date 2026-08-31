@@ -1,7 +1,7 @@
 # F15: SDKs
 
 > Source: `SPEC.md` §6 Features F15
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Implemented (re-verified 2026-08-31 — all ACs hold, targeted tests pass, no AC-masking skips)
 > Category: Service-layer
 
 ## Definition (from block spec)

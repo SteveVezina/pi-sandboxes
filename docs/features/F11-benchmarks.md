@@ -1,7 +1,7 @@
 # F14: Benchmarks
 
 > Source: `SPEC.md` §6 Features F14
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Implemented (re-verified 2026-08-31 — all ACs hold, targeted tests pass, no AC-masking skips)
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -98,6 +98,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | F3: Fast Backend | Internal feature | Available |
 | F4: Compat Backend | Internal feature | ⚠️ Partially — compat is M2, bench runs against fast only for now |
 | F13: Snapshot & Rollback | Internal feature | ⚠️ Partially — snapshot benchmarks are M2 |
+| F12: Cache Model | Internal feature | ⚠️ `pnpm_install_cached` / `uv_sync_cached` / `go_test_cached` / `cargo_test_cached` thresholds cannot be met until F13 (F12) wires cross-sandbox cache reuse; benchmarks *execute* today but measure cold installs |
 
 ## Implementation Approach
 
@@ -118,7 +119,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Acceptance criteria:**
 - [x] Framework defines 13 benchmark functions
 - [x] Each benchmark runs 3 iterations, collects timing
-- [ | Framework computes p50, p95, min, max, mean
+- [x] Framework computes p50, p95, min, max, mean
 - [x] Framework supports `--mode` flag for per-mode benchmarking
 - [x] Output matches SPEC.md §21 format
 

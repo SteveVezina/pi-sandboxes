@@ -31,15 +31,15 @@ Dashboard of all features for this project.
 | [F11](F12-secrets-network.md) | Secrets & Network Model | 🟢 Reviewed (ADR-006 Accepted) | 🔴 Not started — enforcement tracked as F30 T30.1–T30.8 | M2 | F17, F30 |
 | [F12](F13-cache-model.md) | Cache Model | 🟡 Re-verified 2026-08-31 | 🟡 mounts host-bind-free; per-sandbox-ID scoping (no reuse), `pkg/cache` unwired, no shared-layer/overlay | M2 | F5, F16 |
 | [F13](F14-snapshot-rollback.md) | Snapshot & Rollback | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F8 |
-| [F14](F11-benchmarks.md) | Benchmarks | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F3, F4, F13 |
-| [F15](F16-sdk.md) | SDKs | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M3 | F2 |
+| [F14](F11-benchmarks.md) | Benchmarks | 🟢 Reviewed | ✅ Implemented (re-verified 2026-08-31; cached-install threshold benchmarks depend on F13 cache-scoping fix) | M1 | F3, F4, F13 |
+| [F15](F16-sdk.md) | SDKs | 🟢 Reviewed | ✅ Implemented (re-verified 2026-08-31) | M3 | F2 |
 | [F16](F10-system-commands.md) | System Commands | 🟢 Reviewed | ✅ Implemented (re-verified 2026-08-31) | M1 | F8 |
 | [F17](F17-policy-enforcement.md) | Policy Enforcement | 🟡 Re-verified 2026-08-31 | 🟡 host-mount + limits enforced; AC-17.5/AC-34.3 delivered by F30 T30.7–T30.8 (ADR-006) | M2 | F3, F4, F11, F30 |
-| [F18](F18-secure-backend.md) | Secure Backend | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M4 | F4, F17, F19 |
+| [F18](F18-secure-backend.md) | Secure Backend | 🟢 Reviewed | ✅ Implemented | M4 | F4, F17, F19 |
 | [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | 🟢 Reviewed | ✅ Implemented | M4 | F3, F4, F18 |
 | [F20](F20-microvm-backend.md) | MicroVM Backend | 🟢 Reviewed | ✅ Implemented | M5 | F19, F21 |
 | [F21](F21-microvm-guest-control-plane.md) | MicroVM Guest Control Plane | 🟢 Reviewed | ✅ Implemented | M5 | F20 |
-| [F22](F22-remote-daemon-contexts.md) | Remote Daemon Contexts | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M6 | F2, F23 |
+| [F22](F22-remote-daemon-contexts.md) | Remote Daemon Contexts | 🟢 Reviewed | ✅ Implemented (re-verified 2026-08-31) | M6 | F2, F23 |
 | [F23](F23-remote-daemon-transport-auth.md) | Remote Daemon Transport & Auth | 🟢 Reviewed | ✅ Implemented | M6 | F2, F15, F22 |
 | [F24](F24-cross-platform-gui-workbench.md) | Cross-Platform GUI Workbench | 🟢 Reviewed | ✅ Implemented | M7 | F2, F15, F22, F23 |
 | [F25](F25-gui-workspace-authorization.md) | GUI Workspace Authorization | 🟢 Reviewed | ✅ Implemented | M7 | F17, F24 |
@@ -52,12 +52,12 @@ Dashboard of all features for this project.
 
 | Milestone | Features | Status |
 |-----------|----------|--------|
-| M1: Local Linux MVP | F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F14, F16 | ⚠️ Needs re-verify |
-| M2: Hardening & Cache | F11, F12, F13, F17 | ⚠️ Needs re-verify |
-| M3: Agent Integrations | F15 | ⚠️ Needs re-verify |
-| M4: Secure Backend | F18, F19 | ⚠️ Needs re-verify |
+| M1: Local Linux MVP | F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F14, F16 | 🟡 Only F9 open (output-delivery event emission + size validation) |
+| M2: Hardening & Cache | F11, F12, F13, F17 | ⚠️ F11 enforcement pending (F30 tasks), F13 cache-scoping gap, F17 partial |
+| M3: Agent Integrations | F15 | ✅ Implemented |
+| M4: Secure Backend | F18, F19 | ✅ Implemented |
 | M5: MicroVM Backend | F20, F21 | ✅ Implemented |
-| M6: Remote Daemon Mode | F22, F23 | ⚠️ Needs re-verify |
+| M6: Remote Daemon Mode | F22, F23 | ✅ Implemented |
 | M7: Cross-Platform GUI Workbench | F24, F25, F26, F27 | ✅ Implemented |
 | M8: Agent Loop and Egress | F29, F30 | 🟡 F30 Reviewed + tasks authored (ADR-006); F29 spec written |
 

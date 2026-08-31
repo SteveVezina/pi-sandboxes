@@ -59,8 +59,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 | **Security** | Credential injection rules and redaction |
 | **Runtime integration** | Route sandbox outbound traffic through proxy in restricted mode |
 
-**ADR references:** None yet.
-**ADR gaps:** Domain-aware proxy enforcement shape may need an ADR if implementation differs by backend.
+**ADR references:** ADR-006 (Egress Enforcement and Credential Delivery) — Proposed 2026-08-31; tasks stay 🔴 until Accepted + cascaded.
+**ADR gaps:** Resolved by ADR-006 (pending acceptance).
 
 ## Tasks
 
@@ -137,7 +137,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
-| Which backend-neutral mechanism routes all restricted-mode traffic through the proxy? | F30, F3, F4, F18, F20 | ADR-NNN: Backend-neutral egress proxy routing |
+| ~~Which backend-neutral mechanism routes all restricted-mode traffic through the proxy?~~ | F30, F3, F4, F18, F20 | **ADR-006 (Proposed 2026-08-31):** `NetworkSpec{Mode, ProxyAddr}` added to `Driver.Create`; each driver makes `ProxyAddr` the only routable outbound endpoint in `restricted` mode. |
 
 ## Out of Scope
 

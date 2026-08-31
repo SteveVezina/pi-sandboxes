@@ -119,8 +119,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | **Service-layer** | Go policy engine in `pkg/policy/` |
 | **Infrastructure** | Backend-specific policy enforcement |
 
-**ADR references:** None yet.
-**ADR gaps:** None identified.
+**ADR references:** ADR-006 (Egress Enforcement and Credential Delivery) — Proposed 2026-08-31; governs AC-17.5 and AC-34.3 (git creds via egress proxy; secrets as injection rules, no plaintext under `~/.pi-box`).
+**ADR gaps:** AC-17.5 / AC-34.3 blocked on ADR-006 acceptance + cascade.
 
 ## Tasks
 

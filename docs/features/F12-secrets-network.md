@@ -97,8 +97,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | **Service-layer** | Go network/secrets packages |
 | **Infrastructure** | Network namespace policy, container network policy |
 
-**ADR references:** None yet.
-**ADR gaps:** None identified.
+**ADR references:** ADR-006 (Egress Enforcement and Credential Delivery) — Proposed 2026-08-31. Answers all three open questions below: (1) `restricted` mode makes the daemon proxy the only routable outbound endpoint, set per-driver via `NetworkSpec` on `Driver.Create`; (2) proxy resolves `credential id → real value` from an in-memory `CredentialStore` fed by OS keychain / daemon env / off-`~/.pi-box` file; (3) network mode is per-sandbox (fixed at create), not per-exec.
+**ADR gaps:** Resolved by ADR-006 (pending human acceptance). Tasks stay 🔴 until Accepted + cascaded.
 
 ## Tasks
 
@@ -165,8 +165,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
-| How to enforce domain allowlist in fast mode (no proxy)? | F11 | ADR-NNN: Domain-aware egress in namespace sandbox |
-| No enforcement point exists at all yet — `pkg/network`'s `Policy`/`EgressProxy` and `pkg/secrets`' `Broker`/SSH/token helpers are complete, unit-tested libraries with zero callers outside their own packages. Need: (1) how sandbox containers/namespaces actually get attached to a mode-appropriate network (per-sandbox `--network none`? all traffic forced through a daemon-side proxy via `HTTP_PROXY`/iptables redirect?), (2) how the egress proxy resolves and injects a real secret value instead of the current `"[credential-injected]"` placeholder, (3) whether "network mode" is a per-sandbox or per-exec property, given `ExecRequest.Network` implies per-exec but containers are created once with a fixed network. | F11, F30 | ADR-NNN: sandbox egress enforcement architecture (blocks F11 AC-11.1-11.5, F30 in full) |
+| ~~How to enforce domain allowlist in fast mode (no proxy)?~~ | F11 | **ADR-006:** fast mode also routes through the daemon proxy — network namespace `nftables` default-drop with a single accept rule for `ProxyAddr`. No separate namespace-local filter. |
+| ~~No enforcement point exists at all yet~~ (three sub-questions on network attachment, real secret resolution, per-sandbox vs per-exec) | F11, F30 | **ADR-006 (Proposed 2026-08-31):** sandbox egress enforcement architecture. Blocks F11 AC-11.1-11.5 and F30 in full until Accepted + cascaded. |
 
 ## Out of Scope
 

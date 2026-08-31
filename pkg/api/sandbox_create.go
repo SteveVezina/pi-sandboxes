@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pi-sandbox/pi/pkg/network"
 	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 	"github.com/pi-sandbox/pi/pkg/runtime/detect"
@@ -29,6 +30,10 @@ type CreateRequest struct {
 		Source  string `json:"source"`
 		MaxSize string `json:"maxSize"`
 	} `json:"workspace"`
+	Network struct {
+		Mode  string   `json:"mode"`  // none|restricted|open; default restricted
+		Allow []string `json:"allow"` // extra restricted-mode allowlist hosts
+	} `json:"network"`
 }
 
 // CreateSandbox returns an HTTP handler that creates a sandbox.
@@ -71,12 +76,23 @@ func CreateSandbox(store *sandbox.Store) http.HandlerFunc {
 			return
 		}
 
+		netMode := req.Network.Mode
+		if netMode == "" {
+			netMode = "restricted" // ADR-006 default
+		}
+		if _, err := network.PolicyFor(netMode, req.Network.Allow); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+
 		id, err := store.CreateWithOptions(sandbox.CreateOptions{
 			Name:           req.Name,
 			Template:       req.Template,
 			Mode:           req.Mode,
 			RequestedMode:  string(sel.Requested),
 			FallbackReason: sel.Reason,
+			NetworkMode:    netMode,
+			NetworkAllow:   req.Network.Allow,
 			TTL:            req.TTL,
 			Workspace:      req.Workspace.Source,
 			WorkspaceMode:  workspaceMode,

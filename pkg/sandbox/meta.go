@@ -34,6 +34,11 @@ type Meta struct {
 	WorkspaceMode  string    `json:"workspace_mode"`
 	Artifacts      string    `json:"artifacts"`
 	Snapshots      []string  `json:"snapshots"`
+	// NetworkMode is the sandbox egress mode (none|restricted|open), fixed
+	// at create time (ADR-006). NetworkAllow holds extra restricted-mode
+	// allowlist hosts requested by the caller.
+	NetworkMode  string   `json:"network_mode,omitempty"`
+	NetworkAllow []string `json:"network_allow,omitempty"`
 }
 
 // NewMeta creates a new sandbox metadata with default values.
@@ -49,6 +54,7 @@ func NewMeta(name, template, mode string) *Meta {
 		LastUsedAt:    time.Now(),
 		TTL:           7200, // default 2 hours
 		WorkspaceMode: "copy",
+		NetworkMode:   "restricted", // ADR-006 default
 		Snapshots:     []string{},
 	}
 }

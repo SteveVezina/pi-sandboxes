@@ -45,9 +45,9 @@ func (s *Store) Create(name, template, mode string) (string, error) {
 
 // CreateOptions contains optional metadata persisted at sandbox creation.
 type CreateOptions struct {
-	Name          string
-	Template      string
-	Mode          string
+	Name     string
+	Template string
+	Mode     string
 	// RequestedMode preserves the mode the user asked for when selection
 	// resolved a different backend (fallback visibility, SPEC §14.7.5).
 	RequestedMode  string
@@ -55,6 +55,8 @@ type CreateOptions struct {
 	Workspace      string
 	WorkspaceMode  string
 	TTL            int
+	NetworkMode    string
+	NetworkAllow   []string
 }
 
 // CreateWithOptions creates a new sandbox and persists its metadata.
@@ -73,6 +75,12 @@ func (s *Store) CreateWithOptions(opts CreateOptions) (string, error) {
 	}
 	if opts.TTL > 0 {
 		meta.TTL = opts.TTL
+	}
+	if opts.NetworkMode != "" {
+		meta.NetworkMode = opts.NetworkMode
+	}
+	if len(opts.NetworkAllow) > 0 {
+		meta.NetworkAllow = opts.NetworkAllow
 	}
 
 	dir := s.sandboxDir(meta.ID)

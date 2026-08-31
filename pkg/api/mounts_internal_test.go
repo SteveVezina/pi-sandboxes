@@ -75,6 +75,7 @@ func TestCreateRequest_HasNoHostMountFields(t *testing.T) {
 	// explicit workspace bind opt-in.
 	allowed := map[string]bool{
 		"Template": true, "Mode": true, "Name": true, "TTL": true, "Workspace": true,
+		"Network": true, // ADR-006: egress mode + allowlist hosts, no filesystem exposure
 	}
 	rt := reflect.TypeOf(CreateRequest{})
 	for i := 0; i < rt.NumField(); i++ {

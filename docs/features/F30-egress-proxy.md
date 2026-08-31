@@ -1,7 +1,7 @@
 # F30: Egress Proxy
 
 > Source: `SPEC.md` §6 Features F30
-> Status: 🟢 Reviewed — ready for planning (ADR-006 Accepted 2026-08-31)
+> Status: 🔵 In progress — T30.1 done (per-sandbox egress policy assembly); T30.2–T30.8 open (ADR-006 Accepted 2026-08-31)
 > Category: Service-layer / Security
 
 ## Definition (from block spec)
@@ -67,21 +67,23 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 > Re-scoped 2026-08-31 per ADR-006 (Accepted). Old T30.1–T30.3 (M/L/L) split
 > into XS–M tasks. All 🔴 Not started.
 
-### T30.1: Per-sandbox egress policy assembly 🔴
+### T30.1: Per-sandbox egress policy assembly ✅ *(2026-08-31)*
 
-**Description:** Build an `EgressPolicy` per sandbox at create time from `DefaultAllowlist` minus `DefaultDeny` plus any per-sandbox allowlist additions, and store it on the sandbox record keyed by sandbox ID. Wire `Mode.IsAllowed` / `EgressPolicy.Evaluate` — currently callerless — into this path.
+**Description:** Build a per-sandbox `network.Policy` at create time from `DefaultAllowlist` plus any per-sandbox allowlist additions, with `DefaultDeny` always applied, and persist the mode + allowlist on the sandbox record so the policy is rebuildable by sandbox ID. *(Implemented with the existing `network.Policy` mode/allowlist decision type via new `network.PolicyFor`; `EgressPolicy.Evaluate` (credential-injection evaluator) is wired later in T30.7–T30.8.)*
 
 **Acceptance criteria:**
-- [ ] `CreateRequest` accepts `network.mode` (`none`|`restricted`|`open`, default `restricted`) and optional `network.allow` extra hosts
-- [ ] Per-sandbox `EgressPolicy` built and retrievable by sandbox ID
-- [ ] `DefaultDeny` always subtracted, even if a user allow entry matches (cannot relax default deny — F17 consistency)
-- [ ] `open` requires explicit request; never chosen by default
+- [x] `CreateRequest` accepts `network.mode` (`none`|`restricted`|`open`, default `restricted`) and optional `network.allow` extra hosts — `pkg/api/sandbox_create.go`
+- [x] Per-sandbox policy built and retrievable by sandbox ID — `sandboxNetworkPolicy(store, id)` in `pkg/api/network.go`; mode + allowlist persisted on `sandbox.Meta` (`network_mode`, `network_allow`)
+- [x] `DefaultDeny` always subtracted, even if a user allow entry matches and even in `open` mode — `network.PolicyFor` sets `DenyList: DefaultDeny` for every mode
+- [x] `open` requires explicit request; never chosen by default — `NewMeta` and the create handler default to `restricted`; legacy sandboxes with no persisted mode fall back to `restricted`
+- [x] Invalid mode rejected with `400`
 
 **Verification:**
-- [ ] Unit: policy assembly (default, with extras, deny-wins)
-- [ ] `go test ./pkg/network/...`
+- [x] Unit: `tests/network/scope_test.go` (default, extras, deny-wins, none, open, invalid)
+- [x] Unit: `pkg/api/network_internal_test.go` (persisted mode retrievable by ID, none blocks all, legacy → restricted)
+- [x] `go test ./...` — 457 pass
 
-**Files:** `pkg/network/egress_policy.go`, `pkg/api/sandbox_create.go`, `pkg/sandbox/meta.go`
+**Files:** `pkg/network/scope.go` (new), `pkg/api/sandbox_create.go`, `pkg/api/network.go` (new), `pkg/sandbox/meta.go`, `pkg/sandbox/store.go`
 **Size:** S
 **Depends on:** None
 

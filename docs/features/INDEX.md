@@ -46,7 +46,7 @@ Dashboard of all features for this project.
 | [F26](F26-gui-sandbox-operations.md) | GUI Sandbox Operations | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M7 | F7, F6, F9, F10, F13, F24 |
 | [F27](F27-gui-settings-diagnostics.md) | GUI Settings and Diagnostics | 🟢 Reviewed | ✅ Implemented | M7 | F16, F17, F19, F22, F24, F25 |
 | [F29](F29-agent-run.md) | Agent Run | 🟡 Spec written | 🔴 Not started | M8 | F8, F9, F30 |
-| [F30](F30-egress-proxy.md) | Egress Proxy | 🟢 Reviewed (ADR-006 Accepted 2026-08-31) | 🔴 Not started (T30.1–T30.8 authored) | M8 | F11, F17 |
+| [F30](F30-egress-proxy.md) | Egress Proxy | 🔵 In progress (ADR-006 Accepted 2026-08-31) | 🟡 1/8 tasks — T30.1 per-sandbox egress policy done | M8 | F11, F17 |
 
 ## Milestone Summary
 

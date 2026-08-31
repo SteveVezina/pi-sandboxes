@@ -1,7 +1,7 @@
 # F16: System Commands
 
 > Source: `SPEC.md` §6 Features F16
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Implemented (re-verified 2026-08-31 post PROP-008/009 — all 4 commands wired via `cmd/pi-box/system`, `pkg/system/{status,doctor,prune,disk-usage}.go`, 21 tests pass, no stale "session" terminology, no skip stubs)
 > Category: Service-layer
 
 ## Definition (from block spec)

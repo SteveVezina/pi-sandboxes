@@ -29,11 +29,11 @@ Dashboard of all features for this project.
 | [F9](F08-output-delivery.md) | Output Delivery | 🟢 Reviewed | 🟡 list/pull/pack done (event emission, size validation open) | M1 | F6 |
 | [F10](F09-logs-history.md) | Logs & Command History | 🟢 Reviewed | ✅ Implemented | M1 | F7 |
 | [F11](F12-secrets-network.md) | Secrets & Network Model | 🔴 Not enforced (decision logic exists, unwired) | ⏸️ Blocked (needs egress-enforcement ADR) | M2 | F17, F30 |
-| [F12](F13-cache-model.md) | Cache Model | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F5, F16 |
+| [F12](F13-cache-model.md) | Cache Model | 🟡 Re-verified 2026-08-31 | 🟡 mounts host-bind-free; per-sandbox-ID scoping (no reuse), `pkg/cache` unwired, no shared-layer/overlay | M2 | F5, F16 |
 | [F13](F14-snapshot-rollback.md) | Snapshot & Rollback | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F8 |
 | [F14](F11-benchmarks.md) | Benchmarks | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F3, F4, F13 |
 | [F15](F16-sdk.md) | SDKs | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M3 | F2 |
-| [F16](F10-system-commands.md) | System Commands | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M1 | F8 |
+| [F16](F10-system-commands.md) | System Commands | 🟢 Reviewed | ✅ Implemented (re-verified 2026-08-31) | M1 | F8 |
 | [F17](F17-policy-enforcement.md) | Policy Enforcement | 🟡 Re-verified 2026-08-31 (secrets/egress-proxy ACs blocked) | 🟡 host-mount + limits enforced; AC-17.5/AC-34.3 blocked on egress-enforcement ADR | M2 | F3, F4, F11, F30 |
 | [F18](F18-secure-backend.md) | Secure Backend | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M4 | F4, F17, F19 |
 | [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | 🟢 Reviewed | ✅ Implemented | M4 | F3, F4, F18 |

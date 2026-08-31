@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/pi-sandbox/pi/pkg/network"
 	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
@@ -17,11 +18,44 @@ import (
 
 // Daemon is the pi-sandboxd daemon.
 type Daemon struct {
-	socketPath string
-	httpPort   int
-	store      *sandbox.Store
-	runStore   *sandbox.AgentRunStore
-	server     *http.Server
+	socketPath  string
+	httpPort    int
+	proxyPort   int
+	store       *sandbox.Store
+	runStore    *sandbox.AgentRunStore
+	server      *http.Server
+	proxyServer *http.Server
+}
+
+// SetEgressProxyPort enables the daemon-owned egress proxy on
+// 127.0.0.1:<port> (ADR-006). Zero (the default) leaves it disabled.
+// Must be called before Start.
+func (d *Daemon) SetEgressProxyPort(port int) {
+	d.proxyPort = port
+}
+
+// ProxyAddr returns the egress proxy address for injection into sandbox
+// HTTP_PROXY env (T30.5), or "" when the proxy is disabled.
+func (d *Daemon) ProxyAddr() string {
+	if d.proxyPort <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("127.0.0.1:%d", d.proxyPort)
+}
+
+// egressPolicyResolver rebuilds a sandbox's egress policy from its
+// persisted network mode/allowlist. Sandboxes predating ADR-006 default to
+// restricted.
+func (d *Daemon) egressPolicyResolver(sandboxID string) (*network.Policy, error) {
+	m, err := d.store.Get(sandboxID)
+	if err != nil {
+		return nil, err
+	}
+	mode := m.NetworkMode
+	if mode == "" {
+		mode = string(network.ModeRestricted)
+	}
+	return network.PolicyFor(mode, m.NetworkAllow)
 }
 
 // New creates a new daemon with the given store and optional agent run store.
@@ -79,6 +113,22 @@ func (d *Daemon) Start() error {
 			fmt.Fprintf(os.Stderr, "daemon: serve error: %v\n", err)
 		}
 	}()
+
+	// Start the daemon-owned egress proxy if enabled (ADR-006 / F30 T30.2)
+	if d.proxyPort > 0 {
+		proxyListener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", d.proxyPort))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "daemon: warning: could not start egress proxy: %v\n", err)
+		} else {
+			proxy := network.NewProxyServer(d.egressPolicyResolver, nil)
+			d.proxyServer = &http.Server{Handler: proxy}
+			go func() {
+				if err := d.proxyServer.Serve(proxyListener); err != nil && err != http.ErrServerClosed {
+					fmt.Fprintf(os.Stderr, "daemon: egress proxy serve error: %v\n", err)
+				}
+			}()
+		}
+	}
 
 	// Start HTTP listener if port specified
 	if d.httpPort > 0 {
@@ -146,6 +196,9 @@ func (d *Daemon) reconcileCompatContainers() {
 func (d *Daemon) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+	if d.proxyServer != nil {
+		_ = d.proxyServer.Shutdown(ctx)
+	}
 	return d.server.Shutdown(ctx)
 }
 

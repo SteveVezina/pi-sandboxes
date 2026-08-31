@@ -6,7 +6,7 @@
 ## Active Cursor
 
 **Current phase:** PROP-008/009 re-verify sweep + M8 unblock — F1/F2/F3/F4/F5/F6/F8/F10/F16 complete; F9 partial (2 open gaps); F13 partial (cache scoping gap); F17 re-verified; ADR-006 (egress enforcement) Accepted + cascaded → F11/F30 unblocked, F30 tasks authored
-**Next work (2026-08-31):** re-verify backlog cleared (F13/F14/F15/F16/F17/F18/F22); ADR-006 accepted + cascaded; F30 T30.1 done. NEXT: F30 T30.2 (daemon egress proxy listener). — Historical below.
+**Next work (2026-08-31):** re-verify backlog cleared; ADR-006 accepted + cascaded; F30 T30.1 + T30.2 done. NEXT: F30 T30.3 (`NetworkSpec` on `Driver.Create` + compat single-endpoint egress). — Historical below.
 
 **Prior (2026-08-28):** F1/F2/F8/F4/F3/F5/F6/F9/F10/F11 re-verified. F10 gap: `history` CLI command didn't exist, `logs` only printed a one-line summary instead of full stdout/stderr — both implemented. Also fixed a pre-existing test bug (`tests/logs/logs_test.go`) that was leaking log directories into the real ~/.pi-box on every test run; ~2MB of accumulated leftovers cleaned up manually. Note: ~44 stray UUID-named dirs also sit under ~/.pi-box/sandboxes/ from tests/api/* runs (Manager always resolves via the real $HOME, not test-isolated) — not fixed, out of scope, flagging for awareness.
 F11 was significantly overstated: network mode (none/restricted/open) and default-deny targets are validated as strings and unit-tested as pure decision logic in `pkg/network/`, but nothing in the daemon ever calls that logic — sandbox containers always get Docker's default `bridge` network, `exec.Request.NetworkMode` is stored but never read, and `EgressProxy`/`Broker`/SSH/token helpers in `pkg/network` and `pkg/secrets` have zero callers outside their own tests. Downgraded F11 to 🔴 Not enforced / ⏸️ Blocked rather than implementing enforcement under time pressure — this is genuinely the same architecture gap as F30 Egress Proxy (still 🔴 Not started) and needs an ADR first (how sandboxes attach to a mode-appropriate network; how real secret values get resolved instead of the current `"[credential-injected]"` placeholder; whether network mode is per-sandbox or per-exec). Did not touch F30 or attempt enforcement — flagged as a blocker instead.
@@ -104,7 +104,7 @@ F10/F17/F19 ──────────────────────�
 33. **F27** GUI Settings and Diagnostics ✅
 
 ### 🔵 Phase 10 — M8 agent loop and egress
-34. **F30** Egress Proxy — 🔵 In progress. T30.1 done (per-sandbox egress policy: `network.mode`/`network.allow` in create request, persisted on Meta, `network.PolicyFor` + `sandboxNetworkPolicy`, DefaultDeny always applied incl. open mode, 457 tests green). NEXT: T30.2 daemon egress proxy listener.
+34. **F30** Egress Proxy — 🔵 In progress (2/8). T30.1 per-sandbox egress policy; T30.2 daemon forward proxy (`network.ProxyServer`, CONNECT + HTTP, sandbox ID via `Proxy-Authorization`, `--egress-proxy-port`, default disabled). 464 tests green. NEXT: T30.3 `NetworkSpec` on `Driver.Create` + compat single-endpoint egress.
 35. **F29** Agent Run — 🟡 Spec written. Depends on F8, F9, F30.
 36. **F11** Secrets & Network Model — enforcement lands with F30 tasks.
 

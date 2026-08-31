@@ -1,7 +1,7 @@
 # F30: Egress Proxy
 
 > Source: `SPEC.md` §6 Features F30
-> Status: 🔵 In progress — T30.1 done (per-sandbox egress policy assembly); T30.2–T30.8 open (ADR-006 Accepted 2026-08-31)
+> Status: 🔵 In progress — T30.1 (per-sandbox egress policy) + T30.2 (daemon proxy listener) done; T30.3–T30.8 open (ADR-006 Accepted 2026-08-31)
 > Category: Service-layer / Security
 
 ## Definition (from block spec)
@@ -87,21 +87,23 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Size:** S
 **Depends on:** None
 
-### T30.2: Daemon egress proxy listener 🔴
+### T30.2: Daemon egress proxy listener ✅ *(2026-08-31)*
 
-**Description:** Start one `EgressProxy` HTTP/CONNECT listener per daemon, bound to a loopback/bridge address. Resolve the per-sandbox policy on each request via a sandbox-identifying token (proxy auth header or per-sandbox listener port). Refuse non-allowlisted hosts with `403`.
+**Description:** Start one forward-proxy (`network.ProxyServer`) HTTP/CONNECT listener per daemon on `127.0.0.1:<port>`. Resolve the per-sandbox policy on each request from the `Proxy-Authorization` basic-auth username (= sandbox ID; T30.5 injects it). Refuse non-allowlisted hosts with `403`.
 
 **Acceptance criteria:**
-- [ ] Proxy listener starts with the daemon and is addressable as `ProxyAddr`
-- [ ] `CONNECT` (HTTPS tunnel) and plaintext HTTP forwarding both work
-- [ ] Each request is evaluated against the originating sandbox's policy
-- [ ] Non-allowlisted host → `403`, connection refused
+- [x] Proxy listener starts with the daemon and is addressable as `ProxyAddr` — `Daemon.SetEgressProxyPort` / `Daemon.ProxyAddr`, `pi-sandboxd --egress-proxy-port`
+- [x] `CONNECT` (HTTPS tunnel) and plaintext HTTP forwarding both work — `ProxyServer.tunnel` / `ProxyServer.forward`
+- [x] Each request is evaluated against the originating sandbox's policy — sandbox ID from `Proxy-Authorization`, `Daemon.egressPolicyResolver` → `network.PolicyFor`
+- [x] Non-allowlisted host → `403`; missing sandbox identity → `407`; unknown sandbox → `403`
+
+**Deviations:** default port is `0` (disabled) until T30.3–T30.5 complete the enforcement chain (nothing routes sandboxes through it yet). Credential injection deferred to T30.8 — `Proxy-Authorization` is used only as a sandbox-identity carrier here.
 
 **Verification:**
-- [ ] Integration: allowlisted host reachable through proxy
-- [ ] Integration: non-allowlisted host refused
+- [x] Unit: `tests/network/proxy_server_test.go` (allow forwards, deny 403, unknown-sandbox 403, missing-auth 407, CONNECT tunnel, CONNECT deny 403)
+- [x] Integration: `tests/daemon/daemon_test.go::TestDaemon_EgressProxy_EnforcesSandboxPolicy` (restricted allows github.com, denies evil.example.com; none-mode denies all)
 
-**Files:** `pkg/network/egress_proxy.go`, `pkg/daemon/`
+**Files:** `pkg/network/proxy_server.go` (new), `pkg/daemon/daemon.go`, `cmd/pi-sandboxd/main.go`
 **Size:** M
 **Depends on:** T30.1
 

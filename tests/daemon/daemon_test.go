@@ -2,6 +2,7 @@ package daemon_test
 
 import (
 	"context"
+	"encoding/base64"
 	"io"
 	"net"
 	"net/http"
@@ -107,6 +108,102 @@ func TestDaemon_HTTPPort(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected 200, got %d", resp.StatusCode)
 	}
+}
+
+func TestDaemon_EgressProxy_EnforcesSandboxPolicy(t *testing.T) {
+	// Short base dir — macOS caps unix socket paths at ~104 chars and this
+	// test's name makes t.TempDir() too long.
+	tmpDir, err := os.MkdirTemp("", "pid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(tmpDir) })
+	store := sandbox.NewStore(filepath.Join(tmpDir, "sandboxes"))
+
+	// One restricted sandbox (default allowlist) and one none-mode sandbox.
+	restrictedID, err := store.CreateWithOptions(sandbox.CreateOptions{
+		Name: "r", Template: "base", Mode: "fast", NetworkMode: "restricted",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	noneID, err := store.CreateWithOptions(sandbox.CreateOptions{
+		Name: "n", Template: "base", Mode: "fast", NetworkMode: "none",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d := daemon.New(filepath.Join(tmpDir, "sandboxd.sock"), 0, store)
+	d.SetEgressProxyPort(free(t))
+	if err := d.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer d.Stop()
+	time.Sleep(100 * time.Millisecond)
+
+	if d.ProxyAddr() == "" {
+		t.Fatal("ProxyAddr empty after enabling egress proxy")
+	}
+
+	// github.com is on the default restricted allowlist → CONNECT accepted
+	// (dial may still fail offline, but not with 403).
+	if code := connectStatus(t, d.ProxyAddr(), restrictedID, "github.com:443"); code == 403 {
+		t.Errorf("restricted sandbox: github.com should not be 403, got %d", code)
+	}
+	// evil.example.com is not allowlisted → 403.
+	if code := connectStatus(t, d.ProxyAddr(), restrictedID, "evil.example.com:443"); code != 403 {
+		t.Errorf("restricted sandbox: evil.example.com want 403, got %d", code)
+	}
+	// none mode → everything 403.
+	if code := connectStatus(t, d.ProxyAddr(), noneID, "github.com:443"); code != 403 {
+		t.Errorf("none sandbox: want 403, got %d", code)
+	}
+}
+
+func free(t *testing.T) int {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port
+}
+
+func connectStatus(t *testing.T, proxyAddr, sandboxID, target string) int {
+	t.Helper()
+	c, err := net.DialTimeout("tcp", proxyAddr, 2*time.Second)
+	if err != nil {
+		t.Fatalf("dial proxy: %v", err)
+	}
+	defer c.Close()
+	auth := base64.StdEncoding.EncodeToString([]byte(sandboxID + ":x"))
+	_, _ = c.Write([]byte("CONNECT " + target + " HTTP/1.1\r\nHost: " + target +
+		"\r\nProxy-Authorization: Basic " + auth + "\r\n\r\n"))
+	c.SetReadDeadline(time.Now().Add(3 * time.Second))
+	buf := make([]byte, 64)
+	n, _ := c.Read(buf)
+	line := string(buf[:n])
+	switch {
+	case containsSub(line, " 200 "):
+		return 200
+	case containsSub(line, " 403 "):
+		return 403
+	case containsSub(line, " 502 "), containsSub(line, " 400 "):
+		return 502
+	default:
+		return 0
+	}
+}
+
+func containsSub(s, sub string) bool {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
 }
 
 func TestRouter_GUICORSPreflight(t *testing.T) {

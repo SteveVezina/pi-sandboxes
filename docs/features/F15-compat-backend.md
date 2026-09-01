@@ -105,7 +105,11 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | **Service-layer** | Go compat backend in `pkg/runtime/compat/` |
 
 **ADR references:** None yet.
-**ADR gaps:** None identified.
+**ADR gaps:**
+
+| Question | Affects | Notes |
+|----------|---------|-------|
+| Additional OCI engines for the macOS/Windows story — Apple `container` (macOS 15+, per-container lightweight VM), `colima`, `podman machine`, `lima` | F15, F19 | The `oci.Engine` interface already abstracts this; on non-Linux the engine still runs Linux-in-a-VM. `fast`, `secure` (gVisor), and `microvm` (KVM) are inherently Linux — `compat` is the only portable isolation tier, and remote-daemon mode (F22/F23) is the alternative for a native macOS/Windows CLI against a Linux host. Not urgent; capture if a PROP touches engine selection. |
 
 ## Tasks
 

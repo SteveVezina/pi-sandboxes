@@ -16,7 +16,7 @@ Agent Run makes the sandbox the agent's computer. The autonomous agent loop runs
 
 `exec` remains available for setup, debugging, and non-agent use. `pi-box run <agent> [--repo <url>] [--prompt ...]` creates or selects a sandbox, prepares the workspace, launches the configured agent entrypoint inside the sandbox, and streams events until completion or cancellation.
 
-The daemon emits service-level lifecycle events already defined in `.pi/block.yaml`:
+The daemon emits service-level lifecycle events already defined in `.pi/block.yaml` via `pkg/events` (ADR-007 — slog sink always on, `--events-webhook` opt-in). F29 emits `pi.run.started` / `pi.run.completed` through `events.Emit`; the emitter and envelope already exist.
 - `pi.run.started`
 - `pi.run.completed`
 - `pi.artifact.delivered` after output-channel delivery

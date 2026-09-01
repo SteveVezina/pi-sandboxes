@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pi-sandbox/pi/pkg/events"
 	"github.com/pi-sandbox/pi/pkg/network"
 	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
@@ -114,6 +115,16 @@ func CreateSandbox(store *sandbox.Store) http.HandlerFunc {
 
 		// Update state to warm
 		store.UpdateState(id, sandbox.StateWarm)
+
+		events.Emit(events.Event{
+			Type:      events.SandboxCreated,
+			SandboxID: id,
+			Data: map[string]any{
+				"template": req.Template,
+				"mode":     req.Mode,
+				"network":  netMode,
+			},
+		})
 
 		writeJSON(w, http.StatusCreated, map[string]string{"id": id})
 	}

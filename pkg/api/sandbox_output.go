@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/pi-sandbox/pi/pkg/events"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
@@ -263,6 +264,17 @@ func handleOutputPull(w http.ResponseWriter, r *http.Request, sandboxID string, 
 		delivered = append(delivered, "/workspace.patch")
 	}
 
+	// AC-9.4: the delivery event fires only after the copy succeeds.
+	events.Emit(events.Event{
+		Type:      events.ArtifactDelivered,
+		SandboxID: sandboxID,
+		Data: map[string]any{
+			"mode":        "pull",
+			"destination": req.Dest,
+			"items":       delivered,
+		},
+	})
+
 	writeJSON(w, http.StatusOK, OutputPullResponse{
 		SandboxID:   sandboxID,
 		Destination: req.Dest,
@@ -334,6 +346,16 @@ func handleOutputPack(w http.ResponseWriter, r *http.Request, sandboxID string, 
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("get archive size: %v", err)})
 		return
 	}
+
+	events.Emit(events.Event{
+		Type:      events.ArtifactDelivered,
+		SandboxID: sandboxID,
+		Data: map[string]any{
+			"mode":  "pack",
+			"path":  req.Output,
+			"bytes": info.Size(),
+		},
+	})
 
 	writeJSON(w, http.StatusOK, OutputPackResponse{
 		SandboxID: sandboxID,

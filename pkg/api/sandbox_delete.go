@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/pi-sandbox/pi/pkg/events"
 	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
@@ -55,6 +56,12 @@ func DeleteSandbox(store *sandbox.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 			return
 		}
+
+		events.Emit(events.Event{
+			Type:      events.SandboxDestroyed,
+			SandboxID: id,
+			Data:      map[string]any{"mode": meta.Mode, "reason": "explicit"},
+		})
 
 		writeJSON(w, http.StatusOK, map[string]string{"status": "destroyed"})
 	}

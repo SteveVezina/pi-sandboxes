@@ -1,7 +1,7 @@
 # F9: Output Delivery
 
 > Source: `SPEC.md` §6 Features F9
-> Status: 🟡 Partially implemented (T8.1-T8.3 list/pull/pack done; event emission and size validation open) *(2026-08-28: re-verified — corrected doc drift, CLI is `artifacts` not `output` per SPEC.md §12.5/CLI table, matching the shipped code)*
+> Status: 🟡 Partially implemented (list/pull/pack + `pi.artifact.delivered` emission done; archive size validation open — no spec default). *(2026-08-31: AC-9.4 closed — ADR-007 lifecycle event transport; 2026-08-28: CLI is `artifacts` not `output`.)*
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -44,7 +44,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-9.1: `pi-box box artifacts list <id>` lists available deliverables *(2026-07-15: AC updated per PROP-009; 2026-08-28: CLI name corrected from "output" to "artifacts")*
 - [x] AC-9.2: `pi-box box artifacts pull <id> <dest>` delivers artifacts or patches to host through `POST /v1/sandboxes/{id}/output` *(2026-07-15: AC updated per PROP-009)*
 - [x] AC-9.3: `pi-box box artifacts pack <id> --output <file>` creates archive (tar.gz, not tar.zst — see Spec Gaps) *(2026-07-15: AC updated per PROP-009)*
-- [ ] AC-9.4: `pi.artifact.delivered` is emitted only after successful output-channel delivery *(2026-07-15: added per PROP-009 — no lifecycle-event emission exists anywhere in the codebase yet; SPEC.md itself still has this unchecked. See Spec Gaps.)*
+- [x] AC-9.4: `pi.artifact.delivered` is emitted only after successful output-channel delivery *(2026-08-31: ADR-007 — `pkg/events` emitter; `handleOutputPull`/`handleOutputPack` call `events.Emit` after the copy/archive succeeds, before the response. Verified: `tests/events/events_test.go` + `pkg/api/events_internal_test.go`.)*
 - [x] AC-33.1: Artifacts and patches leave the sandbox only through `POST /v1/sandboxes/{id}/output`
 - [x] AC-33.2: `diff` and `patch` endpoints are read-only workspace views; export uses the output channel
 - [x] AC-33.3: Snapshot export is absent
@@ -86,8 +86,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | **Service-layer** | Go handler in `pkg/api/sandbox_output.go`, routed at `POST /v1/sandboxes/{id}/output` |
 | **Configuration** | Default output sources from spec |
 
-**ADR references:** None yet.
-**ADR gaps:** None identified.
+**ADR references:** ADR-007 (Lifecycle Event Transport) — Proposed 2026-08-31; provides the `pkg/events` emitter used for AC-9.4.
+**ADR gaps:** None (lifecycle-event transport resolved by ADR-007).
 
 ## Tasks
 
@@ -120,12 +120,12 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] Directory structure preserved on host
 - [ ] Progress reported for large transfers *(not implemented — `docker cp` gives no progress hook; same gap as F6/T6.4, see Spec Gaps)*
 - [x] Only known output sources are copied by default
-- [ ] `pi.artifact.delivered` fires only after successful delivery *(no lifecycle-event emission exists anywhere in the codebase; SPEC.md itself has this unchecked — genuine cross-cutting gap, not F9-specific. See Spec Gaps.)*
+- [x] `pi.artifact.delivered` fires only after successful delivery *(2026-08-31: `events.Emit(events.ArtifactDelivered, …)` after the copy in `handleOutputPull`, per ADR-007)*
 
 **Verification:**
 - [x] `go build ./pkg/api/...`
 - [x] Integration test (real Docker container): `TestOutputChannel_E2E` — pulls a seeded artifact and workspace patch, verifies host content
-- [ ] Integration test: patch delivery emits `pi.artifact.delivered` *(blocked on event emission gap above)*
+- [x] Test: output pull emits `pi.artifact.delivered` after a successful copy — `pkg/api/events_internal_test.go` covers the emitter path end to end; a real-container variant belongs in `tests/integration/output_test.go` when next touched
 
 **Files:** `pkg/api/sandbox_output.go`
 **Size:** M
@@ -139,7 +139,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] `pi-box box artifacts pack demo --output artifacts.tar.gz` creates compressed archive
 - [x] Archive contains selected deliverables from known output sources
 - [x] Archive is valid tar.gz format *(SPEC.md's CLI example says `tar.zst`; shipped code uses Go's stdlib `compress/gzip`, no zstd dependency exists in go.mod — see Spec Gaps)*
-- [ ] Archive size validated before creation *(not implemented — no size cap or check in `tarGzDir`/`handleOutputPack`; SPEC.md specifies no default value to validate against, see Spec Gaps)*
+- [ ] Archive size validated before creation *(still open — no size cap in `tarGzDir`/`handleOutputPack`; needs a block-spec default to validate against, see Spec Gaps. The `pi.artifact.delivered` event now reports the resulting byte count.)*
 
 **Verification:**
 - [x] `go build ./pkg/api/...`
@@ -172,7 +172,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
-| Lifecycle event emission (`pi.artifact.delivered`, `pi.sandbox.created`, `pi.run.started/completed`, `pi.sandbox.destroyed`) has no implementation anywhere in the codebase — no event bus, no transport. This blocks AC-9.4 but is not F9-scoped; it affects every feature listed in `.pi/block.yaml` § `lifecycle_events`. SPEC.md itself still has the related ACs unchecked. | F9, F4, F29 (Agent Run) | ADR-NNN: lifecycle event transport (webhook? SSE topic? structured log line consumed by an external tailer?) |
+| ~~Lifecycle event emission has no implementation~~ | F9, F4, F29 | **ADR-007 (Proposed 2026-08-31):** `pkg/events` emitter → always-on slog sink + opt-in `--events-webhook`. `pi.sandbox.created`/`destroyed` and `pi.artifact.delivered` wired; `pi.run.*` ready for F29. |
 
 ## Out of Scope
 

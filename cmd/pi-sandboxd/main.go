@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/pi-sandbox/pi/pkg/daemon"
+	"github.com/pi-sandbox/pi/pkg/events"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 	"github.com/pi-sandbox/pi/pkg/system"
 )
@@ -15,7 +16,12 @@ func main() {
 	socketPath := flag.String("socket", "", "Unix socket path (default: ~/.pi-box/sandboxd.sock)")
 	httpPort := flag.Int("http-port", 0, "HTTP port for development (0 = disabled)")
 	egressProxyPort := flag.Int("egress-proxy-port", 0, "daemon egress proxy port on 127.0.0.1 (0 = disabled)")
+	eventsWebhook := flag.String("events-webhook", "", "POST lifecycle events as JSON to this URL (ADR-007)")
 	flag.Parse()
+
+	if *eventsWebhook != "" {
+		events.SetDefault(events.New(events.SlogSink{}, events.NewWebhookSink(*eventsWebhook)))
+	}
 
 	if *socketPath == "" {
 		*socketPath = filepath.Join(system.PiHome(), "sandboxd.sock")

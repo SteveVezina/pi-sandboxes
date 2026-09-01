@@ -26,7 +26,7 @@ Dashboard of all features for this project.
 | [F6](F06-workspace-file-ops.md) | Workspace & File Operations | 🟢 Reviewed | ✅ Implemented | M1 | F8, F9 |
 | [F7](F05-command-execution.md) | Command Execution | 🟢 Reviewed | ✅ Implemented | M1 | F3, F8 |
 | [F8](F04-sandbox-lifecycle.md) | Sandbox Lifecycle | 🟢 Reviewed | ✅ Implemented | M1 | — |
-| [F9](F08-output-delivery.md) | Output Delivery | 🟢 Reviewed | 🟡 list/pull/pack done (event emission, size validation open) | M1 | F6 |
+| [F9](F08-output-delivery.md) | Output Delivery | 🟢 Reviewed | 🟡 list/pull/pack + `pi.artifact.delivered` done (ADR-007); archive size cap open (needs spec default) | M1 | F6 |
 | [F10](F09-logs-history.md) | Logs & Command History | 🟢 Reviewed | ✅ Implemented | M1 | F7 |
 | [F11](F12-secrets-network.md) | Secrets & Network Model | 🟢 Reviewed (ADR-006 Accepted) | 🔴 Not started — enforcement tracked as F30 T30.1–T30.8 | M2 | F17, F30 |
 | [F12](F13-cache-model.md) | Cache Model | 🟡 Re-verified 2026-08-31 | 🟡 mounts host-bind-free; per-sandbox-ID scoping (no reuse), `pkg/cache` unwired, no shared-layer/overlay | M2 | F5, F16 |
@@ -45,14 +45,14 @@ Dashboard of all features for this project.
 | [F25](F25-gui-workspace-authorization.md) | GUI Workspace Authorization | 🟢 Reviewed | ✅ Implemented | M7 | F17, F24 |
 | [F26](F26-gui-sandbox-operations.md) | GUI Sandbox Operations | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M7 | F7, F6, F9, F10, F13, F24 |
 | [F27](F27-gui-settings-diagnostics.md) | GUI Settings and Diagnostics | 🟢 Reviewed | ✅ Implemented | M7 | F16, F17, F19, F22, F24, F25 |
-| [F29](F29-agent-run.md) | Agent Run | 🟡 Spec written | 🔴 Not started | M8 | F8, F9, F30 |
+| [F29](F29-agent-run.md) | Agent Run | 🟡 Spec written | 🔴 Not started (lifecycle-event dep unblocked by ADR-007) | M8 | F8, F9, F30 |
 | [F30](F30-egress-proxy.md) | Egress Proxy | 🔵 In progress (ADR-006 Accepted 2026-08-31) | 🟡 T30.1/T30.2/T30.5/T30.6/T30.7 done; T30.3+T30.8 partial; T30.4 (L3 isolation) needs Linux host | M8 | F11, F17 |
 
 ## Milestone Summary
 
 | Milestone | Features | Status |
 |-----------|----------|--------|
-| M1: Local Linux MVP | F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F14, F16 | 🟡 Only F9 open (output-delivery event emission + size validation) |
+| M1: Local Linux MVP | F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F14, F16 | 🟡 Near-complete — only F9 archive size cap open (needs a block-spec default) |
 | M2: Hardening & Cache | F11, F12, F13, F17 | ⚠️ F11 enforcement pending (F30 tasks), F13 cache-scoping gap, F17 partial |
 | M3: Agent Integrations | F15 | ✅ Implemented |
 | M4: Secure Backend | F18, F19 | ⚠️ F19 done; F18 gVisor driver broken on Linux (found 2026-08-31) |
@@ -63,6 +63,6 @@ Dashboard of all features for this project.
 
 ## Summary
 
-All 29 active feature specs tracked (F28 is reserved by pending PROP-006). PROP-005 moved the default Pi Box home to `~/.pi-box`; affected implemented features are marked for re-verification. PROP-008 (2026-07-14) introduced the runtime driver contract, capability reports, shared OCI engine, and no-downgrade selection engine (ADR-005); F3, F4, F18, and F19 tasks were reset where acceptance criteria changed. PROP-009 (2026-07-15) renamed lifecycle "sessions" to sandboxes, added F29/F30, consolidated deliverables into one output channel, and reset affected F6/F8/F9/F11/F12/F13/F17/F26 specs for re-verification. ADR-006 (Accepted 2026-08-31) chose the backend-neutral egress-enforcement mechanism (`NetworkSpec` on `Driver.Create`, daemon forward proxy, in-memory credential store): F11 moved from ⏸️ Blocked to 🟢 Reviewed, F30 to 🟢 Reviewed with tasks T30.1–T30.8 authored; enforcement itself is not yet implemented.
+All 29 active feature specs tracked (F28 is reserved by pending PROP-006). PROP-005 moved the default Pi Box home to `~/.pi-box`; affected implemented features are marked for re-verification. PROP-008 (2026-07-14) introduced the runtime driver contract, capability reports, shared OCI engine, and no-downgrade selection engine (ADR-005); F3, F4, F18, and F19 tasks were reset where acceptance criteria changed. PROP-009 (2026-07-15) renamed lifecycle "sessions" to sandboxes, added F29/F30, consolidated deliverables into one output channel, and reset affected F6/F8/F9/F11/F12/F13/F17/F26 specs for re-verification. ADR-006 (Accepted 2026-08-31) chose the backend-neutral egress-enforcement mechanism (`NetworkSpec` on `Driver.Create`, daemon forward proxy, in-memory credential store): F11 moved from ⏸️ Blocked to 🟢 Reviewed, F30 to 🔵 In progress (T30.1/T30.2/T30.5/T30.6/T30.7 done; T30.3/T30.8 partial; T30.4 L3 isolation needs a Linux host). ADR-007 (Proposed 2026-08-31) added the `pkg/events` lifecycle-event emitter (slog + opt-in webhook): closed F9 AC-9.4 (`pi.artifact.delivered`), wired `pi.sandbox.created`/`destroyed`, and unblocked F29's `pi.run.*` dependency.
 
 > Note: some legacy filenames predate PROP-002, but the feature labels, titles, source IDs, and index rows now use the canonical `SPEC.md` §6 feature IDs.

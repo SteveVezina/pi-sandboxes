@@ -17,6 +17,8 @@ pi-box template validate <path-or-name>  # schema + policy-relevant checks
 pi-box template history <name>           # local revision list
 pi-box template diff <left> <right>      # compare two templates or revisions
 pi-box template rollback <name> <n>      # restore a prior revision
+pi-box template export <name> -o <file>  # portable OCI bundle
+pi-box template import <bundle.tar>      # install as source: imported
 pi-box template build <name>             # build local artifacts for compatible runtimes
 pi-box template update <name>            # refresh a built-in from product-managed definitions
 pi-box template prune                    # remove unused local artifacts
@@ -68,8 +70,26 @@ optional: `version`, `summary`, `description`, `tags`, `source`
 sandbox's `network.allow`), `resources`, `lineage` (generation + content
 digests).
 
+## export / import
+
+```bash
+pi-box template export my-node -o my-node.oci.tar
+pi-box template import my-node.oci.tar --name my-node-copy
+```
+
+The bundle is an **OCI image layout** tar (ADR-008): a config blob with
+provenance (`contentDigest`, `lineage`, `source`, exporter version), a
+definition layer (the template YAML), `vnd.pi-sandbox.template.*` media
+types. It is a valid OCI artifact — `oras` / `skopeo` can also handle it.
+
+`import` verifies every blob digest, re-runs `validate`, and installs the
+template with `source.type: imported`. It is **untrusted until you run
+`import` explicitly** — nothing is fetched automatically, and sandbox
+`create` never pulls a template. A name collision is rejected; use
+`--name` to install a copy.
+
 :::note Still planned (F28)
-`snapshot` (from a sandbox), `promote` (set default), `import` / `export`
-bundles, and the GUI surface are specified (`SPEC.md` §18.1) but not yet
-implemented.
+`snapshot` (from a sandbox), `promote` (set default), an `oci://<ref>`
+registry transport for export/import, and the GUI surface are specified
+(`SPEC.md` §18.1) but not yet implemented.
 :::

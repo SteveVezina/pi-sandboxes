@@ -38,6 +38,8 @@ func NewRouter(store *sandbox.Store, runStores ...*sandbox.AgentRunStore) *mux.R
 	router.HandleFunc("/v1/templates/fork", api.ForkTemplate).Methods("POST")
 	router.HandleFunc("/v1/templates/validate", api.ValidateTemplate).Methods("POST")
 	router.HandleFunc("/v1/templates/diff", api.DiffTemplates).Methods("POST")
+	router.HandleFunc("/v1/templates/export", api.ExportTemplate).Methods("POST")
+	router.HandleFunc("/v1/templates/import", api.ImportTemplate).Methods("POST")
 	router.HandleFunc("/v1/templates/{name}/history", api.TemplateHistory).Methods("GET")
 	router.HandleFunc("/v1/templates/{name}/rollback", api.RollbackTemplate).Methods("POST")
 	router.HandleFunc("/v1/templates/{name}", api.GetTemplate).Methods("GET")

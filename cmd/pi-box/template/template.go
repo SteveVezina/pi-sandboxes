@@ -28,6 +28,8 @@ func init() {
 	templateCmd.AddCommand(History())
 	templateCmd.AddCommand(Diff())
 	templateCmd.AddCommand(Rollback())
+	templateCmd.AddCommand(Export())
+	templateCmd.AddCommand(Import())
 	templateCmd.AddCommand(Build())
 	templateCmd.AddCommand(Update())
 	templateCmd.AddCommand(Prune())

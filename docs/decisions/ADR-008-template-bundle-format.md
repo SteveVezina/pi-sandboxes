@@ -2,7 +2,16 @@
 
 ## Status
 
-Proposed (2026-08-31) — awaiting human acceptance.
+Accepted (2026-08-31, human-accepted).
+
+Cascade (2026-08-31): no block-spec change. F28 T28.3 unblocked. The
+optional `SPEC.md` §18.1 wording clarification (registry refs are an
+optional transport) remains a small recommended follow-up PROP, tracked
+in F28 § Spec Gaps — not required for T28.3.
+
+---
+
+*(historical) Proposed (2026-08-31) — awaiting human acceptance.*
 
 Unblocks: F28 T28.3 (`pi-box template export` / `import`). Resolves the
 "Import/export bundle format + secret-exclusion guarantees" ADR gap

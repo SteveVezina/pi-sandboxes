@@ -401,3 +401,64 @@ func Rollback() *cobra.Command {
 	}
 	return cmd
 }
+
+// Export returns the `template export <name> -o <file>` command.
+func Export() *cobra.Command {
+	var out string
+	cmd := &cobra.Command{
+		Use:   "export <name>",
+		Short: "Export a template as a portable OCI bundle",
+		Args:  cobra.ExactArgs(1),
+		Run: func(_ *cobra.Command, args []string) {
+			if out == "" {
+				out = args[0] + ".oci.tar"
+			}
+			store := template.NewStore(tmplDir)
+			_ = store.InstallDefaults()
+			t, err := store.Get(args[0])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			bundle, err := template.ExportBundle(t)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			if err := os.WriteFile(out, bundle, 0o644); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("Wrote %s (%d bytes)\n", out, len(bundle))
+		},
+	}
+	cmd.Flags().StringVarP(&out, "output", "o", "", "Output path (default: <name>.oci.tar)")
+	return cmd
+}
+
+// Import returns the `template import <file> [--name <n>]` command.
+func Import() *cobra.Command {
+	var newName string
+	cmd := &cobra.Command{
+		Use:   "import <bundle.tar>",
+		Short: "Import a portable template bundle (installed as source: imported)",
+		Args:  cobra.ExactArgs(1),
+		Run: func(_ *cobra.Command, args []string) {
+			data, err := os.ReadFile(args[0])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			store := template.NewStore(tmplDir)
+			_ = store.InstallDefaults()
+			t, err := store.Import(data, newName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("Imported %s (%s)\n", t.Name, t.ContentDigest())
+		},
+	}
+	cmd.Flags().StringVar(&newName, "name", "", "Install under a different name")
+	return cmd
+}

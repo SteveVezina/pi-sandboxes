@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -150,6 +151,52 @@ func DiffTemplates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"left": req.Left, "right": req.Right, "diff": template.Diff(l, rt)})
+}
+
+// ExportTemplate handles POST /v1/templates/export — {name}. Returns the
+// OCI image-layout bundle tar (ADR-008).
+func ExportTemplate(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "name is required"})
+		return
+	}
+	t, err := templateStore().Get(req.Name)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "template not found"})
+		return
+	}
+	bundle, err := template.ExportBundle(t)
+	if err != nil {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+		return
+	}
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", `attachment; filename="`+req.Name+`.oci.tar"`)
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(bundle)
+}
+
+// ImportTemplate handles POST /v1/templates/import — the raw bundle tar as
+// the request body, optional ?name= to rename.
+func ImportTemplate(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, 32<<20)) // 32 MiB cap
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "read body: " + err.Error()})
+		return
+	}
+	imported, err := templateStore().Import(body, r.URL.Query().Get("name"))
+	if err != nil {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"name":          imported.Name,
+		"source":        imported.Source,
+		"contentDigest": imported.ContentDigest(),
+	})
 }
 
 // RollbackTemplate handles POST /v1/templates/{name}/rollback — {revision}.

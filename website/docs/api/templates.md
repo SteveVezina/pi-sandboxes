@@ -77,7 +77,24 @@ Restores the template to revision `N`. The rollback is itself recorded as
 a new revision and bumps `lineage.generation`. `409` if the revision or
 template is missing.
 
+## Export
+
+`POST /v1/templates/export` — `{ "name": "my-node" }`
+
+Returns the **OCI image layout bundle tar** (`application/octet-stream`,
+`Content-Disposition: attachment`). See
+[the CLI page](/cli/templates#export--import) for the bundle format
+(ADR-008).
+
+## Import
+
+`POST /v1/templates/import` — raw bundle tar as the request body,
+optional `?name=<n>` to rename. Body cap: 32 MiB.
+
+Verifies blob digests, re-runs `Validate`, installs with
+`source.type: imported`. `201` on success; `409` on a name collision.
+
 :::note
-`snapshot` (from a sandbox), `promote`, `import`, `export` endpoints are
-specified (`SPEC.md` §9) but not yet implemented.
+`snapshot` (from a sandbox), `promote`, and an `oci://<ref>` transport
+are specified (`SPEC.md` §9 / §18.1) but not yet implemented.
 :::

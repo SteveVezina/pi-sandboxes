@@ -1,7 +1,7 @@
 # F28: Local Template Library and Lifecycle
 
 > Source: `SPEC.md` §6 Features F28, §18.1
-> Status: 🔵 In progress — T28.1 (metadata + inspect/fork/validate) + T28.2 (history/diff/rollback) done; T28.2b (snapshot), T28.2c (promote), T28.3 (bundles), T28.4 (GUI) open
+> Status: 🔵 In progress — T28.1 (metadata + inspect/fork/validate) + T28.2 (history/diff/rollback) + T28.3 (import/export bundles) done; T28.2b (snapshot), T28.2c (promote), T28.4 (GUI) open
 > Category: Service-layer / CLI / GUI
 
 ## Definition (from block spec)
@@ -46,9 +46,9 @@ Mapped from `SPEC.md` § AC-35:
 - [x] AC-35.6: `pi-box template validate <path-or-name>` validates schema, pinned versions, cache mounts, network requests, runtime compatibility, and policy-relevant fields *(2026-08-31: `Template.Validate()` in `validate.go`; `POST /v1/templates/validate` (installed name or inline definition))*
 - [x] AC-35.7: `pi-box template diff` and `history` show local template changes and lineage *(2026-08-31: T28.2 — revision store + `diff`/`history` CLI + API)*
 - [x] AC-35.8: `pi-box template rollback` restores a local template to a prior revision *(2026-08-31: T28.2 — `Store.Rollback`, recorded as a new revision, bumps lineage)*
-- [ ] AC-35.9: `pi-box template export` creates a portable bundle with metadata, definition, digest, and provenance
-- [ ] AC-35.10: `pi-box template import` validates and installs a portable local bundle
-- [ ] AC-35.11: Snapshot, import, fork, rollback, promote, and export operations are audited and policy-checked
+- [x] AC-35.9: `pi-box template export` creates a portable bundle with metadata, definition, digest, and provenance *(2026-08-31: T28.3 — `template.ExportBundle` → OCI image layout tar per ADR-008; `POST /v1/templates/export`)*
+- [x] AC-35.10: `pi-box template import` validates and installs a portable local bundle *(2026-08-31: T28.3 — `Store.Import` verifies blob digests + `Validate` + collision check, installs `source.type: imported`; `POST /v1/templates/import`)*
+- [ ] AC-35.11: Snapshot, import, fork, rollback, promote, and export operations are audited and policy-checked *(import/fork/rollback/export run `Validate`; a structured audit-log line per mutating op is still open)*
 - [ ] AC-35.12: GUI Templates view can show details, source/lineage, validation errors, history/diff, and fork/snapshot/import/export/promote actions
 - [ ] AC-35.13: Template snapshots and exports exclude secrets and workspace source files by default
 
@@ -91,11 +91,11 @@ Mapped from `SPEC.md` § AC-35:
 | **Service-layer** | Go template library + validation + revision store in `pkg/template/` |
 | **Configuration** | Daemon-owned library under `~/.pi-box/templates/` with per-template revision history |
 
-**ADR references:** ADR-008 (Template Bundle Format) — Proposed 2026-08-31; governs T28.3 (OCI image layout, file-or-optional-registry transport, secret exclusion).
+**ADR references:** ADR-008 (Template Bundle Format) — Accepted 2026-08-31; governs T28.3 (OCI image layout, file-or-optional-registry transport, secret exclusion).
 **ADR gaps:**
 - Local template snapshot boundaries and runtime-specific behavior.
 - Template schema versioning and compatibility policy.
-- ~~Import/export bundle format~~ — ADR-008 (pending acceptance).
+- ~~Import/export bundle format~~ — ADR-008 (Accepted 2026-08-31).
 
 ## Tasks
 
@@ -139,25 +139,34 @@ Mapped from `SPEC.md` § AC-35:
 **Size:** S
 **Depends on:** T28.1
 
-### T28.3: Import / export bundles ⏳ *(design: ADR-008 — OCI image layout)*
+### T28.3: Import / export bundles ✅ *(2026-08-31 — ADR-008)*
 
-**Description:** Per ADR-008 — `export` writes an OCI image layout tar
-(config blob = provenance/`contentDigest`/`lineage`/`source`; definition
-layer = template YAML; optional artifact layers with
-`--include-artifacts`; `vnd.pi-sandbox.template.*` media types).
-`export --to oci://<ref>` and `import oci://<ref>` are optional transports
-using the caller's ambient registry auth; the daemon runs no registry and
-stores no registry credentials. `import` runs `Validate` + policy check,
-strips secret-pattern files, installs as `source.type: imported`
-(untrusted until explicit). Nothing is fetched implicitly.
+**Description:** `template.ExportBundle` writes an OCI image layout tar
+(`oci-layout` + `index.json` + content-addressed blobs): config blob =
+provenance (`contentDigest`, `lineage`, `source`, exporter version,
+export time); one definition layer = template YAML;
+`vnd.pi-sandbox.template.*` media types + `artifactType`. `ReadBundle`
+verifies every blob digest, checks `artifactType`, re-runs `Validate`.
+`Store.Import` installs with `source.type: imported`, rejects name
+collisions. `POST /v1/templates/export` (octet-stream bundle) /
+`POST /v1/templates/import` (raw tar body, `?name=`, 32 MiB cap). CLI:
+`template export -o <file>` / `template import <file> [--name]`.
+`ContentDigest` now also excludes `source` so a fork/import of the same
+definition has the same digest.
 
-**Acceptance criteria:** AC-35.9, AC-35.10, AC-35.11, AC-35.13
-**Verification:** round-trip export → import on a fresh library → digests
-match; export of a template with a seeded `*.pem` artifact → secret
-absent from the bundle; malformed/invalid bundle → rejected, not
-installed.
-**Files:** `pkg/template/bundle.go` (new, OCI image-layout reader/writer),
-`pkg/api/templates.go`, `cmd/pi-box/template/commands.go`
+**Deviations from ADR-008:** artifact layers (`--include-artifacts`) and
+the `oci://<ref>` registry transport are deferred to a follow-up — the
+file bundle is the baseline. AC-35.13's secret-file exclusion applies
+there; the definition itself carries no secret fields.
+
+**Acceptance criteria:** AC-35.9, AC-35.10 — ✅. AC-35.11 partial (Validate
+runs; audit-log line open). AC-35.13 N/A until artifact layers.
+**Verification:** `tests/template/f28_test.go` (round-trip + digest match,
+tampered-blob rejection, non-template archive rejection),
+`pkg/api/templates_internal_test.go` (export → import rename, collision
+409). Suite 508 pass. Site docs updated.
+**Files:** `pkg/template/bundle.go` (new), `pkg/template/digest.go`,
+`pkg/api/templates.go`, `pkg/daemon/router.go`, `cmd/pi-box/template/{commands,template}.go`
 **Size:** M
 **Depends on:** T28.1, ADR-008
 
@@ -192,7 +201,7 @@ installed.
 |----------|-----------------|--------------|
 | Snapshot boundaries per runtime (what fast/compat/secure/microvm each capture) | F28, F13, F20 | ADR: local template snapshot boundaries |
 | Template schema versioning + forward/backward compatibility policy | F28, F5 | ADR: template schema versioning |
-| ~~Import/export bundle format + secret-exclusion guarantees~~ | F28, F17 | **ADR-008** (Proposed 2026-08-31) — OCI image layout, optional registry transport |
+| ~~Import/export bundle format + secret-exclusion guarantees~~ | F28, F17 | **ADR-008** (Accepted 2026-08-31) — OCI image layout, optional registry transport |
 
 ## Out of Scope
 

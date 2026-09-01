@@ -159,3 +159,75 @@ func TestRevisions_HistoryRollbackDiff(t *testing.T) {
 		t.Fatalf("rollback should add a revision; history = %+v", hist)
 	}
 }
+
+func TestBundle_ExportImportRoundTrip(t *testing.T) {
+	src := newTestStore(t)
+	if err := src.InstallDefaults(); err != nil {
+		t.Fatal(err)
+	}
+	orig, err := src.Fork("node", "my-node")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bundle, err := template.ExportBundle(orig)
+	if err != nil {
+		t.Fatalf("export: %v", err)
+	}
+
+	// Fresh library in its own directory (newTestStore's dir name is not
+	// unique, so build this one explicitly).
+	dst := template.NewStore(t.TempDir())
+	if err := dst.InstallDefaults(); err != nil {
+		t.Fatal(err)
+	}
+	imported, err := dst.Import(bundle, "")
+	if err != nil {
+		t.Fatalf("import: %v", err)
+	}
+	if imported.Name != "my-node" {
+		t.Fatalf("name = %q", imported.Name)
+	}
+	if imported.Source == nil || imported.Source.Type != template.SourceImported {
+		t.Fatalf("source = %+v, want imported", imported.Source)
+	}
+	// Definition preserved -> same content digest as the original.
+	if imported.ContentDigest() != orig.ContentDigest() {
+		t.Fatalf("digest drift: %s != %s", imported.ContentDigest(), orig.ContentDigest())
+	}
+
+	// Re-import onto the same name -> collision.
+	if _, err := dst.Import(bundle, ""); err == nil {
+		t.Fatal("re-import onto existing name should fail")
+	}
+	// ...but a rename works.
+	if _, err := dst.Import(bundle, "my-node-copy"); err != nil {
+		t.Fatalf("rename import: %v", err)
+	}
+}
+
+func TestBundle_RejectsTamperedBlob(t *testing.T) {
+	s := newTestStore(t)
+	_ = s.InstallDefaults()
+	t0, _ := s.Get("go")
+	bundle, err := template.ExportBundle(t0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Flip a byte in the tar payload — a blob digest check must catch it.
+	for i := len(bundle) / 2; i < len(bundle); i++ {
+		if bundle[i] >= 'a' && bundle[i] <= 'z' {
+			bundle[i] ^= 0x20
+			break
+		}
+	}
+	if _, err := template.ReadBundle(bundle); err == nil {
+		t.Fatal("tampered bundle should be rejected")
+	}
+}
+
+func TestBundle_RejectsNonTemplateArchive(t *testing.T) {
+	if _, err := template.ReadBundle([]byte("not a tar")); err == nil {
+		t.Fatal("garbage should be rejected")
+	}
+}

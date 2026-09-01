@@ -21,7 +21,7 @@ pi-box
     logs | history | egress
   run        start an autonomous agent loop in a sandbox
   output     list | pull | pack   (same channel as `box artifacts`)
-  template   list | inspect | fork | validate | history | diff | rollback | build | update | prune
+  template   list | inspect | fork | validate | history | diff | rollback | export | import | build | update | prune
   context    create | use | list | delete
   system     status | doctor | prune | disk-usage
   bench      run

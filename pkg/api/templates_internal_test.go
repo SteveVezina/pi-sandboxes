@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -137,5 +138,46 @@ func TestTemplateHistoryDiffRollback(t *testing.T) {
 		strings.NewReader(`{"left":"my-rust@1","right":"rust"}`)))
 	if dw.Code != http.StatusOK || !strings.Contains(dw.Body.String(), "diff") {
 		t.Fatalf("diff: %d %s", dw.Code, dw.Body)
+	}
+}
+
+func TestExportImportTemplate_RoundTrip(t *testing.T) {
+	templateTestHome(t)
+
+	// fork so there is a non-builtin to export
+	fw := httptest.NewRecorder()
+	ForkTemplate(fw, httptest.NewRequest(http.MethodPost, "/v1/templates/fork",
+		strings.NewReader(`{"source":"python","name":"my-py"}`)))
+	if fw.Code != http.StatusCreated {
+		t.Fatalf("fork: %d %s", fw.Code, fw.Body)
+	}
+
+	ew := httptest.NewRecorder()
+	ExportTemplate(ew, httptest.NewRequest(http.MethodPost, "/v1/templates/export",
+		strings.NewReader(`{"name":"my-py"}`)))
+	if ew.Code != http.StatusOK || ew.Body.Len() == 0 {
+		t.Fatalf("export: %d len=%d", ew.Code, ew.Body.Len())
+	}
+	if ct := ew.Header().Get("Content-Type"); ct != "application/octet-stream" {
+		t.Fatalf("content-type %q", ct)
+	}
+	bundle := ew.Body.Bytes()
+
+	// import under a new name
+	iw := httptest.NewRecorder()
+	ir := httptest.NewRequest(http.MethodPost, "/v1/templates/import?name=my-py-2", bytes.NewReader(bundle))
+	ImportTemplate(iw, ir)
+	if iw.Code != http.StatusCreated {
+		t.Fatalf("import: %d %s", iw.Code, iw.Body)
+	}
+	if !strings.Contains(iw.Body.String(), "imported") {
+		t.Fatalf("import response missing source: %s", iw.Body)
+	}
+
+	// collision without rename
+	iw2 := httptest.NewRecorder()
+	ImportTemplate(iw2, httptest.NewRequest(http.MethodPost, "/v1/templates/import", bytes.NewReader(bundle)))
+	if iw2.Code != http.StatusConflict {
+		t.Fatalf("collision import want 409, got %d", iw2.Code)
 	}
 }

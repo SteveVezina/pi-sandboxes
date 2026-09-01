@@ -1,0 +1,18 @@
+{
+  "name": "pi-sandbox-monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">=20.0"
+  },
+  "scripts": {
+    "docs:dev": "turbo run start --filter=pi-sandbox-docs",
+    "docs:build": "turbo run build --filter=pi-sandbox-docs",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  }
+}

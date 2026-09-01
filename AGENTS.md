@@ -353,9 +353,10 @@ install/start step — update the matching page under `website/docs/` **in
 the same change**, not a follow-up pass. Full guide:
 `website/docs/contributing-docs.md`.
 
-Before the change is done, run `cd website && npm run build` (exposed as
-`verify.docs` in `.pi/block.yaml`). `onBrokenLinks: 'throw'` turns a
-broken internal link into a build failure. Purely internal changes
+Before the change is done, run `pnpm run docs:build` from the repo root
+(exposed as `verify.docs` in `.pi/block.yaml`; it runs the `website/`
+Docusaurus build through turbo). `onBrokenLinks: 'throw'` turns a broken
+internal link into a build failure. Purely internal changes
 (refactors, test-only, deploy plumbing) need no doc update — use judgment.
 
 Rule of thumb: **any "yes" on the Spec-First Discipline "Public API
@@ -370,4 +371,4 @@ Before any feature is complete:
 - [ ] Tests pass (against mock services)
 - [ ] Security constraints verified
 - [ ] Feature status updated in `docs/features/INDEX.md`
-- [ ] User-facing docs updated if the change touches a CLI/API/SDK/template/config surface, and `cd website && npm run build` passes
+- [ ] User-facing docs updated if the change touches a CLI/API/SDK/template/config surface, and `pnpm run docs:build` passes

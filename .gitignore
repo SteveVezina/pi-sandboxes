@@ -8,9 +8,10 @@ vendor/
 dist/
 build/
 
-# Docusaurus (website/)
+# JS toolchain (website/, sdk/typescript)
 .docusaurus/
 .vercel/
+.turbo/
 
 # IDE
 .vscode/

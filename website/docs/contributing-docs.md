@@ -62,7 +62,7 @@ Drop a `.md` file into the right folder; the sidebar auto-generates
 ## Before it's done
 
 ```bash
-cd website && npm run build
+pnpm run docs:build      # from the repo root — turbo runs the website build
 ```
 
 `onBrokenLinks: 'throw'` makes a broken internal link a build failure, not

@@ -157,14 +157,15 @@ make mock-down
 ## Documentation
 
 User- and API-facing docs (install, quickstart, CLI, API, runtime modes,
-architecture) live in [`website/`](./website/) as a standalone Docusaurus
-site:
+architecture) live in [`website/`](./website/), a Docusaurus site in the
+pnpm + turbo workspace:
 
 ```bash
-cd website && npm install && npm start   # http://localhost:3000
+pnpm install
+pnpm run docs:dev     # http://localhost:3000
 ```
 
-Run `cd website && npm run build` before any user-visible change —
+Run `pnpm run docs:build` before any user-visible change —
 `onBrokenLinks: 'throw'` makes drift a build failure. See
 `website/docs/contributing-docs.md`.
 

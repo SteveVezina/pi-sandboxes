@@ -23,6 +23,8 @@ import (
 type Daemon struct {
 	socketPath  string
 	httpPort    int
+	httpHost    string
+	authToken   string
 	proxyPort   int
 	store       *sandbox.Store
 	runStore    *sandbox.AgentRunStore
@@ -35,6 +37,18 @@ type Daemon struct {
 // Must be called before Start.
 func (d *Daemon) SetEgressProxyPort(port int) {
 	d.proxyPort = port
+}
+
+// SetHTTPHost sets the bind host for the optional HTTP listener. Empty means
+// the default "127.0.0.1". Must be called before Start.
+func (d *Daemon) SetHTTPHost(host string) {
+	d.httpHost = host
+}
+
+// SetAuthToken sets the expected bearer token for server-side auth (F23
+// T23.5). Empty disables the gate. Must be called before Start.
+func (d *Daemon) SetAuthToken(token string) {
+	d.authToken = token
 }
 
 // ProxyAddr returns the egress proxy address for injection into sandbox
@@ -92,6 +106,17 @@ func New(socketPath string, httpPort int, store *sandbox.Store, runStores ...*sa
 
 // Start starts the daemon.
 func (d *Daemon) Start() error {
+	// Fail closed: a non-loopback HTTP bind must carry a bearer token
+	// (F23 T23.5). The Unix socket and loopback HTTP keep local-user trust.
+	host := d.httpHost
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	if d.httpPort > 0 && !isLoopbackHost(host) && d.authToken == "" {
+		return fmt.Errorf("refusing to start: --http-addr %s is not loopback and PI_DAEMON_TOKEN is unset "+
+			"(a public daemon without auth is an unauthenticated sandbox-exec API)", host)
+	}
+
 	// Remove stale socket file
 	if _, err := os.Stat(d.socketPath); err == nil {
 		os.Remove(d.socketPath)
@@ -121,7 +146,7 @@ func (d *Daemon) Start() error {
 	os.Chmod(d.socketPath, 0755)
 
 	// Create HTTP server with router
-	router := NewRouter(d.store, d.runStore)
+	router := newRouterWithAuth(d.authToken, d.store, d.runStore)
 	d.server = &http.Server{Handler: router}
 
 	// Start HTTP server on Unix socket
@@ -151,7 +176,7 @@ func (d *Daemon) Start() error {
 
 	// Start HTTP listener if port specified
 	if d.httpPort > 0 {
-		httpListener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", d.httpPort))
+		httpListener, err := net.Listen("tcp", net.JoinHostPort(host, fmt.Sprintf("%d", d.httpPort)))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "daemon: warning: could not start HTTP listener: %v\n", err)
 		} else {

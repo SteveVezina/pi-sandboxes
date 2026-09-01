@@ -12,7 +12,9 @@
 
 ## Expanded Specification
 
-`pi-sandboxd` is a local HTTP daemon that exposes a RESTful API over a Unix socket (`~/.pi-box/sandboxd.sock`) by default. An optional localhost HTTP listener (`127.0.0.1:7777`) is available for development.
+`pi-sandboxd` is a local HTTP daemon that exposes a RESTful API over a Unix socket (`~/.pi-box/sandboxd.sock`) by default. An optional HTTP listener (default `127.0.0.1:7777`) is available for development
+and, when bound to a non-loopback address with a bearer token, for private-network
+or container deployments (see F23 for the auth model).
 
 The daemon exposes 14 API endpoints organized by resource:
 
@@ -75,8 +77,12 @@ Each criterion must be:
 ## Security Considerations
 
 - Unix socket has default permissions `0755` — restrict to owner only in production
-- No authentication on local socket (assumes local user trust)
-- Optional localhost HTTP is development-only; never enable in production
+- No authentication on the Unix socket or a loopback-only HTTP listener (assumes local user trust)
+- A non-loopback HTTP listener (`--http-addr` ≠ `127.0.0.1`/`::1`, e.g. `0.0.0.0`
+  for a container deploy) **requires** a bearer token via `PI_DAEMON_TOKEN`;
+  the daemon fails to start otherwise (fail-closed). Enforcement is server-side
+  middleware — see F23. Even so, prefer a private network (SSH forward,
+  Tailscale, WireGuard) over a public bind.
 - No network egress from daemon itself (delegates to backends)
 - Request size limits on all endpoints to prevent DoS
 
@@ -116,7 +122,9 @@ Reference `SPEC.md` §8 (Security Model) for sandbox security constraints.
 - [x] Daemon starts and listens on `~/.pi-box/sandboxd.sock`
 - [x] `GET /health` returns `{"status": "ok"}`
 - [x] Daemon creates `~/.pi-box/` directory if missing
-- [x] Optional `--http-port` flag enables `127.0.0.1:7777`
+- [x] Optional `--http-port` flag enables an HTTP listener (default host `127.0.0.1`, dev port `7777`)
+- [x] `--http-addr` flag / `PI_HTTP_ADDR` env set the HTTP bind host; `PORT` env overrides the port (PaaS)
+- [x] Non-loopback bind without `PI_DAEMON_TOKEN` fails startup (see F23 T23.5)
 
 **Verification:**
 - [x] `go build ./cmd/pi-sandboxd/...`

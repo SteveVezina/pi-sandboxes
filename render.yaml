@@ -1,0 +1,30 @@
+# Render blueprint. Two independent services:
+#   1. pi-sandboxd  — the daemon HTTP API (Docker image built from ./Dockerfile)
+#   2. pi-sandbox-docs — the Docusaurus site in website/ (static)
+#
+# The daemon binds 0.0.0.0 inside the container, so it REQUIRES a bearer token.
+# PI_DAEMON_TOKEN is generated once by Render; read it from the dashboard and
+# put it in the `http` context's auth.token_env on the client side (F23).
+services:
+  - type: web
+    name: pi-sandboxd
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    plan: starter
+    envVars:
+      - key: PI_HTTP_ADDR
+        value: 0.0.0.0
+      - key: PI_DAEMON_TOKEN
+        generateValue: true
+      # Render injects PORT automatically; the daemon reads it.
+
+  - type: web
+    name: pi-sandbox-docs
+    runtime: static
+    rootDir: website
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    staticPublishPath: build
+    # Docusaurus emits real HTML per route + a 404.html that Render serves
+    # for unmatched paths automatically — no SPA rewrite needed.

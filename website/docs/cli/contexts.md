@@ -22,6 +22,9 @@ pi-box context delete <name>
 | `--auth` | `none`, `bearer-token`, `ssh-agent` (auto-detected from transport) |
 | `--token-env` | env var holding the bearer token (required for `http`) |
 
+The daemon must enforce the same token server-side (`PI_DAEMON_TOKEN`) — see
+[Deploying a remote daemon](/getting-started/deployment).
+
 ```bash
 pi-box context create workstation ssh://gpu-box.local
 pi-box context use workstation

@@ -16,18 +16,28 @@ Remote transport and auth allow the local CLI/SDK to talk to a remote `pi-sandbo
 
 Per ADR-003, remote daemon access keeps the existing daemon HTTP API unchanged. Supported transports are `unix`, `http`, and `ssh`; `http` requires bearer-token auth and `ssh` uses SSH agent transport authentication.
 
+Bearer-token auth is enforced **server-side** by the daemon, not only wired
+client-side. When a token is configured (`PI_DAEMON_TOKEN` env var), every
+route except `GET /health` and CORS pre-flight (`OPTIONS`) requires
+`Authorization: Bearer <token>`; a missing or wrong token returns `401` and
+never falls through to handler execution. When the daemon's HTTP listener is
+bound to a non-loopback address (`--http-addr` other than `127.0.0.1`/`::1`)
+the token is **mandatory** — the daemon refuses to start without it
+(fail-closed). The Unix socket and a loopback-only HTTP listener keep the
+"local user trust" model and need no token.
+
 ## Acceptance Criteria
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [x] AC-26.1: Remote daemon API calls are authenticated
+- [x] AC-26.1: Remote daemon API calls are authenticated *(2026-09-01: server-side bearer enforcement added — see T23.5; previously only the client attached the header)*
 - [x] AC-26.2: Remote access works over SSH-friendly transport
 - [x] AC-26.3: Tailscale/WireGuard network paths are supported without API redesign
 - [x] AC-26.4: Credentials are not persisted inside sandbox workspaces
 - [x] AC-26.5: Remote workstation use case works end-to-end
 - [x] AC-26.6: `http` remote contexts require bearer-token auth
 - [x] AC-26.7: `ssh` remote contexts use SSH agent transport authentication
-- [x] AC-26.8: Remote auth failures never fall back to unauthenticated access
+- [x] AC-26.8: Remote auth failures never fall back to unauthenticated access *(2026-09-01: enforced server-side — 401 short-circuits the middleware chain; non-loopback bind without a token fails startup)*
 
 ## Interface Impact
 
@@ -133,6 +143,33 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Size:** M
 **Depends on:** T23.3
 
+### T23.5: Server-side bearer-token enforcement ✅
+
+**Description:** The daemon HTTP API must reject unauthenticated requests when a
+token is configured, and must fail-closed when its HTTP listener is exposed on
+a non-loopback address. Closes the gap where AC-26.1/AC-26.8 were only wired
+client-side.
+
+**Acceptance criteria:**
+- [x] `PI_DAEMON_TOKEN` env var configures the expected bearer token
+- [x] With a token set, every route except `GET /health` and `OPTIONS` requires
+      `Authorization: Bearer <token>`; missing/wrong → `401`, handler not called
+- [x] Token comparison is constant-time
+- [x] `--http-addr` selects the HTTP bind host (default `127.0.0.1`); `PORT` /
+      `PI_HTTP_ADDR` env fallbacks for PaaS
+- [x] Non-loopback `--http-addr` without `PI_DAEMON_TOKEN` → daemon refuses to
+      start with an actionable error
+- [x] Unix socket and loopback HTTP are unaffected when no token is set
+
+**Verification:**
+- [x] `pkg/daemon` unit tests: 401 without token, 200 with token, `/health` open,
+      fail-closed on public bind (`tests/daemon` / `pkg/daemon/auth_internal_test.go`)
+- [x] `go build ./... && go test ./...`
+
+**Files:** `pkg/daemon/auth.go`, `pkg/daemon/daemon.go`, `cmd/pi-sandboxd/main.go`
+**Size:** M
+**Depends on:** T23.2
+
 ## Verification Plan
 
 - [x] Remote auth works
@@ -140,6 +177,8 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] Remote workstation flow works end-to-end
 - [x] Credentials are not persisted in sandbox workspaces
 - [x] Auth failures do not fall back to unauthenticated access
+- [x] Server-side: 401 without a valid token when `PI_DAEMON_TOKEN` set
+- [x] Server-side: daemon refuses to start on a non-loopback bind without a token
 
 ## Spec Gaps
 

@@ -10,8 +10,8 @@ sidebar_position: 1
 
 | | |
 |--|--|
-| **Unix socket** (default) | `~/.pi-box/sandboxd.sock` — override with `--socket` |
-| **HTTP** (dev / remote) | `pi-sandboxd --http-port <n>` → `127.0.0.1:<n>` |
+| **Unix socket** (default) | `~/.pi-box/sandboxd.sock` — override with `--socket` or `$PI_SOCKET_PATH` |
+| **HTTP** (dev / remote) | `pi-sandboxd --http-port <n>` → `127.0.0.1:<n>`; `--http-addr <host>` / `$PI_HTTP_ADDR` change the bind host, `$PORT` overrides the port |
 | **Egress proxy** (opt-in) | `pi-sandboxd --egress-proxy-port <n>` — see [Egress & credentials](/api/credentials) |
 | **Events webhook** (opt-in) | `pi-sandboxd --events-webhook <url>` — see [Lifecycle events](/api/events) |
 
@@ -20,9 +20,24 @@ All request and response bodies are JSON. Errors are returned as
 
 ## Auth
 
-The local socket has no auth (filesystem permissions are the boundary). A
-remote daemon reached over HTTP requires a bearer token — see
-[contexts](/cli/contexts).
+The Unix socket and a **loopback** HTTP listener (`127.0.0.1`) have no auth —
+filesystem permissions / local-user trust are the boundary.
+
+Any **non-loopback** HTTP bind (`--http-addr 0.0.0.0`, a container deploy, a
+private-network address) **requires** a bearer token:
+
+- Set `PI_DAEMON_TOKEN` in the daemon's environment (never a flag — argv leaks
+  to `ps` and shell history).
+- Every route except `GET /health` and CORS pre-flight then requires
+  `Authorization: Bearer <token>`; a missing or wrong token returns `401` and
+  the handler never runs.
+- If `PI_DAEMON_TOKEN` is unset on a non-loopback bind, the daemon **refuses to
+  start** (fail-closed) — a public daemon with no auth is an unauthenticated
+  sandbox-exec API.
+
+On the client, point an `http` context's `auth.token_env` at the env var
+holding the same token — see [contexts](/cli/contexts). Prefer a private
+network (SSH forward, Tailscale, WireGuard) over a public bind.
 
 ## Endpoint groups
 

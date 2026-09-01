@@ -35,6 +35,14 @@ Authentication rules:
 - Bearer tokens are stored outside sandbox workspaces and are never injected into sandbox environment variables.
 - Remote auth failures return actionable errors and do not fall back to unauthenticated access.
 
+*(Clarified 2026-09-01: bearer-token auth is enforced by daemon-side middleware,
+not only attached by the client. The daemon reads the expected token from the
+`PI_DAEMON_TOKEN` environment variable (never a flag, never on disk). All routes
+except `GET /health` and `OPTIONS` require `Authorization: Bearer <token>` when a
+token is set; a non-loopback HTTP bind without a token is a startup error. This
+adds a middleware, not a route change, so "the daemon HTTP API is unchanged"
+still holds. See F23 T23.5.)*
+
 ## Consequences
 
 - CLI and SDK clients can route to remote daemons without changing daemon routes.

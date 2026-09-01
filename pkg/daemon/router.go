@@ -12,8 +12,15 @@ import (
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
-// NewRouter creates the HTTP router with all endpoints.
+// NewRouter creates the HTTP router with all endpoints and no server-side
+// auth (Unix socket / loopback "local user trust" model).
 func NewRouter(store *sandbox.Store, runStores ...*sandbox.AgentRunStore) *mux.Router {
+	return newRouterWithAuth("", store, runStores...)
+}
+
+// newRouterWithAuth is NewRouter plus a server-side bearer-token gate. An
+// empty authToken keeps the pass-through behavior (F23 T23.5, ADR-003).
+func newRouterWithAuth(authToken string, store *sandbox.Store, runStores ...*sandbox.AgentRunStore) *mux.Router {
 	runStore := sandbox.NewAgentRunStore()
 	if len(runStores) > 0 && runStores[0] != nil {
 		runStore = runStores[0]
@@ -21,6 +28,7 @@ func NewRouter(store *sandbox.Store, runStores ...*sandbox.AgentRunStore) *mux.R
 
 	router := mux.NewRouter()
 	router.Use(guiCORSMiddleware)
+	router.Use(bearerAuthMiddleware(authToken))
 	router.Use(activeContextProxyMiddleware)
 	router.PathPrefix("/").Methods(http.MethodOptions).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)

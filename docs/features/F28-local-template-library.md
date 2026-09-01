@@ -91,11 +91,11 @@ Mapped from `SPEC.md` § AC-35:
 | **Service-layer** | Go template library + validation + revision store in `pkg/template/` |
 | **Configuration** | Daemon-owned library under `~/.pi-box/templates/` with per-template revision history |
 
-**ADR references:** None yet.
+**ADR references:** ADR-008 (Template Bundle Format) — Proposed 2026-08-31; governs T28.3 (OCI image layout, file-or-optional-registry transport, secret exclusion).
 **ADR gaps:**
 - Local template snapshot boundaries and runtime-specific behavior.
 - Template schema versioning and compatibility policy.
-- Import/export bundle format and secret-exclusion guarantees.
+- ~~Import/export bundle format~~ — ADR-008 (pending acceptance).
 
 ## Tasks
 
@@ -139,14 +139,27 @@ Mapped from `SPEC.md` § AC-35:
 **Size:** S
 **Depends on:** T28.1
 
-### T28.3: Import / export bundles ⏳
+### T28.3: Import / export bundles ⏳ *(design: ADR-008 — OCI image layout)*
 
-**Description:** Portable bundle format (metadata + definition + optional build artifacts + content digest + provenance). `export` writes it; `import` validates + policy-checks + installs as `imported` source. Untrusted until explicitly installed.
+**Description:** Per ADR-008 — `export` writes an OCI image layout tar
+(config blob = provenance/`contentDigest`/`lineage`/`source`; definition
+layer = template YAML; optional artifact layers with
+`--include-artifacts`; `vnd.pi-sandbox.template.*` media types).
+`export --to oci://<ref>` and `import oci://<ref>` are optional transports
+using the caller's ambient registry auth; the daemon runs no registry and
+stores no registry credentials. `import` runs `Validate` + policy check,
+strips secret-pattern files, installs as `source.type: imported`
+(untrusted until explicit). Nothing is fetched implicitly.
 
 **Acceptance criteria:** AC-35.9, AC-35.10, AC-35.11, AC-35.13
-**Files:** `pkg/template/bundle.go` (new), `pkg/api/templates.go`
+**Verification:** round-trip export → import on a fresh library → digests
+match; export of a template with a seeded `*.pem` artifact → secret
+absent from the bundle; malformed/invalid bundle → rejected, not
+installed.
+**Files:** `pkg/template/bundle.go` (new, OCI image-layout reader/writer),
+`pkg/api/templates.go`, `cmd/pi-box/template/commands.go`
 **Size:** M
-**Depends on:** T28.1
+**Depends on:** T28.1, ADR-008
 
 ### T28.4: GUI template management surface ⏳
 
@@ -171,7 +184,7 @@ Mapped from `SPEC.md` § AC-35:
 
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
-| Bundle wire format (tar layout, manifest schema) not specified | §18.1 | Specify once T28.3 design settles (likely a follow-up PROP or ADR) |
+| Bundle wire format chosen by ADR-008 (OCI image layout). §18.1 says "not a Docker-Hub-style pull/push"; ADR-008 allows an **optional** OCI-ref transport for `import`/`export` (never mandatory, no Pi-operated registry). | §18.1 | Clarify: "no *mandatory* registry and no hosted marketplace; an OCI registry reference is an optional transport for explicit import/export using the caller's own registry auth." Small wording change — recommended alongside ADR-008 acceptance, not a blocker. |
 
 ### ADR gaps (needs architectural decision)
 
@@ -179,7 +192,7 @@ Mapped from `SPEC.md` § AC-35:
 |----------|-----------------|--------------|
 | Snapshot boundaries per runtime (what fast/compat/secure/microvm each capture) | F28, F13, F20 | ADR: local template snapshot boundaries |
 | Template schema versioning + forward/backward compatibility policy | F28, F5 | ADR: template schema versioning |
-| Import/export bundle format + secret-exclusion guarantees | F28, F17 | ADR: template bundle format |
+| ~~Import/export bundle format + secret-exclusion guarantees~~ | F28, F17 | **ADR-008** (Proposed 2026-08-31) — OCI image layout, optional registry transport |
 
 ## Out of Scope
 

@@ -462,3 +462,28 @@ func Import() *cobra.Command {
 	cmd.Flags().StringVar(&newName, "name", "", "Install under a different name")
 	return cmd
 }
+
+// Promote returns the `template promote <name> --default` command.
+func Promote() *cobra.Command {
+	var setDefault bool
+	cmd := &cobra.Command{
+		Use:   "promote <name>",
+		Short: "Mark a template as the default for `box create`",
+		Args:  cobra.ExactArgs(1),
+		Run: func(_ *cobra.Command, args []string) {
+			if !setDefault {
+				fmt.Fprintln(os.Stderr, "Error: pass --default (only default promotion is supported)")
+				os.Exit(1)
+			}
+			store := template.NewStore(tmplDir)
+			_ = store.InstallDefaults()
+			if err := store.SetDefault(args[0]); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("%s is now the default template\n", args[0])
+		},
+	}
+	cmd.Flags().BoolVar(&setDefault, "default", false, "Set as the default template")
+	return cmd
+}

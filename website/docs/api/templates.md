@@ -94,7 +94,14 @@ optional `?name=<n>` to rename. Body cap: 32 MiB.
 Verifies blob digests, re-runs `Validate`, installs with
 `source.type: imported`. `201` on success; `409` on a name collision.
 
+## Promote
+
+`POST /v1/templates/{name}/promote` — `{ "default": true }`
+
+Marks the template as the default for sandbox creation when no template is
+given. `404` if the template is missing.
+
 :::note
-`snapshot` (from a sandbox), `promote`, and an `oci://<ref>` transport
-are specified (`SPEC.md` §9 / §18.1) but not yet implemented.
+`snapshot` (from a sandbox) and an `oci://<ref>` transport are specified
+(`SPEC.md` §9 / §18.1) but not yet implemented.
 :::

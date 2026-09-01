@@ -256,5 +256,10 @@ func (s *Store) Import(tarBytes []byte, newName string) (*Template, error) {
 	if err := s.Create(name, &t); err != nil {
 		return nil, err
 	}
+	digest := "unknown"
+	if imp.Provenance != nil && imp.Provenance.ContentDigest != "" {
+		digest = imp.Provenance.ContentDigest
+	}
+	audit("import", name, "from bundle "+digest)
 	return &t, nil
 }

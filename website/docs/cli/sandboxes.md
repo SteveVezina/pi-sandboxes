@@ -12,7 +12,7 @@ pi-box box create [template] [--name <n>] [--mode <mode>]
 
 | Flag | Default | Notes |
 |------|---------|-------|
-| positional `template` | `base` | one of `base`, `node`, `python`, `go`, `rust`, `node-python`, `polyglot` |
+| positional `template` | promoted default, else `base` | one of `base`, `node`, `python`, `go`, `rust`, `node-python`, `polyglot`, or a local/imported template. `pi-box template promote <name> --default` sets the fallback. |
 | `-t, --template` | — | alternative to the positional arg |
 | `-n, --name` | template name | sandbox name used by later commands |
 | `-m, --mode` | `fast` | `fast`, `compat`, or `secure` |

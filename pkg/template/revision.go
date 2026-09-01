@@ -108,6 +108,7 @@ func (s *Store) Rollback(name string, n int) (*Template, error) {
 	if err := s.Create(name, &restored); err != nil {
 		return nil, err
 	}
+	audit("rollback", name, fmt.Sprintf("restored revision %d", n))
 	return &restored, nil
 }
 

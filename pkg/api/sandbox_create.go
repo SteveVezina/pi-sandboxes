@@ -51,6 +51,9 @@ func CreateSandbox(store *sandbox.Store) http.HandlerFunc {
 			return
 		}
 		if req.Template == "" {
+			req.Template = templateStore().Default() // promoted default (F28 T28.2c)
+		}
+		if req.Template == "" {
 			req.Template = "base"
 		}
 		requested := req.Mode

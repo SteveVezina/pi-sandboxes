@@ -19,6 +19,7 @@ pi-box template diff <left> <right>      # compare two templates or revisions
 pi-box template rollback <name> <n>      # restore a prior revision
 pi-box template export <name> -o <file>  # portable OCI bundle
 pi-box template import <bundle.tar>      # install as source: imported
+pi-box template promote <name> --default # default for `box create` with no template
 pi-box template build <name>             # build local artifacts for compatible runtimes
 pi-box template update <name>            # refresh a built-in from product-managed definitions
 pi-box template prune                    # remove unused local artifacts
@@ -88,8 +89,18 @@ template with `source.type: imported`. It is **untrusted until you run
 `create` never pulls a template. A name collision is rejected; use
 `--name` to install a copy.
 
+## promote
+
+```bash
+pi-box template promote my-node --default
+```
+
+Marks `my-node` as the template `pi-box box create` uses when no template
+argument is given (recorded in `~/.pi-box/templates/.default`). If the
+marked template is later deleted, `create` falls back to `base`.
+
 :::note Still planned (F28)
-`snapshot` (from a sandbox), `promote` (set default), an `oci://<ref>`
-registry transport for export/import, and the GUI surface are specified
-(`SPEC.md` §18.1) but not yet implemented.
+`snapshot` (from a sandbox), an `oci://<ref>` registry transport for
+export/import, and the GUI surface are specified (`SPEC.md` §18.1) but not
+yet implemented.
 :::

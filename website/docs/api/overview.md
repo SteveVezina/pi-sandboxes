@@ -49,7 +49,7 @@ remote daemon reached over HTTP requires a bearer token — see
 | POST | `/v1/sandboxes/{id}/output` |
 | POST | `/v1/sandboxes/{id}/snapshot` · `/snapshot/create` · `/snapshot/list` · `/snapshot/rollback` · `/snapshot/delete` · `/rollback` |
 | GET | `/v1/sandboxes/{id}/logs` · `/logs/list` · `/logs/history` |
-| GET · POST | `/v1/templates` · `/v1/templates/{name}` · `/v1/templates/fork` · `/v1/templates/validate` · `/v1/templates/diff` · `/v1/templates/{name}/history` · `/v1/templates/{name}/rollback` · `/v1/templates/export` · `/v1/templates/import` |
+| GET · POST | `/v1/templates` · `/v1/templates/{name}` · `/v1/templates/fork` · `/v1/templates/validate` · `/v1/templates/diff` · `/v1/templates/{name}/history` · `/v1/templates/{name}/rollback` · `/v1/templates/export` · `/v1/templates/import` · `/v1/templates/{name}/promote` |
 | GET | `/v1/system/status` · `/doctor` · `/runtimes` |
 | GET | `/v1/support-bundle` |
 | GET · POST · PUT · DELETE | `/v1/contexts` · `/v1/contexts/{name}` · `/v1/contexts/use` |

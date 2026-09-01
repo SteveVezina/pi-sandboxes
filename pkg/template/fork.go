@@ -47,5 +47,6 @@ func (s *Store) Fork(source, newName string) (*Template, error) {
 	if err := s.Create(newName, &forked); err != nil {
 		return nil, fmt.Errorf("write forked template: %w", err)
 	}
+	audit("fork", newName, "forked from "+source)
 	return &forked, nil
 }

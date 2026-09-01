@@ -153,6 +153,24 @@ func DiffTemplates(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"left": req.Left, "right": req.Right, "diff": template.Diff(l, rt)})
 }
 
+// PromoteTemplate handles POST /v1/templates/{name}/promote — {default}.
+func PromoteTemplate(w http.ResponseWriter, r *http.Request) {
+	name := mux.Vars(r)["name"]
+	var req struct {
+		Default bool `json:"default"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if !req.Default {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "nothing to promote (set default: true)"})
+		return
+	}
+	if err := templateStore().SetDefault(name); err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"name": name, "default": true})
+}
+
 // ExportTemplate handles POST /v1/templates/export — {name}. Returns the
 // OCI image-layout bundle tar (ADR-008).
 func ExportTemplate(w http.ResponseWriter, r *http.Request) {

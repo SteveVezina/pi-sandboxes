@@ -30,6 +30,7 @@ func init() {
 	templateCmd.AddCommand(Rollback())
 	templateCmd.AddCommand(Export())
 	templateCmd.AddCommand(Import())
+	templateCmd.AddCommand(Promote())
 	templateCmd.AddCommand(Build())
 	templateCmd.AddCommand(Update())
 	templateCmd.AddCommand(Prune())

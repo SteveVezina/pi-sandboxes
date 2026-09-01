@@ -231,3 +231,33 @@ func TestBundle_RejectsNonTemplateArchive(t *testing.T) {
 		t.Fatal("garbage should be rejected")
 	}
 }
+
+func TestPromote_SetsAndResolvesDefault(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.InstallDefaults(); err != nil {
+		t.Fatal(err)
+	}
+
+	if s.Default() != "" {
+		t.Fatalf("no default expected initially, got %q", s.Default())
+	}
+	if err := s.SetDefault("go"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+	if s.Default() != "go" {
+		t.Fatalf("Default() = %q, want go", s.Default())
+	}
+
+	// Promoting a missing template fails.
+	if err := s.SetDefault("nope"); err == nil {
+		t.Fatal("promoting a missing template should fail")
+	}
+
+	// A dangling default (template deleted) resolves to "".
+	if err := s.Delete("go"); err != nil {
+		t.Fatal(err)
+	}
+	if s.Default() != "" {
+		t.Fatalf("dangling default should resolve empty, got %q", s.Default())
+	}
+}

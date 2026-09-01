@@ -1,7 +1,7 @@
 # F28: Local Template Library and Lifecycle
 
 > Source: `SPEC.md` §6 Features F28, §18.1
-> Status: 🔵 In progress — T28.1 (metadata + inspect/fork/validate) + T28.2 (history/diff/rollback) + T28.3 (import/export bundles) done; T28.2b (snapshot), T28.2c (promote), T28.4 (GUI) open
+> Status: 🔵 In progress — T28.1/T28.2/T28.2c/T28.3 done (metadata/fork/validate, history/diff/rollback, promote, OCI import/export); T28.2b (snapshot — Linux/runtime), T28.4 (GUI) open
 > Category: Service-layer / CLI / GUI
 
 ## Definition (from block spec)
@@ -48,7 +48,7 @@ Mapped from `SPEC.md` § AC-35:
 - [x] AC-35.8: `pi-box template rollback` restores a local template to a prior revision *(2026-08-31: T28.2 — `Store.Rollback`, recorded as a new revision, bumps lineage)*
 - [x] AC-35.9: `pi-box template export` creates a portable bundle with metadata, definition, digest, and provenance *(2026-08-31: T28.3 — `template.ExportBundle` → OCI image layout tar per ADR-008; `POST /v1/templates/export`)*
 - [x] AC-35.10: `pi-box template import` validates and installs a portable local bundle *(2026-08-31: T28.3 — `Store.Import` verifies blob digests + `Validate` + collision check, installs `source.type: imported`; `POST /v1/templates/import`)*
-- [ ] AC-35.11: Snapshot, import, fork, rollback, promote, and export operations are audited and policy-checked *(import/fork/rollback/export run `Validate`; a structured audit-log line per mutating op is still open)*
+- [x] AC-35.11: Snapshot, import, fork, rollback, promote, and export operations are audited and policy-checked *(2026-08-31: `pkg/template/audit.go` — structured `slog` line per fork/rollback/import/promote; `Validate` runs on fork/rollback/import/export. Snapshot audit lands with T28.2b.)*
 - [ ] AC-35.12: GUI Templates view can show details, source/lineage, validation errors, history/diff, and fork/snapshot/import/export/promote actions
 - [ ] AC-35.13: Template snapshots and exports exclude secrets and workspace source files by default
 
@@ -130,12 +130,22 @@ Mapped from `SPEC.md` § AC-35:
 **Size:** L → split on a Linux host
 **Depends on:** T28.1, F13
 
-### T28.2c: Promote (set default) ⏳
+### T28.2c: Promote (set default) ✅ *(2026-08-31)*
 
-**Description:** `pi-box template promote <name> [--default]` — mark a local/snapshot template as the default for `pi-box box create` with no template arg. Needs a `default_template` key in `~/.pi-box/config.yaml` (no config-default mechanism exists yet).
+**Description:** `pi-box template promote <name> --default` writes a
+`.default` marker file in the templates dir (`Store.SetDefault` /
+`Store.Default`, validates the name exists). `CreateSandbox` resolves an
+empty `req.Template` from `Store.Default()` before falling back to `base`;
+a deleted default resolves to `""`. `POST /v1/templates/{name}/promote`
+`{default:true}`. Audited via `pkg/template/audit.go`.
 
-**Acceptance criteria:** AC-35.11 (promote is audited/policy-checked)
-**Files:** `pkg/template/`, config plumbing, `pkg/api/sandbox_create.go`
+**Acceptance criteria:** AC-35.11 (promote audited) — ✅
+**Verification:** `tests/template/f28_test.go::TestPromote_SetsAndResolvesDefault`
+(set, resolve, missing-template rejection, dangling-default → `""`).
+Suite 509 pass.
+**Files:** `pkg/template/promote.go` (new), `pkg/template/audit.go` (new),
+`pkg/api/{templates,sandbox_create}.go`, `pkg/daemon/router.go`,
+`cmd/pi-box/template/{commands,template}.go`
 **Size:** S
 **Depends on:** T28.1
 

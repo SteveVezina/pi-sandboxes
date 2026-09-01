@@ -120,7 +120,9 @@ F10/F17/F19 ──────────────────────�
 T28.2c done — `.default` marker file (`Store.SetDefault`/`Default`), `CreateSandbox` resolves empty template from it before `base`, `POST /v1/templates/{name}/promote`, `pi-box template promote --default`. AC-35.11 audit-log done — `pkg/template/audit.go`, `slog` line per fork/rollback/import/promote. 509 tests green.
 Open F28: **T28.2b snapshot-from-sandbox (runtime hooks — Linux)** and **T28.4 GUI**.
 
-**F13 cache-scoping done (ADR-009, accepted):** cache volume names now scoped by template/runtime/user (`cache.VolumeScope` / `cacheVolumeName`), so sibling sandboxes of the same template share a warm cache. Baseline = shared read-write per-scope named volume; strict RO-lower + per-sandbox-upper overlay deferred to a Linux follow-up. `pkg/cache` wired. F12 AC-12.2/AC-12.5 ✅. Cached-install benchmark thresholds need a Linux+Docker `pi-box bench` run to confirm. 510 tests green.
+**F13 Snapshot & Rollback re-verified + fixed (2026-08-31):** real reflink attempt (`FICLONE`/`clonefile`, `pkg/snapshot/clone_*.go`), content-addressed store under `~/.pi-box/snapshots/content-addressed-store/` with dedup, `snapshot.PruneOrphans` wired into `system prune`. `newTestManager` now isolates `$HOME` (was leaking into real `~/.pi-box`). AC-13.3/13.4/13.5 ✅. F13 → 🟢 Implemented. 511 tests green.
+
+**F12 cache-scoping done (ADR-009, accepted):** cache volume names now scoped by template/runtime/user (`cache.VolumeScope` / `cacheVolumeName`), so sibling sandboxes of the same template share a warm cache. Baseline = shared read-write per-scope named volume; strict RO-lower + per-sandbox-upper overlay deferred to a Linux follow-up. `pkg/cache` wired. F12 AC-12.2/AC-12.5 ✅. Cached-install benchmark thresholds need a Linux+Docker `pi-box bench` run to confirm. 510 tests green.
 
 ## Risk Tracking
 

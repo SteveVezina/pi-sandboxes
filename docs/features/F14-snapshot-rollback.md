@@ -1,7 +1,7 @@
 # F13: Snapshot & Rollback
 
 > Source: `SPEC.md` §6 Features F13
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Reviewed — re-verified + fixed 2026-08-31. Snapshots now use a real reflink attempt (Linux `FICLONE` / APFS `clonefile`, falls back to a recursive copy) and a **content-addressed store** under `~/.pi-box/snapshots/content-addressed-store/` (identical workspace contents dedupe to one copy). `pi-box system prune` reclaims unreferenced blobs. `snapshot.Store` (the old parallel CAS impl) is superseded by the wired `Manager` path.
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -48,9 +48,9 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 - [x] AC-13.1: `pi-box box snapshot <id> <name>` creates a named snapshot
 - [x] AC-13.2: `pi-box box rollback <id> <name>` restores to snapshot
-- [x] AC-13.3: Snapshot creation uses overlay upperdir or reflink
-- [ ] AC-13.4: Snapshot metadata stored in a daemon-owned content-addressed store under `~/.pi-box/snapshots/` *(2026-07-15: AC updated per PROP-009)*
-- [ ] AC-13.5: Snapshots are warm-start and rollback inputs only, not an export channel *(2026-07-15: added per PROP-009)*
+- [x] AC-13.3: Snapshot creation uses overlay upperdir or reflink *(2026-08-31: `pkg/snapshot/clone_{linux,darwin,other}.go` — `FICLONE` / `clonefile` per-file; `tryReflink` reports `method: "reflink"` on CoW filesystems, falls back to a recursive copy (`method: "tar"`) on ext4/overlayfs. Overlay-upperdir capture is the fast-backend Linux path.)*
+- [x] AC-13.4: Snapshot metadata stored in a daemon-owned content-addressed store under `~/.pi-box/snapshots/` *(2026-08-31: `Manager.Create` hashes the snapshot, stores bytes under `~/.pi-box/snapshots/content-addressed-store/<hash[:2]>/<hash[2:]>/`, dedupes identical content; per-sandbox `meta.json` holds the hash pointer. `Rollback` reads from the CAS. Verified: `tests/snapshot/snapshot_test.go::TestCreate_ContentAddressedAndDeduped`.)*
+- [x] AC-13.5: Snapshots are warm-start and rollback inputs only, not an export channel *(no endpoint delivers snapshot content off-box; PROP-009 consolidated export to `POST /output`)*
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect

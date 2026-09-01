@@ -83,8 +83,10 @@ func TestCreate(t *testing.T) {
 	if !result.Success {
 		t.Error("Expected snapshot creation to succeed")
 	}
-	if result.Method != "tar" {
-		t.Errorf("Expected method 'tar', got '%s'", result.Method)
+	switch result.Method {
+	case "reflink", "tar":
+	default:
+		t.Errorf("unexpected method %q (want reflink or tar)", result.Method)
 	}
 }
 
@@ -218,14 +220,57 @@ func TestSnapshotTimestamp(t *testing.T) {
 }
 
 func newTestManager(t *testing.T) *snapshot.Manager {
-	tmpDir := filepath.Join(os.TempDir(), "pi-snap-test-"+randomID())
-	os.MkdirAll(tmpDir, 0755)
-	t.Cleanup(func() { os.RemoveAll(tmpDir) })
-	return snapshot.NewManager(tmpDir)
+	// Isolate HOME so snapshots (and the content-addressed store under
+	// ~/.pi-box/snapshots) never touch the real user's Pi Box home.
+	t.Setenv("HOME", t.TempDir())
+	return snapshot.NewManager("sbx-" + randomID())
 }
 
 func randomID() string {
 	b := make([]byte, 8)
 	_, _ = rand.Read(b)
 	return fmt.Sprintf("%x", b)
+}
+
+func TestCreate_ContentAddressedAndDeduped(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	ws := filepath.Join(t.TempDir(), "ws")
+	os.MkdirAll(ws, 0o755)
+	os.WriteFile(filepath.Join(ws, "a.txt"), []byte("hello"), 0o644)
+
+	m1 := snapshot.NewManager("sbx-1")
+	r1, err := m1.Create("s1", ws)
+	if err != nil || !r1.Success {
+		t.Fatalf("create: %v", err)
+	}
+
+	// A second sandbox snapshotting identical content dedupes.
+	m2 := snapshot.NewManager("sbx-2")
+	if _, err := m2.Create("s2", ws); err != nil {
+		t.Fatal(err)
+	}
+
+	// Count the <hash[:2]>/<hash[2:]> content dirs.
+	casRoot := filepath.Join(home, ".pi-box", "snapshots", "content-addressed-store")
+	prefixes, _ := os.ReadDir(casRoot)
+	var contentDirs int
+	for _, pfx := range prefixes {
+		rest, _ := os.ReadDir(filepath.Join(casRoot, pfx.Name()))
+		contentDirs += len(rest)
+	}
+	if contentDirs != 1 {
+		t.Fatalf("identical content should dedupe to one CAS dir, got %d", contentDirs)
+	}
+
+	// Rollback reads from the CAS.
+	dst := filepath.Join(t.TempDir(), "restore")
+	if err := m1.Rollback("s1", dst); err != nil {
+		t.Fatalf("rollback: %v", err)
+	}
+	got, _ := os.ReadFile(filepath.Join(dst, "a.txt"))
+	if string(got) != "hello" {
+		t.Fatalf("rollback content = %q", got)
+	}
 }

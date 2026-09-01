@@ -8,13 +8,16 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/pi-sandbox/pi/pkg/snapshot"
 )
 
 // PruneResult holds the results of a prune operation.
 type PruneResult struct {
-	RemovedSandboxes int
-	RemovedLogs      int
-	RemovedBytes     int64
+	RemovedSandboxes     int
+	RemovedLogs          int
+	RemovedSnapshotBlobs int
+	RemovedBytes         int64
 }
 
 // RunPrune removes old sandbox state and logs.
@@ -90,6 +93,11 @@ func RunPrune(askConfirm bool) (*PruneResult, error) {
 				}
 			}
 		}
+	}
+
+	// Remove unreferenced content-addressed snapshot blobs.
+	if n, err := snapshot.PruneOrphans(piHome); err == nil {
+		result.RemovedSnapshotBlobs = n
 	}
 
 	return result, nil

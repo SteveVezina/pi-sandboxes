@@ -6,30 +6,32 @@ import (
 	"path/filepath"
 )
 
-// Rollback restores a workspace to a snapshot.
+// Rollback restores a workspace directory to a named snapshot, reading
+// the content from the content-addressed store.
 func (m *Manager) Rollback(name string, workspaceDir string) error {
-	snapDir := filepath.Join(m.snapshotsDir, name)
-
-	// Check snapshot exists
-	if _, err := os.Stat(snapDir); os.IsNotExist(err) {
+	meta, err := m.GetMeta(name)
+	if err != nil {
 		return fmt.Errorf("snapshot %s not found", name)
 	}
 
-	// Check workspace exists
-	if _, err := os.Stat(workspaceDir); os.IsNotExist(err) {
-		return fmt.Errorf("workspace %s not found", workspaceDir)
+	var content string
+	switch {
+	case meta.Hash != "":
+		content = m.casContentDir(meta.Hash)
+	default:
+		// legacy pre-CAS snapshot: content lived next to the meta
+		content = filepath.Join(m.snapshotsDir, name)
+	}
+	if _, err := os.Stat(content); err != nil {
+		return fmt.Errorf("snapshot content missing for %s", name)
 	}
 
-	// Remove workspace contents
 	if err := os.RemoveAll(workspaceDir); err != nil {
 		return fmt.Errorf("clear workspace: %w", err)
 	}
-
-	// Copy snapshot contents to workspace
-	if err := os.MkdirAll(workspaceDir, 0755); err != nil {
+	if err := os.MkdirAll(workspaceDir, 0o755); err != nil {
 		return fmt.Errorf("recreate workspace: %w", err)
 	}
-
-	_, err := copyDir(snapDir, workspaceDir)
+	_, err = copyDir(content, workspaceDir)
 	return err
 }

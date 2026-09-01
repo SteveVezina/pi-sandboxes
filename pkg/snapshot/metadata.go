@@ -14,8 +14,11 @@ type Meta struct {
 	SandboxID   string    `json:"sandboxId"`
 	CreatedAt   time.Time `json:"createdAt"`
 	SizeBytes   int64     `json:"sizeBytes"`
-	Method      string    `json:"method"` // "overlay", "reflink", "tar"
+	Method      string    `json:"method"` // "reflink" | "copy"
 	WorkspaceID string    `json:"workspaceId"`
+	// Hash is the sha256 of the snapshot content; the bytes live in the
+	// content-addressed store under ~/.pi-box/snapshots (AC-13.4).
+	Hash string `json:"hash,omitempty"`
 }
 
 // Manager manages snapshots for a sandbox.
@@ -44,6 +47,10 @@ func (m *Manager) EnsureDir() error {
 
 // CreateMeta writes snapshot metadata.
 func (m *Manager) CreateMeta(name string, sizeBytes int64, method string) (*Meta, error) {
+	return m.createMeta(name, sizeBytes, method, "")
+}
+
+func (m *Manager) createMeta(name string, sizeBytes int64, method, hash string) (*Meta, error) {
 	if err := m.EnsureDir(); err != nil {
 		return nil, fmt.Errorf("ensure snapshots dir: %w", err)
 	}
@@ -55,6 +62,7 @@ func (m *Manager) CreateMeta(name string, sizeBytes int64, method string) (*Meta
 		SizeBytes:   sizeBytes,
 		Method:      method,
 		WorkspaceID: m.sandboxID,
+		Hash:        hash,
 	}
 
 	metaPath := filepath.Join(m.snapshotsDir, name, "meta.json")

@@ -14,43 +14,94 @@ type CreateResult struct {
 	Success   bool   `json:"success"`
 }
 
-// Create creates a snapshot of the workspace.
+// Create snapshots the workspace into the daemon-owned content-addressed
+// store (~/.pi-box/snapshots/content-addressed-store, AC-13.4) and leaves
+// a per-sandbox pointer (meta.json with the content hash). Identical
+// workspace contents dedupe to one stored copy.
 func (m *Manager) Create(name string, workspaceDir string) (*CreateResult, error) {
-	snapDir := filepath.Join(m.snapshotsDir, name)
+	staging, err := os.MkdirTemp("", "pi-snap-*")
+	if err != nil {
+		return &CreateResult{Name: name}, err
+	}
+	defer os.RemoveAll(staging)
 
-	// Try reflink first (btrfs, xfs)
-	method, size, err := tryReflink(workspaceDir, snapDir)
-	if err == nil {
-		m.CreateMeta(name, size, method)
-		return &CreateResult{Name: name, Method: method, SizeBytes: size, Success: true}, nil
+	method, size, err := tryReflink(workspaceDir, staging)
+	if err != nil {
+		if method, size, err = tryTarCopy(workspaceDir, staging); err != nil {
+			return &CreateResult{Name: name}, fmt.Errorf("snapshot copy failed: %w", err)
+		}
 	}
 
-	// Fall back to tar copy
-	method, size, err = tryTarCopy(workspaceDir, snapDir)
-	if err == nil {
-		m.CreateMeta(name, size, method)
-		return &CreateResult{Name: name, Method: method, SizeBytes: size, Success: true}, nil
+	hash, err := dirHash(staging)
+	if err != nil {
+		return &CreateResult{Name: name}, fmt.Errorf("hash snapshot: %w", err)
 	}
 
-	return &CreateResult{Name: name, Success: false}, fmt.Errorf("snapshot creation failed: %w", err)
+	content := m.casContentDir(hash)
+	if _, statErr := os.Stat(content); os.IsNotExist(statErr) {
+		if err := os.MkdirAll(filepath.Dir(content), 0o755); err != nil {
+			return &CreateResult{Name: name}, err
+		}
+		if err := os.Rename(staging, content); err != nil {
+			// cross-device (staging in /tmp): fall back to a copy
+			if _, cErr := copyDir(staging, content); cErr != nil {
+				return &CreateResult{Name: name}, cErr
+			}
+		}
+	}
+
+	if _, err := m.createMeta(name, size, method, hash); err != nil {
+		return &CreateResult{Name: name}, err
+	}
+	return &CreateResult{Name: name, Method: method, SizeBytes: size, Success: true}, nil
 }
 
-// tryReflink attempts reflink copy (fast, space-efficient).
+func (m *Manager) casContentDir(hash string) string {
+	// m.snapshotsDir = <pi-home>/sandboxes/<id>/snapshots
+	piHome := filepath.Dir(filepath.Dir(filepath.Dir(m.snapshotsDir)))
+	return filepath.Join(piHome, "snapshots", "content-addressed-store", hash[:2], hash[2:])
+}
+
+// tryReflink copies src to dst file-by-file using copy-on-write clones
+// (Linux FICLONE / APFS clonefile). It fails fast on the first file the
+// filesystem can't clone (ext4, overlayfs) so the caller falls back to a
+// plain copy.
 func tryReflink(src, dst string) (string, int64, error) {
-	// Check if source exists
-	if _, err := os.Stat(src); err != nil {
+	if !reflinkSupported() {
+		return "", 0, fmt.Errorf("reflink not supported on this platform")
+	}
+	srcInfo, err := os.Stat(src)
+	if err != nil || !srcInfo.IsDir() {
+		return "", 0, fmt.Errorf("reflink: source not a directory")
+	}
+	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
 		return "", 0, err
 	}
 
-	// Create destination directory
-	if err := os.MkdirAll(dst, 0755); err != nil {
+	var total int64
+	err = filepath.Walk(src, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(src, p)
+		target := filepath.Join(dst, rel)
+		if info.IsDir() {
+			return os.MkdirAll(target, info.Mode())
+		}
+		if !info.Mode().IsRegular() {
+			return nil // skip symlinks / devices — a snapshot of a workspace shouldn't have them
+		}
+		if err := cloneFile(p, target); err != nil {
+			return err
+		}
+		total += info.Size()
+		return nil
+	})
+	if err != nil {
+		os.RemoveAll(dst)
 		return "", 0, err
 	}
-
-	// Try reflink via cp --reflink=always
-	// This is a stub — actual reflink requires syscall on Linux
-	// For now, fall through to tar copy
-	return "", 0, fmt.Errorf("reflink not supported on this platform")
+	return "reflink", total, nil
 }
 
 // tryTarCopy creates a copy of the workspace.

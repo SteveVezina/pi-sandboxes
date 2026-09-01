@@ -10,64 +10,120 @@ import (
 )
 
 // Template represents a sandbox template definition.
+//
+// The first block is the original minimal schema and stays required. The
+// rest is the F28 metadata extension — every field is optional so the
+// built-in templates remain valid unchanged.
 type Template struct {
 	Name    string            `yaml:"name"`
 	Runtime string            `yaml:"runtime"`
 	Base    string            `yaml:"base"`
-	Image   string            `yaml:"image"`
+	Image   string            `yaml:"image,omitempty"`
 	Tools   []string          `yaml:"tools"`
 	Mounts  map[string]string `yaml:"mounts"`
-	Caches  map[string]string `yaml:"caches"`
+	Caches  map[string]string `yaml:"caches,omitempty"`
 	Network string            `yaml:"network"`
+
+	// --- F28 metadata (all optional) ---
+	Version        string            `yaml:"version,omitempty"`
+	Summary        string            `yaml:"summary,omitempty"`
+	Description    string            `yaml:"description,omitempty"`
+	Tags           []string          `yaml:"tags,omitempty"`
+	Source         *Source           `yaml:"source,omitempty"`
+	Compatibility  *Compatibility    `yaml:"compatibility,omitempty"`
+	NetworkDomains []string          `yaml:"networkDomains,omitempty"`
+	Resources      *ResourceDefaults `yaml:"resources,omitempty"`
+	Lineage        *Lineage          `yaml:"lineage,omitempty"`
+	CreatedAt      string            `yaml:"createdAt,omitempty"`
+	UpdatedAt      string            `yaml:"updatedAt,omitempty"`
+}
+
+// SourceType classifies where a template came from.
+type SourceType string
+
+const (
+	SourceBuiltin  SourceType = "builtin"
+	SourceLocal    SourceType = "local"
+	SourceSnapshot SourceType = "snapshot"
+	SourceImported SourceType = "imported"
+)
+
+// Source records a template's provenance.
+type Source struct {
+	Type       SourceType `yaml:"type"`
+	Parent     string     `yaml:"parent,omitempty"`
+	ForkedFrom string     `yaml:"forkedFrom,omitempty"`
+	SnapshotOf string     `yaml:"snapshotOf,omitempty"` // sandbox ID when Type == snapshot
+}
+
+// Compatibility is a declared hint. The authoritative capability comes
+// from each runtime driver's Probe/CapabilityReport (ADR-005).
+type Compatibility struct {
+	PiBox    string            `yaml:"piBox,omitempty"`
+	Runtimes map[string]string `yaml:"runtimes,omitempty"` // mode -> supported | planned | unsupported
+}
+
+// ResourceDefaults are requested defaults, still subject to daemon policy.
+type ResourceDefaults struct {
+	CPU    string `yaml:"cpu,omitempty"`
+	Memory string `yaml:"memory,omitempty"`
+	Disk   string `yaml:"disk,omitempty"`
+}
+
+// Lineage tracks fork/snapshot relationships and content digests.
+type Lineage struct {
+	Generation    int    `yaml:"generation"`
+	ParentDigest  string `yaml:"parentDigest,omitempty"`
+	ContentDigest string `yaml:"contentDigest,omitempty"`
 }
 
 // ImageMappings maps template base shorthands to fully qualified OCI image names.
 var ImageMappings = map[string]string{
-	"debian-slim":      "docker.io/library/debian:bookworm-slim",
-	"debian":           "docker.io/library/debian:bookworm",
-	"node":             "docker.io/library/node:22-bookworm",
-	"python":           "docker.io/library/python:3.13-bookworm",
-	"go":               "docker.io/library/golang:1.24-bookworm",
-	"rust":             "docker.io/library/rust:1.80-bookworm",
-	"ubuntu":           "docker.io/library/ubuntu:24.04",
-	"alpine":           "docker.io/library/alpine:3.20",
-	"fedora":           "docker.io/library/fedora:40",
-	"archlinux":        "docker.io/library/archlinux:latest",
-	"centos":           "docker.io/library/centos:9",
-	"rockylinux":       "docker.io/library/rockylinux:9",
-	"almalinux":        "docker.io/library/almalinux:9",
-	"void":             "docker.io/library/void:latest",
-	"nixos":            "docker.io/library/nixos:latest",
-	"garuda":           "docker.io/library/garuda:latest",
-	"gentoo":           "docker.io/library/gentoo:latest",
-	"slackware":        "docker.io/library/slackware:latest",
-	"guix":             "docker.io/library/guix:latest",
-	"guix-system":      "docker.io/library/guix-system:latest",
-	"guix-sd":          "docker.io/library/guix-sd:latest",
-	"guix-debian":      "docker.io/library/guix-debian:latest",
-	"guix-ubuntu":      "docker.io/library/guix-ubuntu:latest",
-	"guix-fedora":      "docker.io/library/guix-fedora:latest",
-	"guix-centos":      "docker.io/library/guix-centos:latest",
-	"guix-rocky":       "docker.io/library/guix-rocky:latest",
-	"guix-almalinux":   "docker.io/library/guix-almalinux:latest",
-	"guix-void":        "docker.io/library/guix-void:latest",
-	"guix-nixos":       "docker.io/library/guix-nixos:latest",
-	"guix-garuda":      "docker.io/library/guix-garuda:latest",
-	"guix-gentoo":      "docker.io/library/guix-gentoo:latest",
-	"guix-slackware":   "docker.io/library/guix-slackware:latest",
-	"guix-guix":        "docker.io/library/guix-guix:latest",
-	"guix-guix-system": "docker.io/library/guix-guix-system:latest",
-	"guix-guix-sd":     "docker.io/library/guix-guix-sd:latest",
-	"guix-guix-debian": "docker.io/library/guix-guix-debian:latest",
-	"guix-guix-ubuntu": "docker.io/library/guix-guix-ubuntu:latest",
-	"guix-guix-fedora": "docker.io/library/guix-guix-fedora:latest",
-	"guix-guix-centos": "docker.io/library/guix-guix-centos:latest",
-	"guix-guix-rocky":  "docker.io/library/guix-guix-rocky:latest",
+	"debian-slim":         "docker.io/library/debian:bookworm-slim",
+	"debian":              "docker.io/library/debian:bookworm",
+	"node":                "docker.io/library/node:22-bookworm",
+	"python":              "docker.io/library/python:3.13-bookworm",
+	"go":                  "docker.io/library/golang:1.24-bookworm",
+	"rust":                "docker.io/library/rust:1.80-bookworm",
+	"ubuntu":              "docker.io/library/ubuntu:24.04",
+	"alpine":              "docker.io/library/alpine:3.20",
+	"fedora":              "docker.io/library/fedora:40",
+	"archlinux":           "docker.io/library/archlinux:latest",
+	"centos":              "docker.io/library/centos:9",
+	"rockylinux":          "docker.io/library/rockylinux:9",
+	"almalinux":           "docker.io/library/almalinux:9",
+	"void":                "docker.io/library/void:latest",
+	"nixos":               "docker.io/library/nixos:latest",
+	"garuda":              "docker.io/library/garuda:latest",
+	"gentoo":              "docker.io/library/gentoo:latest",
+	"slackware":           "docker.io/library/slackware:latest",
+	"guix":                "docker.io/library/guix:latest",
+	"guix-system":         "docker.io/library/guix-system:latest",
+	"guix-sd":             "docker.io/library/guix-sd:latest",
+	"guix-debian":         "docker.io/library/guix-debian:latest",
+	"guix-ubuntu":         "docker.io/library/guix-ubuntu:latest",
+	"guix-fedora":         "docker.io/library/guix-fedora:latest",
+	"guix-centos":         "docker.io/library/guix-centos:latest",
+	"guix-rocky":          "docker.io/library/guix-rocky:latest",
+	"guix-almalinux":      "docker.io/library/guix-almalinux:latest",
+	"guix-void":           "docker.io/library/guix-void:latest",
+	"guix-nixos":          "docker.io/library/guix-nixos:latest",
+	"guix-garuda":         "docker.io/library/guix-garuda:latest",
+	"guix-gentoo":         "docker.io/library/guix-gentoo:latest",
+	"guix-slackware":      "docker.io/library/guix-slackware:latest",
+	"guix-guix":           "docker.io/library/guix-guix:latest",
+	"guix-guix-system":    "docker.io/library/guix-guix-system:latest",
+	"guix-guix-sd":        "docker.io/library/guix-guix-sd:latest",
+	"guix-guix-debian":    "docker.io/library/guix-guix-debian:latest",
+	"guix-guix-ubuntu":    "docker.io/library/guix-guix-ubuntu:latest",
+	"guix-guix-fedora":    "docker.io/library/guix-guix-fedora:latest",
+	"guix-guix-centos":    "docker.io/library/guix-guix-centos:latest",
+	"guix-guix-rocky":     "docker.io/library/guix-guix-rocky:latest",
 	"guix-guix-almalinux": "docker.io/library/guix-guix-almalinux:latest",
-	"guix-guix-void":   "docker.io/library/guix-guix-void:latest",
-	"guix-guix-nixos":  "docker.io/library/guix-guix-nixos:latest",
-	"guix-guix-garuda": "docker.io/library/guix-guix-garuda:latest",
-	"guix-guix-gentoo": "docker.io/library/guix-guix-gentoo:latest",
+	"guix-guix-void":      "docker.io/library/guix-guix-void:latest",
+	"guix-guix-nixos":     "docker.io/library/guix-guix-nixos:latest",
+	"guix-guix-garuda":    "docker.io/library/guix-guix-garuda:latest",
+	"guix-guix-gentoo":    "docker.io/library/guix-guix-gentoo:latest",
 	"guix-guix-slackware": "docker.io/library/guix-guix-slackware:latest",
 }
 

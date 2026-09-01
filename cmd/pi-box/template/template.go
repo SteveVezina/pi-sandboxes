@@ -23,6 +23,8 @@ func init() {
 	// Subcommands
 	templateCmd.AddCommand(List())
 	templateCmd.AddCommand(Inspect())
+	templateCmd.AddCommand(Fork())
+	templateCmd.AddCommand(Validate())
 	templateCmd.AddCommand(Build())
 	templateCmd.AddCommand(Update())
 	templateCmd.AddCommand(Prune())

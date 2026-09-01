@@ -11,6 +11,7 @@ import (
 
 	"github.com/pi-sandbox/pi/pkg/template"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var tmplDir string
@@ -80,8 +81,31 @@ func Inspect() *cobra.Command {
 			}
 
 			fmt.Printf("Name:    %s\n", tmpl.Name)
+			if tmpl.Version != "" {
+				fmt.Printf("Version: %s\n", tmpl.Version)
+			}
+			if tmpl.Summary != "" {
+				fmt.Printf("Summary: %s\n", tmpl.Summary)
+			}
+			src := string(template.SourceBuiltin)
+			if tmpl.Source != nil && tmpl.Source.Type != "" {
+				src = string(tmpl.Source.Type)
+				if tmpl.Source.ForkedFrom != "" {
+					src += " (forked from " + tmpl.Source.ForkedFrom + ")"
+				}
+			}
+			fmt.Printf("Source:  %s\n", src)
+			if tmpl.Lineage != nil {
+				fmt.Printf("Digest:  %s (generation %d)\n", tmpl.ContentDigest(), tmpl.Lineage.Generation)
+			}
 			fmt.Printf("Runtime: %s\n", tmpl.Runtime)
 			fmt.Printf("Base:    %s\n", tmpl.Base)
+			if tmpl.Compatibility != nil && len(tmpl.Compatibility.Runtimes) > 0 {
+				fmt.Println("\nRuntime compatibility (declared):")
+				for mode, state := range tmpl.Compatibility.Runtimes {
+					fmt.Printf("  %s: %s\n", mode, state)
+				}
+			}
 			fmt.Println("\nTools:")
 			for _, tool := range tmpl.Tools {
 				fmt.Printf("  - %s\n", tool)
@@ -97,6 +121,19 @@ func Inspect() *cobra.Command {
 				}
 			}
 			fmt.Printf("\nNetwork: %s\n", tmpl.Network)
+			if len(tmpl.NetworkDomains) > 0 {
+				fmt.Println("Network domains (seed):")
+				for _, d := range tmpl.NetworkDomains {
+					fmt.Printf("  - %s\n", d)
+				}
+			}
+			if tmpl.Resources != nil {
+				fmt.Printf("Resources: cpu=%s memory=%s disk=%s\n",
+					tmpl.Resources.CPU, tmpl.Resources.Memory, tmpl.Resources.Disk)
+			}
+			if problems := tmpl.Validate(); len(problems) > 0 {
+				fmt.Printf("\n⚠ %d validation problem(s) — run `pi-box template validate %s`\n", len(problems), tmpl.Name)
+			}
 		},
 	}
 	cmd.Flags().BoolVar(&jsonFlag, "json", false, "Output as JSON")
@@ -201,6 +238,78 @@ func Prune() *cobra.Command {
 					continue
 				}
 				fmt.Printf("  Removed: %s\n", name)
+			}
+		},
+	}
+	cmd.Flags().BoolVar(&jsonFlag, "json", false, "Output as JSON")
+	return cmd
+}
+
+// Fork returns the `template fork <source> <new-name>` command.
+func Fork() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "fork <source> <new-name>",
+		Short: "Create an editable local template from an existing one",
+		Args:  cobra.ExactArgs(2),
+		Run: func(_ *cobra.Command, args []string) {
+			source, newName := args[0], args[1]
+			store := template.NewStore(tmplDir)
+			if err := store.InstallDefaults(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			forked, err := store.Fork(source, newName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("Forked %s -> %s (generation %d)\n", source, newName, forked.Lineage.Generation)
+		},
+	}
+	return cmd
+}
+
+// Validate returns the `template validate <path-or-name>` command.
+func Validate() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "validate <path-or-name>",
+		Short: "Validate a template definition",
+		Args:  cobra.ExactArgs(1),
+		Run: func(_ *cobra.Command, args []string) {
+			ref := args[0]
+			var t *template.Template
+			if data, err := os.ReadFile(ref); err == nil {
+				var parsed template.Template
+				if err := yaml.Unmarshal(data, &parsed); err != nil {
+					fmt.Fprintf(os.Stderr, "Error: parse %s: %v\n", ref, err)
+					os.Exit(1)
+				}
+				t = &parsed
+			} else {
+				store := template.NewStore(tmplDir)
+				_ = store.InstallDefaults()
+				loaded, err := store.Get(ref)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+					os.Exit(1)
+				}
+				t = loaded
+			}
+
+			problems := t.Validate()
+			if jsonFlag {
+				data, _ := json.Marshal(map[string]any{"valid": len(problems) == 0, "problems": problems})
+				fmt.Println(string(data))
+			} else if len(problems) == 0 {
+				fmt.Println("OK")
+			} else {
+				fmt.Printf("%d problem(s):\n", len(problems))
+				for _, p := range problems {
+					fmt.Printf("  - %s\n", p)
+				}
+			}
+			if len(problems) > 0 {
+				os.Exit(1)
 			}
 		},
 	}

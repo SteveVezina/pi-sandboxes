@@ -1,7 +1,7 @@
 # F28: Local Template Library and Lifecycle
 
 > Source: `SPEC.md` §6 Features F28, §18.1
-> Status: 🟡 Spec written (created 2026-08-31 by PROP-006 cascade)
+> Status: 🔵 In progress — T28.1 done (metadata schema + inspect + fork + validate); T28.2–T28.4 open
 > Category: Service-layer / CLI / GUI
 
 ## Definition (from block spec)
@@ -38,12 +38,12 @@ Reconciliation with earlier decisions:
 
 Mapped from `SPEC.md` § AC-35:
 
-- [ ] AC-35.1: Template metadata includes version, summary, description, source, lineage, compatibility, tool versions, cache mounts, network domains, resource defaults, digest, and timestamps
-- [ ] AC-35.2: Existing minimal built-in templates remain valid template definitions
-- [ ] AC-35.3: `pi-box template inspect <name>` shows detailed metadata, lineage, compatibility, and policy-relevant settings
-- [ ] AC-35.4: `pi-box template fork <source> <new-name>` creates an editable local template
-- [ ] AC-35.5: `pi-box template snapshot <sandbox-id> <new-name>` creates a local template when the runtime supports safe snapshotting
-- [ ] AC-35.6: `pi-box template validate <path-or-name>` validates schema, pinned versions, cache mounts, network requests, runtime compatibility, and policy-relevant fields
+- [x] AC-35.1: Template metadata includes version, summary, description, tags, source, lineage, compatibility, tool versions, cache mounts, network domains, resource defaults, digest, and timestamps *(2026-08-31: `Template` extended with all-optional fields in `pkg/template/template.go`; `ContentDigest()` in `digest.go`)*
+- [x] AC-35.2: Existing minimal built-in templates remain valid template definitions *(2026-08-31: `TestValidate_BuiltinsAllPass` — all 7 pass; new fields are `omitempty`)*
+- [x] AC-35.3: `pi-box template inspect <name>` shows detailed metadata, lineage, compatibility, and policy-relevant settings *(also `GET /v1/templates/{name}` → template + resolved image + digest + validation problems)*
+- [x] AC-35.4: `pi-box template fork <source> <new-name>` creates an editable local template *(2026-08-31: `Store.Fork` in `fork.go` — records `source.forkedFrom` + `lineage` generation + parent digest; `POST /v1/templates/fork`)*
+- [ ] AC-35.5: `pi-box template snapshot <sandbox-id> <new-name>` creates a local template when the runtime supports safe snapshotting *(T28.2)*
+- [x] AC-35.6: `pi-box template validate <path-or-name>` validates schema, pinned versions, cache mounts, network requests, runtime compatibility, and policy-relevant fields *(2026-08-31: `Template.Validate()` in `validate.go`; `POST /v1/templates/validate` (installed name or inline definition))*
 - [ ] AC-35.7: `pi-box template diff` and `history` show local template changes and lineage
 - [ ] AC-35.8: `pi-box template rollback` restores a local template to a prior revision
 - [ ] AC-35.9: `pi-box template export` creates a portable bundle with metadata, definition, digest, and provenance
@@ -101,12 +101,13 @@ Mapped from `SPEC.md` § AC-35:
 
 > Phased per PROP-006. Author detailed ACs/verification per task before executing.
 
-### T28.1: Metadata schema + inspect + fork + validate ⏳
+### T28.1: Metadata schema + inspect + fork + validate ✅ *(2026-08-31)*
 
-**Description:** Extend the template YAML schema (version, summary, source, lineage, compatibility, resolved base, pinned tools, network domains, resources, timestamps) while keeping the current minimal form valid. Implement `inspect`, `fork` (builtin/local/imported/snapshot → editable local), and `validate` (schema + pinned versions + cache mounts + network + runtime compat + policy fields).
+**Description:** Extended the template YAML schema (version, summary, description, tags, source, lineage, compatibility, network domains, resources, timestamps) — all optional, built-ins unchanged. `Template.Validate()`, `Template.ContentDigest()`, `Store.Fork()`. API: `GET /v1/templates`, `GET /v1/templates/{name}`, `POST /v1/templates/fork`, `POST /v1/templates/validate`. CLI: `template fork`, `template validate`; `template inspect` extended.
 
-**Acceptance criteria:** AC-35.1, AC-35.2, AC-35.3, AC-35.4, AC-35.6
-**Files:** `pkg/template/`, `pkg/api/templates.go` (new), `cmd/pi-box/box/template.go`
+**Acceptance criteria:** AC-35.1, AC-35.2, AC-35.3, AC-35.4, AC-35.6 — all ✅
+**Verification:** `tests/template/f28_test.go` (validate, digest stability, fork lineage + collision), `pkg/api/templates_internal_test.go` (list/inspect/fork-409/validate). Suite 502 pass. `website/docs/{cli,api}/templates.md` updated.
+**Files:** `pkg/template/{template,validate,digest,fork}.go`, `pkg/api/templates.go`, `pkg/daemon/router.go`, `cmd/pi-box/template/{commands,template}.go`
 **Size:** M
 **Depends on:** F5
 

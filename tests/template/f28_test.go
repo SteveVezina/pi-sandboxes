@@ -1,0 +1,106 @@
+package template_test
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/pi-sandbox/pi/pkg/template"
+)
+
+func TestValidate_BuiltinsAllPass(t *testing.T) {
+	store := newTestStore(t)
+	if err := store.InstallDefaults(); err != nil {
+		t.Fatal(err)
+	}
+	names, _ := store.List()
+	for _, name := range names {
+		tmpl, err := store.Get(name)
+		if err != nil {
+			t.Fatalf("get %s: %v", name, err)
+		}
+		if p := tmpl.Validate(); len(p) != 0 {
+			t.Errorf("built-in %s should validate clean, got: %v", name, p)
+		}
+	}
+}
+
+func TestValidate_CatchesProblems(t *testing.T) {
+	bad := &template.Template{
+		Name:    "",
+		Network: "wideopen",
+		Caches:  map[string]string{"npm": "relative/path"},
+		Tools:   []string{"node:"},
+		Compatibility: &template.Compatibility{
+			Runtimes: map[string]string{"fast": "maybe", "wat": "supported"},
+		},
+		Source: &template.Source{Type: "snapshot"},
+	}
+	problems := bad.Validate()
+	joined := strings.Join(problems, " | ")
+	for _, want := range []string{"name is required", "network", "absolute path", "empty name or version", "maybe", "unknown mode", "snapshotOf"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("expected a problem mentioning %q; got: %s", want, joined)
+		}
+	}
+}
+
+func TestContentDigest_StableAcrossLineageAndTimestamps(t *testing.T) {
+	a := &template.Template{Name: "x", Base: "debian-slim", Network: "restricted"}
+	b := &template.Template{
+		Name: "x", Base: "debian-slim", Network: "restricted",
+		CreatedAt: "2020-01-01T00:00:00Z",
+		Lineage:   &template.Lineage{Generation: 5, ParentDigest: "sha256:abc"},
+	}
+	if a.ContentDigest() == "" || a.ContentDigest() != b.ContentDigest() {
+		t.Fatalf("digest should ignore lineage/timestamps: %q vs %q", a.ContentDigest(), b.ContentDigest())
+	}
+
+	c := &template.Template{Name: "x", Base: "debian-slim", Network: "open"}
+	if a.ContentDigest() == c.ContentDigest() {
+		t.Fatal("digest should change when the definition changes")
+	}
+}
+
+func TestFork_CreatesLocalDerivativeWithLineage(t *testing.T) {
+	store := newTestStore(t)
+	if err := store.InstallDefaults(); err != nil {
+		t.Fatal(err)
+	}
+
+	forked, err := store.Fork("node", "my-node")
+	if err != nil {
+		t.Fatalf("fork: %v", err)
+	}
+	if forked.Source == nil || forked.Source.Type != template.SourceLocal || forked.Source.ForkedFrom != "node" {
+		t.Fatalf("source = %+v", forked.Source)
+	}
+	if forked.Lineage == nil || forked.Lineage.Generation != 1 || forked.Lineage.ParentDigest == "" {
+		t.Fatalf("lineage = %+v", forked.Lineage)
+	}
+
+	// Persisted and re-loadable.
+	reloaded, err := store.Get("my-node")
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if reloaded.Source.ForkedFrom != "node" {
+		t.Errorf("reloaded source lost: %+v", reloaded.Source)
+	}
+	if len(reloaded.Validate()) != 0 {
+		t.Errorf("forked template should be valid: %v", reloaded.Validate())
+	}
+
+	// Fork again from the fork -> generation 2.
+	gen2, err := store.Fork("my-node", "my-node-2")
+	if err != nil {
+		t.Fatalf("second fork: %v", err)
+	}
+	if gen2.Lineage.Generation != 2 {
+		t.Errorf("generation = %d, want 2", gen2.Lineage.Generation)
+	}
+
+	// Name collision rejected.
+	if _, err := store.Fork("node", "my-node"); err == nil {
+		t.Error("forking onto an existing name should fail")
+	}
+}

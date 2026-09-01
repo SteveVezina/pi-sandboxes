@@ -29,6 +29,7 @@ remote daemon reached over HTTP requires a bearer token — see
 - [Sandboxes](/api/sandboxes) — create / exec / clone / files / diff / patch / output / snapshot
 - [System](/api/system) — health, runtimes
 - [Agent runs](/api/agent-runs)
+- [Templates](/api/templates)
 - [Credentials](/api/credentials)
 - [Lifecycle events](/api/events)
 
@@ -48,6 +49,7 @@ remote daemon reached over HTTP requires a bearer token — see
 | POST | `/v1/sandboxes/{id}/output` |
 | POST | `/v1/sandboxes/{id}/snapshot` · `/snapshot/create` · `/snapshot/list` · `/snapshot/rollback` · `/snapshot/delete` · `/rollback` |
 | GET | `/v1/sandboxes/{id}/logs` · `/logs/list` · `/logs/history` |
+| GET · POST | `/v1/templates` · `/v1/templates/{name}` · `/v1/templates/fork` · `/v1/templates/validate` |
 | GET | `/v1/system/status` · `/doctor` · `/runtimes` |
 | GET | `/v1/support-bundle` |
 | GET · POST · PUT · DELETE | `/v1/contexts` · `/v1/contexts/{name}` · `/v1/contexts/use` |

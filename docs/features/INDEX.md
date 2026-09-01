@@ -46,7 +46,7 @@ Dashboard of all features for this project.
 | [F26](F26-gui-sandbox-operations.md) | GUI Sandbox Operations | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M7 | F7, F6, F9, F10, F13, F24 |
 | [F27](F27-gui-settings-diagnostics.md) | GUI Settings and Diagnostics | 🟢 Reviewed | ✅ Implemented | M7 | F16, F17, F19, F22, F24, F25 |
 | [F29](F29-agent-run.md) | Agent Run | 🟡 Spec written | 🔴 Not started | M8 | F8, F9, F30 |
-| [F30](F30-egress-proxy.md) | Egress Proxy | 🔵 In progress (ADR-006 Accepted 2026-08-31) | 🟡 T30.1/T30.2/T30.5/T30.6/T30.7 done, T30.3 partial; T30.4 needs Linux host; T30.8 (credential injection) open | M8 | F11, F17 |
+| [F30](F30-egress-proxy.md) | Egress Proxy | 🔵 In progress (ADR-006 Accepted 2026-08-31) | 🟡 T30.1/T30.2/T30.5/T30.6/T30.7 done; T30.3+T30.8 partial; T30.4 (L3 isolation) needs Linux host | M8 | F11, F17 |
 
 ## Milestone Summary
 

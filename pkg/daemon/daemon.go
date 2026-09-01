@@ -138,6 +138,7 @@ func (d *Daemon) Start() error {
 			fmt.Fprintf(os.Stderr, "daemon: warning: could not start egress proxy: %v\n", err)
 		} else {
 			proxy := network.NewProxyServer(d.egressPolicyResolver, d.egressDecisionSink)
+			proxy.SetCredentialInjector(network.CredentialInjectorFromStore(api.CredentialStoreInstance()))
 			d.proxyServer = &http.Server{Handler: proxy}
 			api.SetEgressProxyAddr(d.ProxyAddr())
 			go func() {

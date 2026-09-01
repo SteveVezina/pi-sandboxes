@@ -1,7 +1,7 @@
 # F30: Egress Proxy
 
 > Source: `SPEC.md` §6 Features F30
-> Status: 🔵 In progress — T30.1/T30.2/T30.5/T30.6/T30.7 done; T30.3 partial (L3 isolation → T30.4); T30.4 open (needs Linux host); T30.8 open (credential injection into proxied requests). Checkpoint review waived by user 2026-08-31. (ADR-006 Accepted 2026-08-31)
+> Status: 🔵 In progress — T30.1/T30.2/T30.5/T30.6/T30.7 done; T30.3 + T30.8 partial; T30.4 open (needs Linux host). Remaining before close: T30.4 (L3 isolation, Linux), T30.3/T30.8 finish (compat firewall + HTTPS git credential-helper channel). Checkpoint review waived by user 2026-08-31. (ADR-006 Accepted 2026-08-31)
 > Category: Service-layer / Security
 
 ## Definition (from block spec)
@@ -203,21 +203,23 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Size:** M
 **Depends on:** None
 
-### T30.8: Credential injection into approved requests 🔴
+### T30.8: Credential injection into approved requests 🟡 *(2026-08-31 — plaintext-HTTP injection done; HTTPS git-token needs the credential-helper channel)*
 
-**Description:** Proxy resolves `id → value` at request time and injects: git-token via the in-sandbox git credential helper over the proxy control channel (scoped to approved host); registry-auth as the `Authorization` header on the forwarded request. Replace the `"[credential-injected]"` placeholder in `EgressProxy.injectCredentials`.
+**Description:** The proxy resolves `id → value` at request time and injects an `Authorization` header on approved **plaintext HTTP** forwards. HTTPS (CONNECT) is end-to-end encrypted in the no-MITM baseline (ADR-006) so header injection is not possible there.
 
 **Acceptance criteria:**
-- [ ] Authenticated git clone of an approved private host succeeds through the proxy
-- [ ] Registry auth injected for approved registry host
-- [ ] Credential absent from sandbox env, files, process args, command output
-- [ ] Credential value redacted from daemon logs
+- [x] `ProxyServer` injects credentials on approved HTTP forwards — `SetCredentialInjector` + `network.CredentialInjectorFromStore`; git-token → `Basic base64("x-access-token:<v>")`, registry-auth → `Basic base64("<name>:<v>")`
+- [x] The proxy owns the header — a sandbox-supplied `Authorization` is overwritten, not merged
+- [x] Credential absent from sandbox env, files, process args, command output — by construction: the value only ever exists in the daemon's in-memory store and on the injected header to the approved host; the container only ever sees `HTTP_PROXY`
+- [x] Credential value never logged — the decision sink records only `{host, allowed, reason}`; the injector emits no logs
+- [ ] Authenticated **git-over-HTTPS** clone of a private host — **deferred**: needs an in-sandbox git credential helper that calls back to the proxy control channel (ADR-006), or TLS interception. Registry auth over HTTPS has the same limitation.
 
 **Verification:**
-- [ ] Security test: token not readable from inside sandbox (env dump, `/proc`, fs scan)
-- [ ] Integration: authenticated git clone through proxy
+- [x] Unit: `tests/network/proxy_server_test.go` — injection overwrites a smuggled `Authorization`; no injector → no header added
+- [x] Unit: `tests/network/credentials_test.go` — git-token / registry-auth header shapes, host matching, nil store
+- [ ] Integration: authenticated git clone through proxy (needs the HTTPS credential-helper channel + Linux)
 
-**Files:** `pkg/network/egress_proxy.go`, `pkg/secrets/inject.go`
+**Files:** `pkg/network/proxy_server.go`, `pkg/network/credentials.go` (new), `pkg/daemon/daemon.go`
 **Size:** M
 **Depends on:** T30.7, T30.3
 

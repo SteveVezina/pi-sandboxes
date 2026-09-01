@@ -126,7 +126,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 **Depends on:** F17 (Policy Enforcement), F30 T30.1–T30.5 (Egress Proxy — 🟢 Reviewed, ADR-006)
 **Implemented by:** F30 T30.1 (policy assembly), T30.2 (proxy listener), T30.3/T30.4 (driver single-endpoint egress), T30.5 (proxy env), T30.6 (denial logging)
 
-### T12.2: Egress-proxy credential injection 🟡 *(2026-08-31: F30 T30.7 done — credential registration API + in-memory store + daemon value sources (no `~/.pi-box` plaintext). F30 T30.8 (injection into approved requests) still open.)*
+### T12.2: Egress-proxy credential injection 🟡 *(2026-08-31: F30 T30.7 done (registration API + in-memory store + value sources, no `~/.pi-box` plaintext); F30 T30.8 partial — `Authorization` injection on approved plaintext-HTTP forwards done; HTTPS git-token via credential-helper channel deferred.)*
 
 **Description:** Implement egress-proxy credential injection for Git credentials. SSH agent and token use are scoped to approved outbound requests, and credentials are never readable from inside the sandbox. *(2026-07-15: AC updated per PROP-009.)*
 

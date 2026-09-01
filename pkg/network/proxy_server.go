@@ -28,16 +28,35 @@ type Decision struct {
 // logs/history). A nil sink is replaced with a slog-based default.
 type DecisionSink func(Decision)
 
+// HeaderInjection is one request header the proxy adds to an approved
+// outbound request on the sandbox's behalf (T30.8). The value never
+// leaves the daemon except on the wire to the approved host.
+type HeaderInjection struct {
+	Name  string
+	Value string
+}
+
+// CredentialInjector returns the headers to inject for an approved host,
+// or nil. It is only consulted for plaintext HTTP forwarding — CONNECT
+// tunnels are end-to-end encrypted and cannot be modified in the no-MITM
+// baseline (ADR-006).
+type CredentialInjector func(host string) []HeaderInjection
+
 // ProxyServer is the daemon-owned forward proxy. Every sandbox in
 // restricted mode routes outbound HTTP(S) through one ProxyServer instance;
-// it enforces the per-sandbox allowlist and records decisions. Credential
-// injection is added in T30.8.
+// it enforces the per-sandbox allowlist, injects approved credentials, and
+// records decisions.
 type ProxyServer struct {
 	resolve   PolicyResolver
 	sink      DecisionSink
+	inject    CredentialInjector
 	transport http.RoundTripper
 	dialer    *net.Dialer
 }
+
+// SetCredentialInjector wires credential injection for approved plaintext
+// HTTP requests. Safe to leave unset (no injection).
+func (p *ProxyServer) SetCredentialInjector(fn CredentialInjector) { p.inject = fn }
 
 // NewProxyServer builds a proxy that resolves per-sandbox policy via resolve
 // and reports decisions to sink (nil sink → slog default).
@@ -132,6 +151,16 @@ func (p *ProxyServer) forward(w http.ResponseWriter, r *http.Request) {
 	outReq.RequestURI = ""
 	outReq.Header.Del("Proxy-Authorization")
 	outReq.Header.Del("Proxy-Connection")
+
+	if p.inject != nil {
+		if headers := p.inject(hostOnly(outReq.Host)); len(headers) > 0 {
+			for _, h := range headers {
+				// The proxy owns the injected header — a sandbox cannot
+				// smuggle its own value past it.
+				outReq.Header.Set(h.Name, h.Value)
+			}
+		}
+	}
 
 	resp, err := p.transport.RoundTrip(outReq)
 	if err != nil {

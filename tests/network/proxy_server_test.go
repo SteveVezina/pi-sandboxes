@@ -55,6 +55,59 @@ func TestProxyServer_AllowedHost_ForwardsRequest(t *testing.T) {
 	}
 }
 
+func TestProxyServer_InjectsCredentialsIntoApprovedForward(t *testing.T) {
+	var gotAuth string
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+	}))
+	defer backend.Close()
+
+	proxy := network.NewProxyServer(permissiveResolver, nil)
+	proxy.SetCredentialInjector(func(host string) []network.HeaderInjection {
+		return []network.HeaderInjection{{Name: "Authorization", Value: "Basic injected"}}
+	})
+	ps := httptest.NewServer(proxy)
+	defer ps.Close()
+
+	// Client sends its own Authorization — the proxy must overwrite it.
+	req, _ := http.NewRequest("GET", backend.URL, nil)
+	req.Header.Set("Authorization", "Basic smuggled")
+	resp, err := proxyClientDo(t, ps.Listener.Addr().String(), "sbx-1", req)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	resp.Body.Close()
+
+	if gotAuth != "Basic injected" {
+		t.Fatalf("upstream Authorization = %q, want proxy-injected value", gotAuth)
+	}
+}
+
+func TestProxyServer_NoInjector_NoAuthAdded(t *testing.T) {
+	var gotAuth string
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+	}))
+	defer backend.Close()
+
+	ps := httptest.NewServer(network.NewProxyServer(permissiveResolver, nil))
+	defer ps.Close()
+
+	resp, err := proxyClient(t, ps.Listener.Addr().String(), "sbx-1").Get(backend.URL)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	resp.Body.Close()
+	if gotAuth != "" {
+		t.Fatalf("unexpected Authorization %q with no injector", gotAuth)
+	}
+}
+
+func proxyClientDo(t *testing.T, proxyAddr, sandboxID string, req *http.Request) (*http.Response, error) {
+	t.Helper()
+	return proxyClient(t, proxyAddr, sandboxID).Do(req)
+}
+
 func TestProxyServer_DeniedHost_403(t *testing.T) {
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
 	defer backend.Close()

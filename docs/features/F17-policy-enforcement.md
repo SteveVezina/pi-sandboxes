@@ -79,7 +79,7 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 - [x] AC-17.7: Exec timeout 120s by default
 - [x] AC-17.8: Max processes 256 by default
 - [x] AC-34.1: No sandbox has a writable bind mount of any host directory by default *(2026-07-15: added per PROP-009; 2026-08-31 verified: compat create/exec derive workspace, artifacts, and cache sources from daemon-managed named volumes (`managedVolumeName`); host paths surface only when the caller explicitly sets `WorkspaceMode: "bind"`. `CreateRequest` exposes no arbitrary-mount field. Regression guard: `pkg/api/mounts_internal_test.go`)*
-- [ ] AC-34.3: Secrets are represented as egress-proxy injection rules and are not stored as plaintext files under `~/.pi-box` *(2026-07-15: added per PROP-009; 2026-08-31: implemented by F30 T30.7 per ADR-006 — in-memory `CredentialStore`, daemon-side value sources, nothing under `~/.pi-box`)*
+- [x] AC-34.3: Secrets are represented as egress-proxy injection rules and are not stored as plaintext files under `~/.pi-box` *(2026-08-31: F30 T30.7 — `POST /v1/credentials` builds injection rules; values live only in the in-memory `secrets.CredentialStore`; `secrets.ValueSource` rejects file paths under `~/.pi-box`. Verified: `tests/secrets/credentials_test.go`, `pkg/api/credentials_internal_test.go`)*
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect

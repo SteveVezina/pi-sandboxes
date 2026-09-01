@@ -2,13 +2,16 @@ package secrets
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
-// CredentialStore manages credential injection rules without storing plaintext secrets on disk.
+// CredentialStore manages credential injection rules and holds resolved
+// secret values in memory only — nothing is written to disk (ADR-006).
 type CredentialStore struct {
-	mu       sync.RWMutex
+	mu          sync.RWMutex
 	credentials map[string]Credential
+	values      map[string]string
 }
 
 // Credential represents a scoped credential.
@@ -25,6 +28,7 @@ type Credential struct {
 func NewCredentialStore() *CredentialStore {
 	return &CredentialStore{
 		credentials: make(map[string]Credential),
+		values:      make(map[string]string),
 	}
 }
 
@@ -44,6 +48,40 @@ func (s *CredentialStore) Add(c Credential) error {
 	defer s.mu.Unlock()
 	s.credentials[c.ID] = c
 	return nil
+}
+
+// AddWithValue registers a credential rule together with its resolved
+// secret value. The value is kept in memory only.
+func (s *CredentialStore) AddWithValue(c Credential, value string) error {
+	if value == "" {
+		return fmt.Errorf("credential value is required")
+	}
+	if err := s.Add(c); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[c.ID] = value
+	return nil
+}
+
+// Resolve returns the in-memory secret value for a credential ID.
+func (s *CredentialStore) Resolve(id string) (string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	v, ok := s.values[id]
+	if !ok {
+		return "", fmt.Errorf("credential %s has no value", id)
+	}
+	return v, nil
+}
+
+// Remove deletes a credential rule and its value.
+func (s *CredentialStore) Remove(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.credentials, id)
+	delete(s.values, id)
 }
 
 // Get retrieves a credential by ID.
@@ -78,13 +116,24 @@ func (s *CredentialStore) GetForHost(host string) []Credential {
 	var creds []Credential
 	for _, c := range s.credentials {
 		for _, h := range c.Hosts {
-			if h == host || (len(h) > 2 && h[0] == '*' && host[len(host)-len(h)+1:] == h[1:]) {
+			if hostMatches(h, host) {
 				creds = append(creds, c)
 				break
 			}
 		}
 	}
 	return creds
+}
+
+// hostMatches reports whether pattern (exact host or "*.suffix") matches host.
+func hostMatches(pattern, host string) bool {
+	if pattern == host {
+		return true
+	}
+	if strings.HasPrefix(pattern, "*.") {
+		return strings.HasSuffix(host, pattern[1:]) // ".suffix"
+	}
+	return false
 }
 
 // Redact redacts sensitive values from a string for logging.

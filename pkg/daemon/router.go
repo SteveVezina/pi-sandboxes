@@ -29,6 +29,10 @@ func NewRouter(store *sandbox.Store, runStores ...*sandbox.AgentRunStore) *mux.R
 	// Health check
 	router.HandleFunc("/health", HealthHandler()).Methods("GET")
 
+	// Credentials (ADR-006 / F30 T30.7) — in-memory only
+	router.HandleFunc("/v1/credentials", api.RegisterCredential).Methods("POST")
+	router.HandleFunc("/v1/credentials", api.ListCredentials).Methods("GET")
+
 	// Sandbox CRUD
 	router.HandleFunc("/v1/sandboxes", api.CreateSandbox(store)).Methods("POST")
 	router.HandleFunc("/v1/sandboxes", api.ListSandboxes(store)).Methods("GET")

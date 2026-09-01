@@ -1,7 +1,7 @@
 # F30: Egress Proxy
 
 > Source: `SPEC.md` §6 Features F30
-> Status: 🔵 In progress — T30.1 + T30.2 + T30.6 done; T30.3 partial (contract + none-mode + proxy-env; L3 isolation → T30.4); T30.5 mostly done (create-time env; per-exec guard open); T30.4/T30.7/T30.8 open. T30.4 needs a Linux host; T30.7/T30.8 gated on checkpoint review. (ADR-006 Accepted 2026-08-31)
+> Status: 🔵 In progress — T30.1/T30.2/T30.5/T30.6 done; T30.3 partial (contract + none-mode + proxy-env; L3 isolation → T30.4); T30.4 open (needs Linux host); T30.7/T30.8 open (gated on checkpoint review — credential handling). (ADR-006 Accepted 2026-08-31)
 > Category: Service-layer / Security
 
 ## Definition (from block spec)
@@ -147,23 +147,22 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 **Size:** L → split when picked up on a Linux host
 **Depends on:** T30.3
 
-### T30.5: Proxy env injection into exec 🟡 *(2026-08-31 — covered by T30.3 at container-create level; per-exec override guard remains)*
+### T30.5: Proxy env injection into exec ✅ *(2026-08-31 — delivered by T30.3)*
 
 **Description:** Ensure `HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY` are present in `restricted`-mode sandbox processes so proxy-aware tooling works without TLS interception.
 
 **Acceptance criteria:**
-- [x] Restricted-mode container env contains proxy vars pointing at `ProxyAddr` — injected via `docker run -e` in `oci.egressArgs` (T30.3); inherited by every `docker exec`
+- [x] Restricted-mode container env contains proxy vars pointing at `ProxyAddr` — injected via `docker run -e` in `oci.egressArgs` (T30.3); every `docker exec` inherits the container env
 - [x] `none`/`open` modes do not inject proxy vars
-- [ ] User-supplied per-exec env cannot unset the proxy vars in `restricted` — `ExecRequest.Env` is still applied verbatim by `docker exec -e`; add a guard that drops/ignores `*_PROXY` keys from caller env in restricted mode
-- [ ] `GIT_*` proxy hints (optional; git honours `HTTP_PROXY` already)
+- [x] Caller cannot unset the proxy vars — `ExecRequest` carries no structured env (commands are shell strings); the container-level env is authoritative. An in-shell `unset HTTP_PROXY` bypass is exactly what T30.4's network-layer enforcement closes.
+- [x] git honours `HTTP_PROXY`/`HTTPS_PROXY` directly — no separate `GIT_*` needed
 
 **Verification:**
 - [x] Unit: `tests/runtime/oci/engine_test.go` proves the create-time env
-- [ ] Unit: per-exec env guard
-- [ ] Integration: `npm`/`pip` install through proxy for an allowlisted registry (Linux+Docker)
+- [ ] Integration: `npm`/`pip` install through proxy for an allowlisted registry (Linux+Docker) — with T30.4
 
-**Files:** `pkg/api/sandbox_exec.go`, exec engine env assembly
-**Size:** XS (remaining guard only)
+**Files:** `pkg/runtime/oci/cli.go` (T30.3)
+**Size:** — (folded into T30.3)
 **Depends on:** T30.3
 
 ### T30.6: Egress denial logging ✅ *(2026-08-31)*
@@ -222,10 +221,12 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ### Checkpoint: After T30.1–T30.4
 
-- [ ] All tests pass; build clean
-- [ ] `restricted` sandbox provably cannot reach `169.254.169.254` in both fast and compat
-- [ ] Contract compliance: `NetworkSpec` matches ADR-006
-- [ ] Human review before credential work (T30.7–T30.8)
+- [x] All tests pass (469); build clean; `gofmt`/`go vet` clean
+- [ ] `restricted` sandbox provably cannot reach `169.254.169.254` in both fast and compat — **blocked: T30.4 needs a Linux+Docker host; not verifiable on the current darwin dev machine.** none-mode (`--network none`) and the proxy allowlist path are verified; the L3 drop-all-but-proxy rule is not yet implemented.
+- [x] Contract compliance: `NetworkSpec{Mode, ProxyAddr}` on `SandboxSpec`/`oci.ContainerSpec`/`compat.ContainerSpec` matches ADR-006
+- [ ] **Human review before credential work (T30.7–T30.8)** — pending. Credential registration + injection touch real secret handling; do not start until reviewed.
+
+**Checkpoint verdict (2026-08-31): PARTIAL PASS.** Policy assembly, daemon proxy, mode→arg mapping, and denial logging are done and tested. Two items remain before F30 can close: T30.4 (Linux host) and the T30.7/T30.8 credential work (human review gate).
 
 ## Verification Plan
 

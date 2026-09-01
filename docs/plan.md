@@ -6,7 +6,7 @@
 ## Active Cursor
 
 **Current phase:** PROP-008/009 re-verify sweep + M8 unblock — F1/F2/F3/F4/F5/F6/F8/F10/F16 complete; F9 partial (2 open gaps); F13 partial (cache scoping gap); F17 re-verified; ADR-006 (egress enforcement) Accepted + cascaded → F11/F30 unblocked, F30 tasks authored
-**Next work (2026-08-31):** re-verify backlog cleared; ADR-006 accepted + cascaded; F30 T30.1/T30.2/T30.6 done, T30.3/T30.5 partial. NEXT: **checkpoint review** (spec: after T30.1–T30.4, human review before credential work) — T30.4 is Linux-blocked, so review T30.1–T30.3+T30.6 now, then decide on T30.7/T30.8 (credential API + injection). T30.5 per-exec proxy-override guard is a quick XS. **T30.4 (L3 isolation) needs a Linux host.**
+**Next work (2026-08-31):** F30 T30.1/T30.2/T30.5/T30.6 done, T30.3 partial. **F30 checkpoint reached — verdict PARTIAL PASS.** Remaining: T30.4 (L3 isolation, needs Linux+Docker host — blocked on this darwin machine) and T30.7/T30.8 (credential registration API + injection — gated on human review per the checkpoint; real secret handling). Session pause point: awaiting (a) a Linux host for T30.4 or (b) explicit go-ahead to start the credential work.
 
 **Known defect (found 2026-08-31, not fixed):** `pkg/runtime/gvisor/runtime.go` (linux-only, F18 Secure Backend) does not compile against the current `oci.Engine` — references removed symbols `oci.NewEngine`, `oci.EngineConfig`, `oci.ImageRef`, `oci.ContainerSpec.{ImageID,UserNS,MountNS,PIDNS}`, `SandboxSpec.Workspace`. `GOOS=linux go build ./pkg/runtime/gvisor/` fails. F18 was marked ✅ Implemented but its driver is stale post-PROP-008 OCI-engine refactor. Darwin test suite never caught it (build-tagged out). Needs F18 re-open on a Linux host. — Historical below.
 

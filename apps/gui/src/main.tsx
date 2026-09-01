@@ -62,6 +62,8 @@ import {
   TemplateRevision
 } from "./api";
 import { Button } from "@/components/ui/button";
+import "@fontsource-variable/hanken-grotesk/wght.css";
+import "@fontsource-variable/jetbrains-mono/wght.css";
 import "./styles.css";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -442,7 +444,15 @@ function Sidebar({
           <Gauge size={17} />
           <span>{activeContext === "local" ? "Local HTTP daemon" : "Remote context"}</span>
         </div>
-        <strong className={connection === "connected" ? "connected-text" : "offline-text"}>
+        <strong
+          className={
+            connection === "connected"
+              ? "connected-text"
+              : connection === "checking"
+              ? "checking-text"
+              : "offline-text"
+          }
+        >
           {connection === "checking" ? (
             <Loader2 className="spin" size={15} />
           ) : (

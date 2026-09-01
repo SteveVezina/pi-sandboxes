@@ -5,34 +5,41 @@
 
 :root {
   color-scheme: dark;
-  font-family:
-    ui-sans-serif,
-    "Aptos",
-    "Segoe UI",
-    system-ui,
-    sans-serif;
-  background: #070808;
-  color: #f2f1ec;
+  --font-body: "Hanken Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-family: var(--font-body);
+  background: #08090a;
+  color: #f4f2ec;
   font-synthesis: none;
-  text-rendering: geometricPrecision;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --bg: #070808;
-  --panel: #101112;
-  --panel-strong: #17191b;
-  --panel-soft: #0c0d0e;
-  --line: #292c30;
-  --line-strong: #3a3e45;
-  --text: #f2f1ec;
-  --muted: #94979e;
-  --quiet: #636771;
-  --green: #35d39b;
-  --green-soft: rgba(53, 211, 155, 0.16);
-  --blue: #7d94ff;
-  --blue-soft: rgba(125, 148, 255, 0.13);
-  --amber: #d9a34a;
-  --red: #ff6d67;
-  --shadow: 0 10px 32px rgba(0, 0, 0, 0.22);
+  --bg: #08090a;
+  --bg-2: #0b0c0e;
+  --panel: #101113;
+  --panel-strong: #17191c;
+  --panel-soft: #0c0d0f;
+  --line: #26292e;
+  --line-strong: #3b3f46;
+  --text: #f4f2ec;
+  --muted: #9498a0;
+  --quiet: #62666f;
+  --green: #3ad6a3;
+  --green-soft: rgba(58, 214, 163, 0.14);
+  --blue: #6d8bff;
+  --blue-soft: rgba(109, 139, 255, 0.13);
+  --amber: #e0a94f;
+  --red: #ff6b64;
+  /* directional, close, layered */
+  --shadow:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 12px 28px -12px rgba(0, 0, 0, 0.6),
+    0 2px 6px -2px rgba(0, 0, 0, 0.5);
+  --shadow-lift:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 22px 46px -16px rgba(0, 0, 0, 0.7),
+    0 4px 12px -4px rgba(0, 0, 0, 0.55);
   --radius: 0.5rem;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --background: #070808;
   --foreground: #f2f1ec;
   --card: #101112;
@@ -76,8 +83,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-sans: ui-sans-serif, "Aptos", "Segoe UI", system-ui, sans-serif;
-  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-sans: "Hanken Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
 
 * {
@@ -89,11 +96,35 @@ body {
   min-width: 320px;
   min-height: 100vh;
   overflow-x: hidden;
+  position: relative;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    radial-gradient(900px 520px at 22% -8%, rgba(109, 139, 255, 0.06), transparent 60%),
+    radial-gradient(700px 480px at 100% 0%, rgba(58, 214, 163, 0.045), transparent 55%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024) 1px, transparent 1px),
     var(--bg);
-  background-size: 52px 52px;
+  background-size:
+    100% 100%,
+    100% 100%,
+    54px 54px,
+    54px 54px;
+}
+
+/* grain overlay — sits above the background, below content */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+#root {
+  position: relative;
+  z-index: 1;
 }
 
 button {
@@ -101,7 +132,19 @@ button {
   background: #151719;
   color: var(--text);
   font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
   cursor: pointer;
+  transition:
+    background 140ms var(--ease),
+    border-color 140ms var(--ease),
+    transform 140ms var(--ease),
+    box-shadow 140ms var(--ease);
+}
+
+button:active {
+  transform: translateY(1px);
 }
 
 button:disabled {
@@ -137,10 +180,24 @@ button:hover {
   background: #1d2023;
 }
 
+input,
+select {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  transition:
+    border-color 140ms var(--ease),
+    box-shadow 140ms var(--ease);
+}
+
+input:hover,
+select:hover {
+  border-color: var(--line-strong);
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid rgba(125, 148, 255, 0.72);
+  outline: 2px solid var(--blue);
   outline-offset: 2px;
 }
 
@@ -4592,4 +4649,243 @@ button:not(:disabled):active {
   max-height: 240px;
   overflow: auto;
   white-space: pre-wrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Design pass — typography, motion, atmosphere (terminal / live-pulse)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Display type: headings are tight uppercase mono ──────────────────────── */
+.topbar h1,
+.hero-panel h2,
+.onboarding-header h1,
+.create-dialog-header h2,
+.brand strong {
+  font-family: var(--font-display);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+.section-heading h3,
+.section-heading h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+}
+.eyebrow,
+.section-heading span,
+code,
+.engine-card code,
+.status-rail strong,
+.metric-row strong {
+  font-family: var(--font-mono);
+}
+.eyebrow,
+.section-heading span {
+  letter-spacing: 0.08em;
+}
+.eyebrow::before {
+  content: "// ";
+  opacity: 0.5;
+}
+
+/* ── Page-load reveal: staggered rise ────────────────────────────────────── */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.sidebar,
+.workspace {
+  animation: rise 480ms var(--ease) both;
+}
+.workspace {
+  animation-delay: 60ms;
+}
+
+.content-grid > section,
+.dashboard-grid > section,
+.templates-workbench > section,
+.sandboxes-workbench > section,
+.onboarding-card {
+  animation: rise 520ms var(--ease) both;
+}
+.content-grid > section:nth-child(1),
+.dashboard-grid > section:nth-child(1) { animation-delay: 90ms; }
+.content-grid > section:nth-child(2),
+.dashboard-grid > section:nth-child(2) { animation-delay: 150ms; }
+.content-grid > section:nth-child(3),
+.dashboard-grid > section:nth-child(3) { animation-delay: 210ms; }
+.content-grid > section:nth-child(4),
+.dashboard-grid > section:nth-child(4) { animation-delay: 270ms; }
+.content-grid > section:nth-child(n + 5),
+.dashboard-grid > section:nth-child(n + 5) { animation-delay: 320ms; }
+
+.nav-item {
+  animation: rise 420ms var(--ease) both;
+}
+.nav-list .nav-item:nth-child(1) { animation-delay: 120ms; }
+.nav-list .nav-item:nth-child(2) { animation-delay: 160ms; }
+.nav-list .nav-item:nth-child(3) { animation-delay: 200ms; }
+.nav-list .nav-item:nth-child(4) { animation-delay: 240ms; }
+.nav-list .nav-item:nth-child(5) { animation-delay: 280ms; }
+.nav-list .nav-item:nth-child(6) { animation-delay: 320ms; }
+
+/* ── Hover choreography ──────────────────────────────────────────────────── */
+.nav-item,
+.template-card,
+.sandbox-row,
+.onboarding-choice {
+  transition:
+    background 160ms var(--ease),
+    border-color 160ms var(--ease),
+    color 160ms var(--ease),
+    transform 160ms var(--ease),
+    box-shadow 160ms var(--ease);
+}
+.nav-item:not(.active):hover {
+  color: var(--text);
+  background: #131519;
+  transform: translateX(2px);
+}
+.nav-item.active {
+  position: relative;
+}
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--green);
+  box-shadow: 0 0 10px var(--green-soft);
+}
+.template-card:hover,
+.sandbox-row:not(.selected):hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-lift);
+}
+.hero-panel {
+  transition: box-shadow 200ms var(--ease), transform 200ms var(--ease);
+}
+.hero-panel:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lift);
+}
+.primary-action:hover {
+  box-shadow: 0 12px 30px -6px rgba(244, 243, 238, 0.28);
+  transform: translateY(-1px);
+}
+
+/* ── Connection status dot + pulse ──────────────────────────────────────── */
+.connected-text,
+.checking-text,
+.offline-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.connected-text::before,
+.checking-text::before,
+.offline-text::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.connected-text::before {
+  background: var(--green);
+  box-shadow: 0 0 0 3px var(--green-soft);
+}
+.offline-text::before {
+  background: var(--red);
+}
+.checking-text {
+  color: var(--amber);
+}
+.checking-text::before {
+  background: var(--amber);
+  animation: dot-pulse 1200ms var(--ease) infinite;
+}
+@keyframes dot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(224, 169, 79, 0.5);
+    opacity: 1;
+  }
+  60% {
+    box-shadow: 0 0 0 7px rgba(224, 169, 79, 0);
+    opacity: 0.6;
+  }
+}
+
+/* ── EXECUTING pill: it should feel alive ───────────────────────────────── */
+.state-pill.executing,
+.state-pill.running {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(58, 214, 163, 0.4);
+}
+.state-pill.executing::after,
+.state-pill.running::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(58, 214, 163, 0.22) 50%,
+    transparent 80%
+  );
+  transform: translateX(-100%);
+  animation: shimmer 1800ms linear infinite;
+}
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* ── Panels: crisper edge, subtle top highlight ─────────────────────────── */
+.hero-panel,
+.create-panel,
+.sandboxes-panel,
+.operations-panel,
+.diagnostics-panel,
+.recent-sandboxes-panel,
+.onboarding-panel,
+.authorization-panel,
+.templates-panel,
+.template-detail {
+  transition: box-shadow 180ms var(--ease);
+}
+
+.brand-mark,
+.onboarding-logo {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 8px 22px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Respect reduced motion ─────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

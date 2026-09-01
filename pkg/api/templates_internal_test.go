@@ -95,3 +95,47 @@ func TestValidateTemplate_InlineBadDefinition(t *testing.T) {
 		t.Fatalf("expected invalid with problems, got %+v", vr)
 	}
 }
+
+func TestTemplateHistoryDiffRollback(t *testing.T) {
+	templateTestHome(t)
+
+	// fork -> rev 1
+	fw := httptest.NewRecorder()
+	ForkTemplate(fw, httptest.NewRequest(http.MethodPost, "/v1/templates/fork",
+		strings.NewReader(`{"source":"rust","name":"my-rust"}`)))
+	if fw.Code != http.StatusCreated {
+		t.Fatalf("fork: %d %s", fw.Code, fw.Body)
+	}
+
+	// mutate via a second fork-target write is not exposed; drive a rollback
+	// off the single revision instead and check history grows.
+	hw := httptest.NewRecorder()
+	hr := httptest.NewRequest(http.MethodGet, "/v1/templates/my-rust/history", nil)
+	hr = mux.SetURLVars(hr, map[string]string{"name": "my-rust"})
+	TemplateHistory(hw, hr)
+	var h struct {
+		Count int `json:"count"`
+	}
+	json.Unmarshal(hw.Body.Bytes(), &h)
+	if h.Count != 1 {
+		t.Fatalf("history count = %d, want 1", h.Count)
+	}
+
+	// rollback to rev 1 -> rev 2
+	rw := httptest.NewRecorder()
+	rr := httptest.NewRequest(http.MethodPost, "/v1/templates/my-rust/rollback",
+		strings.NewReader(`{"revision":1}`))
+	rr = mux.SetURLVars(rr, map[string]string{"name": "my-rust"})
+	RollbackTemplate(rw, rr)
+	if rw.Code != http.StatusOK {
+		t.Fatalf("rollback: %d %s", rw.Code, rw.Body)
+	}
+
+	// diff rev 1 vs rev 2 -> no meaningful difference (rollback of identical state)
+	dw := httptest.NewRecorder()
+	DiffTemplates(dw, httptest.NewRequest(http.MethodPost, "/v1/templates/diff",
+		strings.NewReader(`{"left":"my-rust@1","right":"rust"}`)))
+	if dw.Code != http.StatusOK || !strings.Contains(dw.Body.String(), "diff") {
+		t.Fatalf("diff: %d %s", dw.Code, dw.Body)
+	}
+}

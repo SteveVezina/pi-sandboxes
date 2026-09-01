@@ -104,3 +104,58 @@ func TestFork_CreatesLocalDerivativeWithLineage(t *testing.T) {
 		t.Error("forking onto an existing name should fail")
 	}
 }
+
+func TestRevisions_HistoryRollbackDiff(t *testing.T) {
+	store := newTestStore(t)
+	if err := store.InstallDefaults(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Fork -> rev 1 for the new template.
+	if _, err := store.Fork("go", "my-go"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Edit + re-write -> rev 2.
+	tmpl, _ := store.Get("my-go")
+	tmpl.Summary = "customized go toolchain"
+	tmpl.Network = "open"
+	if err := store.Create("my-go", tmpl); err != nil {
+		t.Fatal(err)
+	}
+
+	hist, err := store.History("my-go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hist) != 2 || hist[0].N != 2 {
+		t.Fatalf("history = %+v, want 2 revs newest-first", hist)
+	}
+
+	// Diff rev 1 vs rev 2 shows the network change.
+	r1, err := store.ResolveRef("my-go@1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r2, err := store.ResolveRef("my-go@2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := template.Diff(r1, r2)
+	if !strings.Contains(d, "open") || !strings.Contains(d, "restricted") {
+		t.Fatalf("diff missing the network change:\n%s", d)
+	}
+
+	// Rollback to rev 1 -> rev 3, network back to restricted.
+	restored, err := store.Rollback("my-go", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restored.Network != "restricted" {
+		t.Fatalf("rollback did not restore network: %q", restored.Network)
+	}
+	hist, _ = store.History("my-go")
+	if len(hist) != 3 {
+		t.Fatalf("rollback should add a revision; history = %+v", hist)
+	}
+}

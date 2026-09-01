@@ -57,7 +57,27 @@ missing.
 Provide either an installed template `name` or an inline `template`.
 Response: `{ "valid": bool, "problems": [string] }`.
 
+## History
+
+`GET /v1/templates/{name}/history` → `{ name, count, revisions: [{ n, time, digest }] }`,
+newest first. Every write to a local template records a revision.
+
+## Diff
+
+`POST /v1/templates/diff` — `{ "left": "node", "right": "my-node@2" }`
+
+Each ref is a template name or `name@N`. Response:
+`{ left, right, diff: "<text>" }`.
+
+## Rollback
+
+`POST /v1/templates/{name}/rollback` — `{ "revision": 1 }`
+
+Restores the template to revision `N`. The rollback is itself recorded as
+a new revision and bumps `lineage.generation`. `409` if the revision or
+template is missing.
+
 :::note
-`snapshot`, `diff`, `history`, `rollback`, `promote`, `import`, `export`
-endpoints are specified (`SPEC.md` §9) but not yet implemented.
+`snapshot` (from a sandbox), `promote`, `import`, `export` endpoints are
+specified (`SPEC.md` §9) but not yet implemented.
 :::

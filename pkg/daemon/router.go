@@ -33,10 +33,13 @@ func NewRouter(store *sandbox.Store, runStores ...*sandbox.AgentRunStore) *mux.R
 	router.HandleFunc("/v1/credentials", api.RegisterCredential).Methods("POST")
 	router.HandleFunc("/v1/credentials", api.ListCredentials).Methods("GET")
 
-	// Templates (F28 T28.1)
+	// Templates (F28 T28.1 / T28.2)
 	router.HandleFunc("/v1/templates", api.ListTemplates).Methods("GET")
 	router.HandleFunc("/v1/templates/fork", api.ForkTemplate).Methods("POST")
 	router.HandleFunc("/v1/templates/validate", api.ValidateTemplate).Methods("POST")
+	router.HandleFunc("/v1/templates/diff", api.DiffTemplates).Methods("POST")
+	router.HandleFunc("/v1/templates/{name}/history", api.TemplateHistory).Methods("GET")
+	router.HandleFunc("/v1/templates/{name}/rollback", api.RollbackTemplate).Methods("POST")
 	router.HandleFunc("/v1/templates/{name}", api.GetTemplate).Methods("GET")
 
 	// Sandbox CRUD

@@ -1,7 +1,7 @@
 # F28: Local Template Library and Lifecycle
 
 > Source: `SPEC.md` §6 Features F28, §18.1
-> Status: 🔵 In progress — T28.1 done (metadata schema + inspect + fork + validate); T28.2–T28.4 open
+> Status: 🔵 In progress — T28.1 (metadata + inspect/fork/validate) + T28.2 (history/diff/rollback) done; T28.2b (snapshot), T28.2c (promote), T28.3 (bundles), T28.4 (GUI) open
 > Category: Service-layer / CLI / GUI
 
 ## Definition (from block spec)
@@ -44,8 +44,8 @@ Mapped from `SPEC.md` § AC-35:
 - [x] AC-35.4: `pi-box template fork <source> <new-name>` creates an editable local template *(2026-08-31: `Store.Fork` in `fork.go` — records `source.forkedFrom` + `lineage` generation + parent digest; `POST /v1/templates/fork`)*
 - [ ] AC-35.5: `pi-box template snapshot <sandbox-id> <new-name>` creates a local template when the runtime supports safe snapshotting *(T28.2)*
 - [x] AC-35.6: `pi-box template validate <path-or-name>` validates schema, pinned versions, cache mounts, network requests, runtime compatibility, and policy-relevant fields *(2026-08-31: `Template.Validate()` in `validate.go`; `POST /v1/templates/validate` (installed name or inline definition))*
-- [ ] AC-35.7: `pi-box template diff` and `history` show local template changes and lineage
-- [ ] AC-35.8: `pi-box template rollback` restores a local template to a prior revision
+- [x] AC-35.7: `pi-box template diff` and `history` show local template changes and lineage *(2026-08-31: T28.2 — revision store + `diff`/`history` CLI + API)*
+- [x] AC-35.8: `pi-box template rollback` restores a local template to a prior revision *(2026-08-31: T28.2 — `Store.Rollback`, recorded as a new revision, bumps lineage)*
 - [ ] AC-35.9: `pi-box template export` creates a portable bundle with metadata, definition, digest, and provenance
 - [ ] AC-35.10: `pi-box template import` validates and installs a portable local bundle
 - [ ] AC-35.11: Snapshot, import, fork, rollback, promote, and export operations are audited and policy-checked
@@ -111,14 +111,33 @@ Mapped from `SPEC.md` § AC-35:
 **Size:** M
 **Depends on:** F5
 
-### T28.2: Snapshot + history + diff + rollback + promote ⏳
+### T28.2: Local revision store — history + diff + rollback ✅ *(2026-08-31)*
 
-**Description:** Local revision store per template. Snapshot from a sandbox (records source ID/mode/time; excludes secrets + workspace source; runtime-aware — fast = metadata-only, compat/microvm = image/rootfs). `history`, `diff` (templates or revisions), `rollback` to a prior revision, `promote` (set default / named stable).
+**Description:** Every write to a local template records a revision under `~/.pi-box/templates/<name>/revisions/` (`N.yaml` + `index.json`). `Store.History`, `Store.GetRevision`, `Store.Rollback` (recorded as a new revision, bumps lineage), `Store.ResolveRef` (`name` or `name@N`), `template.Diff` (line-oriented, no diff-lib dependency). API: `GET /v1/templates/{name}/history`, `POST /v1/templates/diff`, `POST /v1/templates/{name}/rollback`. CLI: `template history|diff|rollback`.
 
-**Acceptance criteria:** AC-35.5, AC-35.7, AC-35.8, AC-35.11
+**Acceptance criteria:** AC-35.7, AC-35.8 — ✅
+**Verification:** `tests/template/f28_test.go::TestRevisions_HistoryRollbackDiff`, `pkg/api/templates_internal_test.go::TestTemplateHistoryDiffRollback`. Suite 504 pass. Site docs updated.
+**Files:** `pkg/template/revision.go` (new), `pkg/template/template.go` (Create records a revision), `pkg/api/templates.go`, `pkg/daemon/router.go`, `cmd/pi-box/template/commands.go`
+**Size:** M
+**Depends on:** T28.1
+
+### T28.2b: Snapshot a sandbox into a local template ⏳
+
+**Description:** `pi-box template snapshot <sandbox-id> <new-name>` — records source sandbox ID/mode/time; excludes secrets + workspace source; runtime-aware (fast = metadata + cache/toolchain assumptions; compat/microvm = image/rootfs). Fails closed when a runtime cannot safely capture executable state (offers metadata-only).
+
+**Acceptance criteria:** AC-35.5, AC-35.11
 **Files:** `pkg/template/`, `pkg/api/templates.go`, runtime snapshot hooks
-**Size:** L → split when picked up
+**Size:** L → split on a Linux host
 **Depends on:** T28.1, F13
+
+### T28.2c: Promote (set default) ⏳
+
+**Description:** `pi-box template promote <name> [--default]` — mark a local/snapshot template as the default for `pi-box box create` with no template arg. Needs a `default_template` key in `~/.pi-box/config.yaml` (no config-default mechanism exists yet).
+
+**Acceptance criteria:** AC-35.11 (promote is audited/policy-checked)
+**Files:** `pkg/template/`, config plumbing, `pkg/api/sandbox_create.go`
+**Size:** S
+**Depends on:** T28.1
 
 ### T28.3: Import / export bundles ⏳
 

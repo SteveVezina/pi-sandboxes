@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 
 	"github.com/pi-sandbox/pi/pkg/template"
 	"github.com/spf13/cobra"
@@ -314,5 +315,89 @@ func Validate() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&jsonFlag, "json", false, "Output as JSON")
+	return cmd
+}
+
+// History returns the `template history <name>` command.
+func History() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "history <name>",
+		Short: "Show local revision history for a template",
+		Args:  cobra.ExactArgs(1),
+		Run: func(_ *cobra.Command, args []string) {
+			store := template.NewStore(tmplDir)
+			_ = store.InstallDefaults()
+			revs, err := store.History(args[0])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			if jsonFlag {
+				data, _ := json.Marshal(revs)
+				fmt.Println(string(data))
+				return
+			}
+			if len(revs) == 0 {
+				fmt.Println("no revisions")
+				return
+			}
+			for _, r := range revs {
+				fmt.Printf("rev %-3d  %s  %s\n", r.N, r.Time, r.Digest)
+			}
+		},
+	}
+	cmd.Flags().BoolVar(&jsonFlag, "json", false, "Output as JSON")
+	return cmd
+}
+
+// Diff returns the `template diff <left> <right>` command. Each ref is a
+// template name or "name@N" for a revision.
+func Diff() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "diff <left> <right>",
+		Short: "Diff two templates or revisions (name or name@N)",
+		Args:  cobra.ExactArgs(2),
+		Run: func(_ *cobra.Command, args []string) {
+			store := template.NewStore(tmplDir)
+			_ = store.InstallDefaults()
+			l, err := store.ResolveRef(args[0])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			r, err := store.ResolveRef(args[1])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Print(template.Diff(l, r))
+		},
+	}
+	return cmd
+}
+
+// Rollback returns the `template rollback <name> <revision>` command.
+func Rollback() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "rollback <name> <revision>",
+		Short: "Restore a template to a prior local revision",
+		Args:  cobra.ExactArgs(2),
+		Run: func(_ *cobra.Command, args []string) {
+			n, err := strconv.Atoi(args[1])
+			if err != nil || n < 1 {
+				fmt.Fprintln(os.Stderr, "Error: revision must be a positive integer")
+				os.Exit(1)
+			}
+			store := template.NewStore(tmplDir)
+			_ = store.InstallDefaults()
+			restored, err := store.Rollback(args[0], n)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("Rolled %s back to revision %d (now generation %d)\n",
+				args[0], n, restored.Lineage.Generation)
+		},
+	}
 	return cmd
 }

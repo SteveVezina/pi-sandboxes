@@ -115,3 +115,61 @@ func ValidateTemplate(w http.ResponseWriter, r *http.Request) {
 		"problems": problems,
 	})
 }
+
+// TemplateHistory handles GET /v1/templates/{name}/history.
+func TemplateHistory(w http.ResponseWriter, r *http.Request) {
+	name := mux.Vars(r)["name"]
+	revs, err := templateStore().History(name)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"name": name, "count": len(revs), "revisions": revs})
+}
+
+// DiffTemplates handles POST /v1/templates/diff — {left, right} refs
+// ("name" or "name@N").
+func DiffTemplates(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Left  string `json:"left"`
+		Right string `json:"right"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Left == "" || req.Right == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "left and right refs are required"})
+		return
+	}
+	s := templateStore()
+	l, err := s.ResolveRef(req.Left)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		return
+	}
+	rt, err := s.ResolveRef(req.Right)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"left": req.Left, "right": req.Right, "diff": template.Diff(l, rt)})
+}
+
+// RollbackTemplate handles POST /v1/templates/{name}/rollback — {revision}.
+func RollbackTemplate(w http.ResponseWriter, r *http.Request) {
+	name := mux.Vars(r)["name"]
+	var req struct {
+		Revision int `json:"revision"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Revision < 1 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "revision (>= 1) is required"})
+		return
+	}
+	restored, err := templateStore().Rollback(name, req.Revision)
+	if err != nil {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"name":       name,
+		"restoredTo": req.Revision,
+		"generation": restored.Lineage.Generation,
+	})
+}

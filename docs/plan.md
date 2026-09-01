@@ -116,7 +116,7 @@ F10/F17/F19 ──────────────────────�
 34. **F30** Egress Proxy — 🔵 In progress. T30.1/T30.2/T30.5/T30.6/T30.7 done; T30.3/T30.8 partial. Deferred (Linux): T30.4 L3 isolation, T30.3 compat firewall, T30.8 HTTPS git credential-helper channel.
 35. **F29** Agent Run — 🔵 In progress. T29.1 (API + state + `pi.run.*` events) done; T29.3 via F9; T29.2 partial (CLI wired). Blocked: agent entrypoint resolution spec gap.
 36. **F11** Secrets & Network Model — enforcement lands with F30 tasks.
-37. **F28** Local Template Library and Lifecycle — 🔵 In progress. T28.1 done (extended `Template` schema all-optional, `Validate`/`ContentDigest`/`Fork`, `/v1/templates` list/inspect/fork/validate, `pi-box template fork|validate`, site docs). NEXT: T28.2 (snapshot from sandbox + history/diff/rollback/promote — overlaps F13 primitives).
+37. **F28** Local Template Library and Lifecycle — 🔵 In progress. T28.1 (metadata schema + `Validate`/`ContentDigest`/`Fork` + `/v1/templates` + CLI) and T28.2 (revision store: `history`/`diff`/`rollback`, `name@N` refs, `pkg/template/revision.go`) done. NEXT: T28.2b snapshot-from-sandbox (needs runtime hooks, Linux), T28.2c promote (needs config default_template key), T28.3 import/export bundles (darwin-doable), T28.4 GUI.
 
 ## Risk Tracking
 

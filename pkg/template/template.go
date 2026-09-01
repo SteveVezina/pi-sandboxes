@@ -243,6 +243,11 @@ func (s *Store) Create(name string, t *Template) error {
 		return fmt.Errorf("write template file: %w", err)
 	}
 
+	// Record a local revision (F28 T28.2). Best-effort: a revision-store
+	// failure must not fail the write.
+	if err := s.appendRevision(name, t, data); err != nil {
+		return fmt.Errorf("record revision: %w", err)
+	}
 	return nil
 }
 

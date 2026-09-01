@@ -156,9 +156,13 @@ make mock-down
 
 ## Documentation
 
+The pnpm + turbo workspace covers the JS/TS packages: `website/`
+(Docusaurus docs), `sdk/typescript/`, and `apps/gui/` (Tauri + React
+workbench). `pnpm install` once at the root, then `pnpm run build` builds
+all three via turbo.
+
 User- and API-facing docs (install, quickstart, CLI, API, runtime modes,
-architecture) live in [`website/`](./website/), a Docusaurus site in the
-pnpm + turbo workspace:
+architecture) live in [`website/`](./website/):
 
 ```bash
 pnpm install

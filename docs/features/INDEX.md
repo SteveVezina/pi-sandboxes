@@ -43,7 +43,7 @@ Dashboard of all features for this project.
 | [F23](F23-remote-daemon-transport-auth.md) | Remote Daemon Transport & Auth | 🟢 Reviewed | ✅ Implemented | M6 | F2, F15, F22 |
 | [F24](F24-cross-platform-gui-workbench.md) | Cross-Platform GUI Workbench | 🟢 Reviewed | ✅ Implemented | M7 | F2, F15, F22, F23 |
 | [F25](F25-gui-workspace-authorization.md) | GUI Workspace Authorization | 🟢 Reviewed | ✅ Implemented | M7 | F17, F24 |
-| [F26](F26-gui-sandbox-operations.md) | GUI Sandbox Operations | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M7 | F7, F6, F9, F10, F13, F24 |
+| [F26](F26-gui-sandbox-operations.md) | GUI Sandbox Operations | 🟢 Reviewed | ✅ Implemented (re-verified 2026-08-31) | M7 | F7, F6, F9, F10, F13, F24 |
 | [F27](F27-gui-settings-diagnostics.md) | GUI Settings and Diagnostics | 🟢 Reviewed | ✅ Implemented | M7 | F16, F17, F19, F22, F24, F25 |
 | [F28](F28-local-template-library.md) | Local Template Library and Lifecycle | 🟡 Spec written | 🔵 T28.1/T28.2/T28.2c/T28.3 done (+ promote); T28.2b (snapshot, Linux) + T28.4 (GUI) open | M8 | F5, F13, F17 |
 | [F29](F29-agent-run.md) | Agent Run | 🟡 Spec written | 🔵 T29.1 done (API + state + events), T29.3 via F9; T29.2 partial; in-sandbox agent launch blocked on "agent entrypoint resolution" spec gap | M8 | F8, F9, F30 |
@@ -59,7 +59,7 @@ Dashboard of all features for this project.
 | M4: Secure Backend | F18, F19 | ⚠️ F19 done; F18 gVisor driver broken on Linux (found 2026-08-31) |
 | M5: MicroVM Backend | F20, F21 | ✅ Implemented |
 | M6: Remote Daemon Mode | F22, F23 | ✅ Implemented |
-| M7: Cross-Platform GUI Workbench | F24, F25, F26, F27 | ✅ Implemented |
+| M7: Cross-Platform GUI Workbench | F24, F25, F26, F27 | ✅ Implemented (all re-verified) |
 | M8: Agent Loop, Egress, Template Library | F28, F29, F30 | 🔵 In progress — F30 core egress path done (T30.4 Linux-blocked); F29 run state + events + CLI done (agent launch = spec gap); F28 T28.1/T28.2/T28.2c/T28.3 done (metadata, revisions, promote, OCI bundles) |
 
 ## Summary

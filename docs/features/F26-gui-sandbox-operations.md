@@ -1,7 +1,7 @@
 # F26: GUI Sandbox Operations
 
 > Source: `SPEC.md` §6 Features F26
-> Status: ⚠️ Needs re-verify
+> Status: 🟢 Reviewed — re-verified 2026-08-31. `apps/gui/src/api.ts` covers every F26 operation (list/get/create/destroy/clone/exec/execStream/logs/logsHistory/diff/patch/output list+pull+pack/snapshot list+create+rollback+delete) and every route matches the current daemon router (`/output`, `/logs/history`, `/snapshot/*`) — no stale `session` terminology, no removed `/artifacts/*` or `/exec/ws` routes. `network` is passed through on exec (AC-29.8). GUI builds clean (`pnpm --filter @pi-sandbox/gui build` — tsc + vite) via the pnpm/turbo workspace.
 > Category: Client / Integration
 
 ## Definition (from block spec)

@@ -21,6 +21,9 @@ type CLIEngine struct {
 	Binary string
 	// runtimeName is "docker" or "podman".
 	runtimeName string
+	// ociRuntime, when set, is passed as `--runtime <value>` to `run`
+	// (e.g. "runsc" to select gVisor under Docker/Podman — F18).
+	ociRuntime string
 	// Timeout bounds every CLI call.
 	Timeout time.Duration
 }
@@ -33,6 +36,12 @@ func NewDockerEngine(binary string) *CLIEngine {
 // NewPodmanEngine returns a Podman-backed engine.
 func NewPodmanEngine(binary string) *CLIEngine {
 	return &CLIEngine{Binary: binary, runtimeName: "podman", Timeout: DefaultCommandTimeout}
+}
+
+// NewDockerEngineWithRuntime returns a Docker-backed engine that selects a
+// non-default OCI runtime (e.g. "runsc" for gVisor — F18) via `--runtime`.
+func NewDockerEngineWithRuntime(binary, ociRuntime string) *CLIEngine {
+	return &CLIEngine{Binary: binary, runtimeName: "docker", ociRuntime: ociRuntime, Timeout: DefaultCommandTimeout}
 }
 
 func (e *CLIEngine) Runtime() string { return e.runtimeName }
@@ -107,8 +116,11 @@ func limitArgs(l pruntime.ResourceLimits) []string {
 func (e *CLIEngine) createArgs(spec *ContainerSpec) ([]string, error) {
 	dockerNet, proxyEnv := egressArgs(spec.SandboxID, spec.Network)
 
-	args := []string{
-		"run", "-d",
+	args := []string{"run", "-d"}
+	if e.ociRuntime != "" {
+		args = append(args, "--runtime", e.ociRuntime)
+	}
+	args = append(args,
 		"--name", spec.Name,
 		"--label", "pi-sandbox=true",
 		"--network", dockerNet,
@@ -117,7 +129,7 @@ func (e *CLIEngine) createArgs(spec *ContainerSpec) ([]string, error) {
 		"--read-only",
 		"--tmpfs", "/tmp:rw,nosuid,noexec",
 		"--tmpfs", "/home/agent:rw,nosuid",
-	}
+	)
 	args = append(args, proxyEnv...)
 
 	security, err := e.securityArgs()

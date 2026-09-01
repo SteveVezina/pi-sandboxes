@@ -1,7 +1,16 @@
 # F18: Secure Backend
 
 > Source: `SPEC.md` §6 Features F18
-> Status: ⚠️ Re-open (2026-08-31) — `pkg/runtime/gvisor/runtime.go` does not compile against the current `oci.Engine`. It references symbols removed in the PROP-008 OCI-engine refactor: `oci.NewEngine`, `oci.EngineConfig`, `oci.ImageRef`, `oci.ContainerSpec.{ImageID,UserNS,MountNS,PIDNS}`, `SandboxSpec.Workspace`. `GOOS=linux go build ./pkg/runtime/gvisor/` fails. The darwin test suite never caught this because the file is `//go:build linux`. The 2026-08-31 F18 "re-verify" was darwin-only and missed it. Needs a fix pass on a Linux host: migrate the gVisor driver onto the shared OCI engine like compat did (thin `runsc` runtime handler). *(Prior: 2026-07-15 PROP-008 T18.1 claimed rebuilt on shared OCI engine — the claim did not hold.)*
+> Status: 🟡 Partially fixed (2026-09-01) — `pkg/runtime/gvisor/runtime.go` now
+> compiles (`GOOS=linux go build ./...` clean; verified via cross-compile and
+> a `linux/amd64` Docker build, since discovered while debugging a Render
+> deploy failure). Rebuilt exactly as this spec already directed: the same
+> `oci.CLIEngine` compat uses, with `--runtime runsc` (new
+> `oci.NewDockerEngineWithRuntime`) instead of a handcrafted bundle builder.
+> `Stats()` is not implemented (`oci.Engine` has no stats call — returns an
+> explicit error, not fabricated numbers). **Still unverified against a real
+> `runsc` binary** — no Linux+gVisor host in this session; the T18.1
+> integration-test checkbox is reset until that runs for real.
 > Category: Service-layer / Infrastructure
 
 ## Definition (from block spec)
@@ -61,23 +70,30 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Tasks
 
-### T18.1: gVisor backend lifecycle ✅ *(2026-07-15: PROP-008 complete — rebuilt on shared OCI engine)*
+### T18.1: gVisor backend lifecycle ⚠️ needs re-verify *(2026-09-01: recompiled against current oci.Engine; E2E against real runsc still unrun)*
 
 **Acceptance criteria:**
 - [x] Create/destroy/exec work through the shared OCI engine with a `runsc` runtime handler
-- [x] Template image is pulled/unpacked (no empty rootfs); container is created **and** started
-- [x] Sandbox runs as unprivileged user with `/workspace` mounted
-- [x] Secure backend returns actionable errors when unavailable (probe executes `runsc` check)
-- [x] Secure backend enforces default policy; no silent downgrade below secure
+- [x] Template image is pulled/unpacked (no empty rootfs — `docker run` pulls implicitly); container is created **and** started
+- [x] Sandbox runs as unprivileged user with `/workspace` mounted (same `securityArgs`/mount path as compat)
+- [x] Secure backend returns actionable errors when unavailable (probe checks `runsc` **and** `docker` on PATH)
+- [x] Secure backend enforces default policy; no silent downgrade below secure (unchanged — selector-owned, F19)
 
 **Verification:**
-- [x] `go build ./pkg/runtime/gvisor/...`
-- [x] Integration test: secure sandbox create/exec/destroy through shared OCI lifecycle
+- [x] `GOOS=linux go build ./...` (verified 2026-09-01 via cross-compile + `docker build --platform linux/amd64`)
+- [ ] Integration test: secure sandbox create/exec/destroy through shared OCI lifecycle *(reset — prior ✅ predated a build that didn't compile; needs a real Linux+runsc host)*
 - [ ] Integration test: secure sandbox executes command in `/workspace` as non-root
 
-**Files:** `pkg/runtime/gvisor/runtime.go`, `pkg/runtime/oci/engine.go`
+**Files:** `pkg/runtime/gvisor/runtime.go`, `pkg/runtime/oci/cli.go` (`NewDockerEngineWithRuntime`, `--runtime` flag)
 **Size:** L
 **Depends on:** F17, F19, T15.2 (shared OCI engine)
+
+**Known gap:** `Stats()` returns an explicit "not implemented" error —
+`oci.Engine` has no stats method (neither compat nor gvisor implement
+`Driver.Stats` today). Add `oci.Engine.Stats` (docker stats parsing) and wire
+both drivers, or accept the gap and note it in `SPEC.md` §21 benchmarks as
+"memory/CPU stats unavailable in secure mode" — needs a decision, not a
+silent partial fix.
 
 ### T18.2: Secure-mode benchmark comparison
 

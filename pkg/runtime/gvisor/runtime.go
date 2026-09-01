@@ -4,14 +4,16 @@
 package gvisor
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"os"
+	"io"
 	"os/exec"
-	"path/filepath"
+	"strings"
 	"time"
 
 	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
+	"github.com/pi-sandbox/pi/pkg/runtime/compat"
 	"github.com/pi-sandbox/pi/pkg/runtime/oci"
 )
 
@@ -24,15 +26,23 @@ const (
 
 	// DefaultTimeout is the default command execution timeout.
 	DefaultTimeout = 30 * time.Second
+
+	// ociRuntime is the `--runtime` value that selects gVisor under Docker.
+	ociRuntime = "runsc"
 )
 
 // Runtime implements the gVisor (runsc) backend using the shared OCI engine.
+// gVisor runs as a Docker/Podman `--runtime=runsc` selection, not a
+// standalone CLI, so container lifecycle goes through oci.CLIEngine exactly
+// like the compat driver (ADR-005) — only the extra --runtime flag differs.
 type Runtime struct {
 	image   string
 	timeout time.Duration
 	eng     oci.Engine
 	rootDir string
 }
+
+var _ pruntime.Driver = (*Runtime)(nil)
 
 // New creates a gVisor runtime backed by the shared OCI engine.
 func New(image, rootDir string, timeout time.Duration) *Runtime {
@@ -64,9 +74,13 @@ func (r *Runtime) Mode() pruntime.Mode {
 	return pruntime.ModeSecure
 }
 
-// IsAvailable checks if gVisor (runsc) is installed and usable.
+// IsAvailable checks if gVisor (runsc) and a Docker/Podman CLI able to
+// drive it are both installed.
 func (r *Runtime) IsAvailable() bool {
-	_, err := exec.LookPath("runsc")
+	if _, err := exec.LookPath("runsc"); err != nil {
+		return false
+	}
+	_, err := exec.LookPath("docker")
 	return err == nil
 }
 
@@ -88,18 +102,27 @@ func (r *Runtime) Probe(ctx context.Context) pruntime.CapabilityReport {
 		CompatTier:       3,
 	}
 	if !r.IsAvailable() {
-		report.Reason = "gVisor (runsc) not installed"
-		report.Missing = []string{"runsc"}
+		report.Reason = "gVisor (runsc) or docker not installed"
+		report.Missing = []string{"runsc", "docker"}
 	}
 	return report
 }
 
-// EnsureImage ensures the gVisor base image is available.
-func (r *Runtime) EnsureImage(ctx context.Context) (string, error) {
-	if r.eng == nil {
-		return "", fmt.Errorf("OCI engine not initialized")
+// engine lazily resolves the docker-runsc engine. Docker pulls a missing
+// image implicitly on `run`, so there is no separate "ensure image" step
+// (unlike the pre-ADR-005 implementation this replaces).
+func (r *Runtime) engine() (oci.Engine, error) {
+	if r.eng != nil {
+		return r.eng, nil
 	}
-	return r.eng.EnsureImage(ctx, oci.ImageRef(r.image))
+	path, err := exec.LookPath("docker")
+	if err != nil {
+		return nil, fmt.Errorf("gVisor requires docker on PATH: %w", err)
+	}
+	e := oci.NewDockerEngineWithRuntime(path, ociRuntime)
+	e.Timeout = r.timeout
+	r.eng = e
+	return r.eng, nil
 }
 
 // Create provisions a new sandbox using gVisor via the shared OCI engine.
@@ -108,131 +131,167 @@ func (r *Runtime) Create(ctx context.Context, spec pruntime.SandboxSpec) (prunti
 		return pruntime.Handle{}, fmt.Errorf("gVisor not available: %w", exec.ErrNotFound)
 	}
 
-	// Initialize OCI engine if not already done
-	if r.eng == nil {
-		r.eng = oci.NewEngine(oci.EngineConfig{
-			Runtime: "runsc",
-			RootDir: r.rootDir,
-		})
-	}
-
-	// Ensure the gVisor base image is available
-	imageID, err := r.eng.EnsureImage(ctx, oci.ImageRef(r.image))
+	eng, err := r.engine()
 	if err != nil {
-		return pruntime.Handle{}, fmt.Errorf("ensure gVisor image: %w", err)
+		return pruntime.Handle{}, err
 	}
 
-	// Create the container using the shared OCI engine
-	containerID, err := r.eng.Create(ctx, oci.ContainerSpec{
-		ImageID:   imageID,
+	image := spec.Image
+	if image == "" {
+		image = r.image
+	}
+
+	containerID, err := eng.Create(ctx, &oci.ContainerSpec{
 		SandboxID: spec.SandboxID,
-		Workspace: spec.Workspace,
-		Artifacts: spec.Artifacts,
-		Caches:    spec.Caches,
-		UserNS:    true,
-		MountNS:   true,
-		PIDNS:     true,
+		Name:      compat.ContainerName(spec.SandboxID),
+		Image:     image,
+		Workspace: spec.WorkspacePath,
+		Artifacts: spec.ArtifactsPath,
+		Caches:    spec.CachePaths,
 		Network:   spec.Network,
 		Limits:    spec.Limits,
 	})
 	if err != nil {
-		return pruntime.Handle{}, fmt.Errorf("create container: %w", err)
+		return pruntime.Handle{}, fmt.Errorf("create gVisor container: %w", err)
 	}
 
-	// Return handle with stable sandbox ID and runtime object ID
 	return pruntime.Handle{
 		SandboxID:       spec.SandboxID,
 		RuntimeObjectID: containerID,
+		DriverName:      RuntimeName,
+		Mode:            pruntime.ModeSecure,
 	}, nil
 }
 
-// Start starts a gVisor sandbox.
+// Start is a no-op: CLIEngine.Create already runs the container (`docker
+// run -d`). It confirms the container came up.
 func (r *Runtime) Start(ctx context.Context, h pruntime.Handle) error {
-	if r.eng == nil {
-		return fmt.Errorf("OCI engine not initialized")
+	eng, err := r.engine()
+	if err != nil {
+		return err
 	}
-	return r.eng.Start(ctx, h.RuntimeObjectID)
+	state, err := eng.Inspect(ctx, h.RuntimeObjectID)
+	if err != nil {
+		return fmt.Errorf("start: inspect gVisor container: %w", err)
+	}
+	if state != "running" {
+		return fmt.Errorf("start: gVisor container %s is %q, not running", h.RuntimeObjectID, state)
+	}
+	return nil
 }
 
 // Exec executes a command in a gVisor sandbox.
 func (r *Runtime) Exec(ctx context.Context, h pruntime.Handle, req pruntime.ExecRequest) (pruntime.ExecSession, error) {
-	if r.eng == nil {
-		return nil, fmt.Errorf("OCI engine not initialized")
+	eng, err := r.engine()
+	if err != nil {
+		return nil, err
 	}
-	return r.eng.Exec(ctx, h.RuntimeObjectID, req)
+
+	execCtx := ctx
+	var cancel context.CancelFunc
+	if req.Timeout > 0 {
+		execCtx, cancel = context.WithTimeout(ctx, req.Timeout)
+		defer cancel()
+	}
+
+	result, err := eng.Exec(execCtx, h.RuntimeObjectID, shellCommand(req))
+	if err != nil {
+		return nil, fmt.Errorf("exec in gVisor container: %w", err)
+	}
+	return newCompletedSession(*result), nil
 }
+
+// shellCommand renders an ExecRequest as a single /bin/sh -c string
+// (CLIEngine.Exec's surface), applying WorkingDir and Env inline since the
+// engine only accepts one command string.
+func shellCommand(req pruntime.ExecRequest) string {
+	var b strings.Builder
+	if req.WorkingDir != "" {
+		b.WriteString("cd " + shellQuote(req.WorkingDir) + " && ")
+	}
+	for k, v := range req.Env {
+		b.WriteString(k + "=" + shellQuote(v) + " ")
+	}
+	parts := make([]string, len(req.Command))
+	for i, c := range req.Command {
+		parts[i] = shellQuote(c)
+	}
+	b.WriteString(strings.Join(parts, " "))
+	return b.String()
+}
+
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
+// completedSession adapts oci.ExecResult (blocking, already-finished) to
+// the streaming pruntime.ExecSession contract.
+type completedSession struct {
+	stdout *bytes.Reader
+	stderr *bytes.Reader
+	result pruntime.ExecResult
+}
+
+func newCompletedSession(r oci.ExecResult) *completedSession {
+	return &completedSession{
+		stdout: bytes.NewReader([]byte(r.Stdout)),
+		stderr: bytes.NewReader([]byte(r.Stderr)),
+		result: pruntime.ExecResult{
+			ExitCode: r.ExitCode,
+			Duration: time.Duration(r.DurationMs) * time.Millisecond,
+			TimedOut: r.TimedOut,
+		},
+	}
+}
+
+func (s *completedSession) Stdout() io.Reader { return s.stdout }
+func (s *completedSession) Stderr() io.Reader { return s.stderr }
+func (s *completedSession) Wait(ctx context.Context) (pruntime.ExecResult, error) {
+	return s.result, nil
+}
+func (s *completedSession) Close() error { return nil }
 
 // Inspect returns the state of a gVisor sandbox.
 func (r *Runtime) Inspect(ctx context.Context, h pruntime.Handle) (pruntime.RuntimeState, error) {
-	if r.eng == nil {
-		return pruntime.RuntimeState{}, fmt.Errorf("OCI engine not initialized")
-	}
-	state, err := r.eng.Inspect(ctx, h.RuntimeObjectID)
+	eng, err := r.engine()
 	if err != nil {
-		return pruntime.RuntimeState{}, fmt.Errorf("inspect container: %w", err)
+		return pruntime.RuntimeState{}, err
 	}
-	return pruntime.RuntimeState{
-		State:       state.State,
-		ExitCode:    state.ExitCode,
-		ContainerID: h.RuntimeObjectID,
-	}, nil
+	state, err := eng.Inspect(ctx, h.RuntimeObjectID)
+	if err != nil {
+		return pruntime.RuntimeState{}, fmt.Errorf("inspect gVisor container: %w", err)
+	}
+	status := "stopped"
+	switch state {
+	case "running":
+		status = "running"
+	case "":
+		status = "absent"
+	}
+	return pruntime.RuntimeState{Status: status}, nil
 }
 
 // Stop stops a gVisor sandbox.
 func (r *Runtime) Stop(ctx context.Context, h pruntime.Handle, grace time.Duration) error {
-	if r.eng == nil {
-		return fmt.Errorf("OCI engine not initialized")
+	eng, err := r.engine()
+	if err != nil {
+		return err
 	}
-	return r.eng.Stop(ctx, h.RuntimeObjectID, grace)
+	return eng.Stop(ctx, h.RuntimeObjectID, grace)
 }
 
 // Destroy destroys a gVisor sandbox.
 func (r *Runtime) Destroy(ctx context.Context, h pruntime.Handle) error {
-	if r.eng == nil {
-		return fmt.Errorf("OCI engine not initialized")
+	eng, err := r.engine()
+	if err != nil {
+		return err
 	}
-	return r.eng.Remove(ctx, h.RuntimeObjectID)
+	return eng.Remove(ctx, h.RuntimeObjectID)
 }
 
-// Stats returns resource statistics for a gVisor sandbox.
+// Stats returns resource statistics for a gVisor sandbox. Not yet
+// implemented — the shared oci.Engine interface has no stats call
+// (F18 gap; tracked in docs/features/F18-secure-mode-gvisor.md).
 func (r *Runtime) Stats(ctx context.Context, h pruntime.Handle) (pruntime.RuntimeStats, error) {
-	if r.eng == nil {
-		return pruntime.RuntimeStats{}, fmt.Errorf("OCI engine not initialized")
-	}
-	stats, err := r.eng.Stats(ctx, h.RuntimeObjectID)
-	if err != nil {
-		return pruntime.RuntimeStats{}, fmt.Errorf("stats: %w", err)
-	}
-	return pruntime.RuntimeStats{
-		MemoryUsageBytes:  stats.MemoryUsageBytes,
-		CPUUsageNanoCores: stats.CPUUsageNanoCores,
-	}, nil
-}
-
-// generateConfig generates a minimal runsc config.json (deprecated, kept for reference).
-// This function is no longer used — gVisor now uses the shared OCI engine.
-func (r *Runtime) generateConfig(id, bundleDir, template string) string {
-	// Deprecated: this function is kept for reference only.
-	// gVisor now uses the shared OCI engine for container creation.
-	return `{
-		"ociVersion": "1.0.2",
-		"process": {
-			"terminal": false,
-			"user": {"uid": 1000, "gid": 1000},
-			"args": ["/bin/sh", "-c", "sleep infinity"],
-			"env": ["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"]
-		},
-		"root": {"path": "rootfs", "readonly": false},
-		"hostname": "` + id + `"
-	}`
-}
-
-// ensureRuntimeDir ensures the runtime directory exists.
-func ensureRuntimeDir() error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("get home dir: %w", err)
-	}
-	dir := filepath.Join(home, ".pi-box", "runtime")
-	return os.MkdirAll(dir, 0755)
+	return pruntime.RuntimeStats{}, fmt.Errorf("gvisor: Stats not implemented")
 }

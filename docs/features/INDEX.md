@@ -35,7 +35,7 @@ Dashboard of all features for this project.
 | [F15](F16-sdk.md) | SDKs | 🟢 Reviewed | ✅ Implemented (re-verified 2026-08-31) | M3 | F2 |
 | [F16](F10-system-commands.md) | System Commands | 🟢 Reviewed | ✅ Implemented (re-verified 2026-08-31) | M1 | F8 |
 | [F17](F17-policy-enforcement.md) | Policy Enforcement | 🟡 Re-verified 2026-08-31 | 🟡 host-mount + limits enforced; AC-17.5/AC-34.3 delivered by F30 T30.7–T30.8 (ADR-006) | M2 | F3, F4, F11, F30 |
-| [F18](F18-secure-backend.md) | Secure Backend | ⚠️ Re-open 2026-08-31 | 🔴 `pkg/runtime/gvisor` doesn't compile on Linux (stale post-PROP-008) — needs Linux-host fix | M4 | F4, F17, F19 |
+| [F18](F18-secure-backend.md) | Secure Backend | 🟡 Reviewed 2026-09-01 | 🟡 Compiles again (`GOOS=linux go build ./...` + `docker build` clean) — E2E against real runsc still unverified, `Stats()` unimplemented | M4 | F4, F17, F19 |
 | [F19](F19-runtime-selection-fallback.md) | Runtime Selection & Fallback | 🟢 Reviewed | ✅ Implemented | M4 | F3, F4, F18 |
 | [F20](F20-microvm-backend.md) | MicroVM Backend | 🟢 Reviewed | ✅ Implemented | M5 | F19, F21 |
 | [F21](F21-microvm-guest-control-plane.md) | MicroVM Guest Control Plane | 🟢 Reviewed | ✅ Implemented | M5 | F20 |
@@ -56,7 +56,7 @@ Dashboard of all features for this project.
 | M1: Local Linux MVP | F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F14, F16 | 🟡 Near-complete — only F9 archive size cap open (needs a block-spec default) |
 | M2: Hardening & Cache | F11, F12, F13, F17 | ⚠️ F11 enforcement pending (F30 tasks); F12 scoping done (ADR-009); F13 ✅; F17 partial |
 | M3: Agent Integrations | F15 | ✅ Implemented |
-| M4: Secure Backend | F18, F19 | ⚠️ F19 done; F18 gVisor driver broken on Linux (found 2026-08-31) |
+| M4: Secure Backend | F18, F19 | ⚠️ F19 done; F18 gVisor driver compiles again (2026-09-01) but unverified against real runsc |
 | M5: MicroVM Backend | F20, F21 | ✅ Implemented |
 | M6: Remote Daemon Mode | F22, F23 | ✅ Implemented |
 | M7: Cross-Platform GUI Workbench | F24, F25, F26, F27 | ✅ Implemented (all re-verified) |

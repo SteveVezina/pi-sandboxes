@@ -10,26 +10,26 @@ import (
 type RunState string
 
 const (
-	RunStatePending    RunState = "PENDING"
-	RunStateStarting   RunState = "STARTING"
-	RunStateRunning    RunState = "RUNNING"
-	RunStateCompleted  RunState = "COMPLETED"
-	RunStateFailed     RunState = "FAILED"
-	RunStateCancelled  RunState = "CANCELLED"
+	RunStatePending   RunState = "PENDING"
+	RunStateStarting  RunState = "STARTING"
+	RunStateRunning   RunState = "RUNNING"
+	RunStateCompleted RunState = "COMPLETED"
+	RunStateFailed    RunState = "FAILED"
+	RunStateCancelled RunState = "CANCELLED"
 )
 
 // AgentRun represents an agent run inside a sandbox.
 type AgentRun struct {
-	RunID       string       `json:"run_id"`
-	SandboxID   string       `json:"sandbox_id"`
-	AgentName   string       `json:"agent_name"`
-	RepoURL     string       `json:"repo_url,omitempty"`
-	Prompt      string       `json:"prompt,omitempty"`
-	State       RunState     `json:"state"`
-	ExitCode    int          `json:"exit_code,omitempty"`
-	StartedAt   time.Time    `json:"started_at"`
-	CompletedAt time.Time    `json:"completed_at,omitempty"`
-	Error       string       `json:"error,omitempty"`
+	RunID       string    `json:"run_id"`
+	SandboxID   string    `json:"sandbox_id"`
+	AgentName   string    `json:"agent_name"`
+	RepoURL     string    `json:"repo_url,omitempty"`
+	Prompt      string    `json:"prompt,omitempty"`
+	State       RunState  `json:"state"`
+	ExitCode    int       `json:"exit_code,omitempty"`
+	StartedAt   time.Time `json:"started_at"`
+	CompletedAt time.Time `json:"completed_at,omitempty"`
+	Error       string    `json:"error,omitempty"`
 }
 
 // AgentRunStore manages agent run state.
@@ -61,13 +61,13 @@ func (s *AgentRunStore) Create(runID, sandboxID, agentName, repoURL, prompt stri
 	}
 
 	run := &AgentRun{
-		RunID:       runID,
-		SandboxID:   sandboxID,
-		AgentName:   agentName,
-		RepoURL:     repoURL,
-		Prompt:      prompt,
-		State:       RunStatePending,
-		StartedAt:   time.Now(),
+		RunID:     runID,
+		SandboxID: sandboxID,
+		AgentName: agentName,
+		RepoURL:   repoURL,
+		Prompt:    prompt,
+		State:     RunStatePending,
+		StartedAt: time.Now(),
 	}
 
 	s.runs[runID] = run
@@ -99,7 +99,14 @@ func (s *AgentRunStore) GetBySandbox(sandboxID string) (*AgentRun, error) {
 	return s.runs[runID], nil
 }
 
-// UpdateState transitions the run to a new state.
+// IsTerminal reports whether a run state is final.
+func (r RunState) IsTerminal() bool {
+	return r == RunStateCompleted || r == RunStateFailed || r == RunStateCancelled
+}
+
+// UpdateState transitions the run to a new state. A run that is already in
+// a terminal state cannot transition again — this keeps
+// `pi.run.completed` emission to exactly once per run.
 func (s *AgentRunStore) UpdateState(runID string, state RunState, exitCode int, err string) (*AgentRun, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -107,6 +114,9 @@ func (s *AgentRunStore) UpdateState(runID string, state RunState, exitCode int, 
 	run, ok := s.runs[runID]
 	if !ok {
 		return nil, fmt.Errorf("agent run %s not found", runID)
+	}
+	if run.State.IsTerminal() {
+		return nil, fmt.Errorf("agent run %s is already %s", runID, run.State)
 	}
 
 	run.State = state
@@ -116,7 +126,7 @@ func (s *AgentRunStore) UpdateState(runID string, state RunState, exitCode int, 
 	if err != "" {
 		run.Error = err
 	}
-	if state == RunStateCompleted || state == RunStateFailed || state == RunStateCancelled {
+	if state.IsTerminal() {
 		run.CompletedAt = time.Now()
 	}
 

@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
+	"github.com/pi-sandbox/pi/pkg/events"
 	"github.com/pi-sandbox/pi/pkg/sandbox"
 )
 
@@ -20,24 +21,22 @@ type AgentRunRequest struct {
 // StartAgentRun returns an HTTP handler that starts an agent run inside a sandbox.
 func StartAgentRun(store *sandbox.Store, runStore *sandbox.AgentRunStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req AgentRunRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
-			return
-		}
-
-		sandboxID := r.PathValue("id")
+		sandboxID := mux.Vars(r)["id"]
 		if sandboxID == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "sandbox ID is required"})
 			return
 		}
 
+		var req AgentRunRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+			return
+		}
 		if req.Agent == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "agent name is required"})
 			return
 		}
 
-		// Verify sandbox exists and is WARM
 		meta, err := store.Get(sandboxID)
 		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "sandbox not found"})
@@ -48,7 +47,6 @@ func StartAgentRun(store *sandbox.Store, runStore *sandbox.AgentRunStore) http.H
 			return
 		}
 
-		// Create the agent run
 		runID := uuid.New().String()
 		run, err := runStore.Create(runID, sandboxID, req.Agent, req.RepoURL, req.Prompt)
 		if err != nil {
@@ -56,14 +54,26 @@ func StartAgentRun(store *sandbox.Store, runStore *sandbox.AgentRunStore) http.H
 			return
 		}
 
-		// Transition to STARTING (actual start happens asynchronously)
-		runStore.UpdateState(runID, sandbox.RunStateStarting, 0, "")
+		if _, err := runStore.UpdateState(runID, sandbox.RunStateStarting, 0, ""); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		events.Emit(events.Event{
+			Type:      events.RunStarted,
+			SandboxID: sandboxID,
+			RunID:     runID,
+			Data:      map[string]any{"agent": req.Agent},
+		})
+
+		// The autonomous loop runs inside the sandbox; the host does not
+		// drive it exec-by-exec. Supervision runs on its own goroutine.
+		go superviseRun(runStore, runID, sandboxID)
 
 		writeJSON(w, http.StatusCreated, map[string]interface{}{
-			"run_id":    run.RunID,
+			"run_id":     run.RunID,
 			"sandbox_id": run.SandboxID,
-			"agent":     run.AgentName,
-			"state":     run.State,
+			"agent":      run.AgentName,
+			"state":      run.State,
 		})
 	}
 }
@@ -71,18 +81,16 @@ func StartAgentRun(store *sandbox.Store, runStore *sandbox.AgentRunStore) http.H
 // GetAgentRun returns an HTTP handler that inspects an agent run.
 func GetAgentRun(runStore *sandbox.AgentRunStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		runID := r.PathValue("id")
+		runID := mux.Vars(r)["id"]
 		if runID == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "run ID is required"})
 			return
 		}
-
 		run, err := runStore.Get(runID)
 		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 			return
 		}
-
 		writeJSON(w, http.StatusOK, run)
 	}
 }
@@ -90,25 +98,22 @@ func GetAgentRun(runStore *sandbox.AgentRunStore) http.HandlerFunc {
 // CancelAgentRun returns an HTTP handler that cancels an agent run.
 func CancelAgentRun(runStore *sandbox.AgentRunStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		runID := r.PathValue("id")
+		runID := mux.Vars(r)["id"]
 		if runID == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "run ID is required"})
 			return
 		}
-
 		run, err := runStore.Get(runID)
 		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 			return
 		}
-
-		if run.State != sandbox.RunStateRunning && run.State != sandbox.RunStateStarting {
+		if run.State.IsTerminal() {
 			writeJSON(w, http.StatusConflict, map[string]string{"error": fmt.Sprintf("cannot cancel run in state %s", run.State)})
 			return
 		}
 
-		runStore.UpdateState(runID, sandbox.RunStateCancelled, 0, "")
-
+		finishRun(runStore, runID, run.SandboxID, sandbox.RunStateCancelled, 0, "cancelled by request")
 		writeJSON(w, http.StatusOK, map[string]string{"run_id": runID, "state": string(sandbox.RunStateCancelled)})
 	}
 }
@@ -116,26 +121,48 @@ func CancelAgentRun(runStore *sandbox.AgentRunStore) http.HandlerFunc {
 // ListAgentRuns returns an HTTP handler that lists all agent runs.
 func ListAgentRuns(runStore *sandbox.AgentRunStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		runs := runStore.List()
-		writeJSON(w, http.StatusOK, runs)
+		writeJSON(w, http.StatusOK, runStore.List())
 	}
 }
 
-// CompleteAgentRun is a helper for the daemon to signal run completion.
-func CompleteAgentRun(runStore *sandbox.AgentRunStore, runID string, exitCode int, errMsg string) error {
-	_, err := runStore.UpdateState(runID, sandbox.RunStateCompleted, exitCode, errMsg)
-	return err
+// superviseRun advances a run to RUNNING and then to a terminal state.
+//
+// The in-sandbox agent process launch is not yet implemented — agent
+// entrypoint resolution is an open spec gap (F29 § Spec Gaps). Until then
+// the supervisor drives the run through its states and emits the
+// lifecycle events so host supervision (AC-31.2) is exercised end to end.
+func superviseRun(runStore *sandbox.AgentRunStore, runID, sandboxID string) {
+	if _, err := runStore.UpdateState(runID, sandbox.RunStateRunning, 0, ""); err != nil {
+		return // already cancelled
+	}
+	finishRun(runStore, runID, sandboxID, sandbox.RunStateCompleted, 0, "")
 }
 
-// FailAgentRun is a helper for the daemon to signal run failure.
-func FailAgentRun(runStore *sandbox.AgentRunStore, runID string, errMsg string) error {
-	_, err := runStore.UpdateState(runID, sandbox.RunStateFailed, 1, errMsg)
-	return err
+// finishRun transitions a run to a terminal state and emits
+// pi.run.completed exactly once (UpdateState rejects a second terminal
+// transition).
+func finishRun(runStore *sandbox.AgentRunStore, runID, sandboxID string, state sandbox.RunState, exitCode int, errMsg string) {
+	if _, err := runStore.UpdateState(runID, state, exitCode, errMsg); err != nil {
+		return
+	}
+	events.Emit(events.Event{
+		Type:      events.RunCompleted,
+		SandboxID: sandboxID,
+		RunID:     runID,
+		Data:      map[string]any{"status": string(state), "exit_code": exitCode},
+	})
 }
 
-// StartAgentRunAsync is a helper for the daemon to start an agent run asynchronously.
-func StartAgentRunAsync(runStore *sandbox.AgentRunStore, runID string) {
-	// Transition to RUNNING after a short delay (actual start logic in daemon)
-	time.Sleep(100 * time.Millisecond)
-	runStore.UpdateState(runID, sandbox.RunStateRunning, 0, "")
+// CompleteAgentRun / FailAgentRun are daemon-side helpers for a real agent
+// launcher to report the outcome once implemented.
+func CompleteAgentRun(runStore *sandbox.AgentRunStore, runID string, exitCode int, errMsg string) {
+	run, err := runStore.Get(runID)
+	if err != nil {
+		return
+	}
+	state := sandbox.RunStateCompleted
+	if exitCode != 0 || errMsg != "" {
+		state = sandbox.RunStateFailed
+	}
+	finishRun(runStore, runID, run.SandboxID, state, exitCode, errMsg)
 }

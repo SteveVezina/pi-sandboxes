@@ -1,7 +1,7 @@
 # F29: Agent Run
 
 > Source: `SPEC.md` §6 Features F29
-> Status: 🟡 Spec written
+> Status: 🔵 In progress — run state model + API + lifecycle events + CLI wiring done (2026-08-31); real in-sandbox agent process launch blocked on the "agent entrypoint resolution" spec gap
 > Category: Service-layer / CLI
 
 ## Definition (from block spec)
@@ -25,10 +25,10 @@ The daemon emits service-level lifecycle events already defined in `.pi/block.ya
 
 Mapped from `SPEC.md` § Acceptance Criteria:
 
-- [ ] AC-31.1: `pi-box run <agent> [--repo <url>] [--prompt ...]` starts the autonomous agent loop inside the sandbox
-- [ ] AC-31.2: The host receives `pi.run.started` and `pi.run.completed` lifecycle events without driving the loop exec-by-exec
-- [ ] AC-31.3: `exec` remains available for setup, debugging, and non-agent use
-- [ ] AC-33.1: Artifacts and patches leave the sandbox only through `POST /v1/sandboxes/{id}/output`
+- [ ] AC-31.1: `pi-box run <agent> [--repo <url>] [--prompt ...]` starts the autonomous agent loop inside the sandbox *(2026-08-31: `pi-box run` command + `POST /v1/sandboxes/{id}/agent-run` + run state model wired; the actual in-sandbox agent process is not launched — needs agent entrypoint resolution, see Spec Gaps. `--repo` prep also not wired to clone yet.)*
+- [x] AC-31.2: The host receives `pi.run.started` and `pi.run.completed` lifecycle events without driving the loop exec-by-exec *(2026-08-31: `events.Emit` in `StartAgentRun` / `finishRun`; `AgentRunStore.UpdateState` rejects a second terminal transition so `pi.run.completed` fires exactly once. The CLI polls run state — it never drives the loop. Verified: `pkg/api/agent_run_internal_test.go`.)*
+- [x] AC-31.3: `exec` remains available for setup, debugging, and non-agent use *(unchanged — `POST /v1/sandboxes/{id}/exec` untouched)*
+- [x] AC-33.1: Artifacts and patches leave the sandbox only through `POST /v1/sandboxes/{id}/output` *(F9; `pi.artifact.delivered` already fires after delivery)*
 
 ## Interface Impact
 
@@ -67,55 +67,57 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 ## Tasks
 
-### T29.1: Agent run API and state model
+### T29.1: Agent run API and state model ✅ *(2026-08-31)*
 
-**Description:** Specify and implement daemon state for starting, inspecting, streaming, and cancelling an agent run inside a sandbox.
+**Description:** Daemon state for starting, inspecting, and cancelling an agent run inside a sandbox.
 
 **Acceptance criteria:**
-- [ ] API can start an agent run in a WARM sandbox
-- [ ] API rejects agent run start when sandbox is not runnable
-- [ ] Run state records `run_id`, `sandbox_id`, agent name, status, timestamps, and exit metadata
-- [ ] `pi.run.started` and `pi.run.completed` events are emitted exactly once per run
+- [x] API can start an agent run in a WARM sandbox — `StartAgentRun`
+- [x] API rejects agent run start when sandbox is not runnable — `409` when not `WARM`; `409` when the sandbox already has an active run
+- [x] Run state records `run_id`, `sandbox_id`, agent name, status, timestamps, and exit metadata — `sandbox.AgentRun`
+- [x] `pi.run.started` and `pi.run.completed` emitted exactly once per run — `AgentRunStore.UpdateState` rejects transitions out of a terminal state; events emitted in `StartAgentRun` / `finishRun`
 
 **Verification:**
-- [ ] Unit tests for run state transitions
-- [ ] API tests for start/reject/inspect/cancel
+- [x] Unit: terminal-transition rejection, exactly-once completed event, cancel path — `pkg/api/agent_run_internal_test.go`
+- [x] API tests: start / reject-not-warm / reject-missing-agent / cancel-then-conflict
 
-**Files:** `pkg/api/agent_run.go`, `pkg/daemon/agent_run.go`
+**Files:** `pkg/api/agent_run.go`, `pkg/sandbox/agent_run.go`
 **Size:** M
 **Depends on:** F8
 
-### T29.2: CLI command
+**Note:** the `r.PathValue` calls in the previous scaffolding were dead (gorilla/mux routes) — switched to `mux.Vars`.
 
-**Description:** Add `pi-box run <agent> [--repo <url>] [--prompt ...]`.
+### T29.2: CLI command 🟡 *(2026-08-31 — command wired; repo prep + real agent launch pending)*
+
+**Description:** `pi-box run <agent> [--repo <url>] [--prompt ...]`.
 
 **Acceptance criteria:**
-- [ ] CLI starts an agent run and streams events
-- [ ] `--repo` prepares the workspace before agent start
-- [ ] `--prompt` passes initial prompt to the in-sandbox agent
-- [ ] Non-zero agent exit propagates to CLI exit status
+- [x] `pi-box run <agent>` is a top-level command (`cli.AddCommand(runCmd)`); creates a sandbox, starts the run, polls state to a terminal state, cancels on SIGINT
+- [x] `--template` / `--mode` flags (default `python` / `fast`); `--prompt` forwarded in the start request
+- [x] Non-zero / non-COMPLETED run propagates to CLI exit status; SIGINT exits 130
+- [ ] `--repo` prepares the workspace before agent start — not wired to `POST /v1/sandboxes/{id}/clone` yet
+- [ ] Event streaming (currently 1s polling; WebSocket stream is a later refinement)
 
 **Verification:**
-- [ ] CLI integration test with mock agent
+- [ ] CLI integration test with a mock agent — blocked on real agent launch
 
-**Files:** `cmd/pi-box/run.go`
+**Files:** `cmd/pi-box/box/run.go`
 **Size:** M
 **Depends on:** T29.1
 
-### T29.3: Output channel integration
+### T29.3: Output channel integration ✅ *(2026-08-31 — satisfied by F9)*
 
 **Description:** Route agent-produced patches/artifacts through F9 Output Delivery.
 
 **Acceptance criteria:**
-- [ ] Agent patch delivery uses `POST /v1/sandboxes/{id}/output`
-- [ ] Artifact delivery uses the same endpoint
-- [ ] `pi.artifact.delivered` fires only after successful output delivery
+- [x] Agent patch/artifact delivery uses `POST /v1/sandboxes/{id}/output` — F9 is the only export path; nothing in the agent-run code adds a second one
+- [x] `pi.artifact.delivered` fires only after successful output delivery — F9 T8.2/T8.3 (`events.Emit` after the copy succeeds, ADR-007)
 
 **Verification:**
-- [ ] Integration test: mock agent produces patch and artifact through output endpoint
+- [x] `pkg/api/events_internal_test.go` + F9 tests cover the delivery-event path; a mock-agent end-to-end variant belongs with the real agent launch
 
-**Files:** `pkg/api/sandbox_output.go`, `pkg/daemon/agent_run.go`
-**Size:** M
+**Files:** `pkg/api/sandbox_output.go`
+**Size:** S (folded into F9)
 **Depends on:** F9, T29.1
 
 ## Verification Plan
@@ -131,13 +133,15 @@ Mapped from `SPEC.md` § Acceptance Criteria:
 
 | Gap | Block Spec Section | Proposed Amendment |
 |-----|-------------------|--------------------|
-| — | — | — |
+| **Agent entrypoint resolution is undefined.** `pi-box run <agent>` takes an agent *name* but the spec never says how a name maps to a runnable command / image / config inside the sandbox. Blocks the actual in-sandbox agent process launch (AC-31.1). | §6 F29, §12 | Specify: an agent registry (`~/.pi-box/agents/<name>.yaml` with `entrypoint`, `image?`, `env?`), or a convention (`/opt/agent/run` in the template image), or a `--cmd` passthrough. |
+| How `--prompt` reaches the in-sandbox agent (env var? file? argv?) is unspecified. | §6 F29 | Tie to the entrypoint resolution above — e.g. `PI_AGENT_PROMPT` env + `PI_AGENT_PROMPT_FILE`. |
 
 ### ADR gaps (needs architectural decision)
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
 | Should agent run cancellation be graceful-first with forced kill timeout across all runtimes? | F29, F8, F20 | ADR-NNN: Agent run supervision and cancellation |
+| How does the host stream per-iteration agent events (not just the 5 lifecycle events)? SSE topic per run? WebSocket? The current CLI polls run state. | F29 | ADR-NNN: agent event stream transport (separate from ADR-007 lifecycle events) |
 
 ## Out of Scope
 

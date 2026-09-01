@@ -220,6 +220,36 @@ export type GuiLogEntry = {
   message: string;
 };
 
+// ─── Templates (F28) ─────────────────────────────────────────────────────────
+
+export type TemplateSummary = {
+  name: string;
+  version: string;
+  summary: string;
+  source: string;
+  tags: string[] | null;
+};
+
+export type TemplateListResponse = { count: number; templates: TemplateSummary[] };
+
+export type TemplateDetail = {
+  template: Record<string, unknown> & {
+    name: string;
+    base?: string;
+    network?: string;
+    source?: { type?: string; forkedFrom?: string };
+    lineage?: { generation?: number };
+    compatibility?: { runtimes?: Record<string, string> };
+  };
+  image: string;
+  contentDigest: string;
+  problems: string[];
+};
+
+export type TemplateRevision = { n: number; time: string; digest: string };
+export type TemplateHistoryResponse = { name: string; count: number; revisions: TemplateRevision[] };
+export type TemplateValidateResponse = { valid: boolean; problems: string[] };
+
 export type SupportBundle = {
   version: { component: string };
   diagnostics: DoctorResult;
@@ -458,6 +488,41 @@ export class PiDaemonClient {
       `/v1/sandboxes/${encodeURIComponent(id)}/snapshot/delete`,
       { name }
     );
+  }
+
+  // ── Templates (F28) ──────────────────────────────────────────────────────
+
+  async templates(): Promise<TemplateListResponse> {
+    return this.request<TemplateListResponse>("GET", "/v1/templates");
+  }
+
+  async template(name: string): Promise<TemplateDetail> {
+    return this.request<TemplateDetail>("GET", `/v1/templates/${encodeURIComponent(name)}`);
+  }
+
+  async templateFork(source: string, name: string): Promise<{ name: string }> {
+    return this.request<{ name: string }>("POST", "/v1/templates/fork", { source, name });
+  }
+
+  async templateValidate(name: string): Promise<TemplateValidateResponse> {
+    return this.request<TemplateValidateResponse>("POST", "/v1/templates/validate", { name });
+  }
+
+  async templateHistory(name: string): Promise<TemplateHistoryResponse> {
+    return this.request<TemplateHistoryResponse>(
+      "GET",
+      `/v1/templates/${encodeURIComponent(name)}/history`
+    );
+  }
+
+  async templateRollback(name: string, revision: number): Promise<unknown> {
+    return this.request("POST", `/v1/templates/${encodeURIComponent(name)}/rollback`, { revision });
+  }
+
+  async templatePromote(name: string): Promise<unknown> {
+    return this.request("POST", `/v1/templates/${encodeURIComponent(name)}/promote`, {
+      default: true
+    });
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {

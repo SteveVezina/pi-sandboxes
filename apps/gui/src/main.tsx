@@ -56,7 +56,10 @@ import {
   SandboxInfo,
   SnapshotMeta,
   SupportBundle,
-  SystemStatus
+  SystemStatus,
+  TemplateSummary,
+  TemplateDetail,
+  TemplateRevision
 } from "./api";
 import { Button } from "@/components/ui/button";
 import "./styles.css";
@@ -1570,31 +1573,216 @@ function CreateSandboxDialog({
 
 // ─── Templates View ──────────────────────────────────────────────────────────
 
-function TemplatesView({ defaults }: { defaults: GUIDefaults }) {
-  const templateDescriptions: Record<string, string> = {
-    base: "Minimal POSIX environment with coreutils, git, curl, jq, ripgrep",
-    node: "Node.js LTS + npm + pnpm + corepack",
-    python: "Python 3.x + uv + pip + venv",
-    go: "Go stable toolchain + GOMODCACHE + GOCACHE",
-    rust: "rustc + cargo + rustup",
-    "node-python": "Node.js + Python + pnpm + uv + pip",
-    polyglot: "All toolchains in one image"
+function TemplatesView({
+  defaults,
+  client,
+  connected
+}: {
+  defaults: GUIDefaults;
+  client: PiDaemonClient;
+  connected: boolean;
+}) {
+  const [list, setList] = useState<TemplateSummary[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [detail, setDetail] = useState<TemplateDetail | null>(null);
+  const [history, setHistory] = useState<TemplateRevision[]>([]);
+  const [defaultName, setDefaultName] = useState(defaults.template);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const loadList = useCallback(async () => {
+    if (!connected) return;
+    try {
+      const res = await client.templates();
+      setList(res.templates);
+      setErr(null);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }, [client, connected]);
+
+  const loadDetail = useCallback(
+    async (name: string) => {
+      setSelected(name);
+      try {
+        const [d, h] = await Promise.all([client.template(name), client.templateHistory(name)]);
+        setDetail(d);
+        setHistory(h.revisions);
+        setErr(null);
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [client]
+  );
+
+  useEffect(() => {
+    void loadList();
+  }, [loadList]);
+
+  const act = async (label: string, fn: () => Promise<unknown>) => {
+    setBusy(true);
+    setErr(null);
+    setMsg(null);
+    try {
+      await fn();
+      setMsg(`${label} ok`);
+      await loadList();
+      if (selected) await loadDetail(selected);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
   };
 
+  const runtimes = detail?.template.compatibility?.runtimes ?? {};
+
   return (
-    <div className="templates-grid">
-      {TEMPLATES.map((template) => (
-        <div className="template-card" key={template}>
-          <div className="template-header">
-            <Layers3 size={22} />
-            <strong>{template}</strong>
-            {template === defaults.template && (
-              <span className="template-default-badge">default</span>
-            )}
-          </div>
-          <p className="template-desc">{templateDescriptions[template] || ""}</p>
+    <div className="templates-workbench">
+      <section className="templates-panel">
+        <div className="section-heading">
+          <h3>Templates</h3>
+          <button onClick={() => void loadList()} disabled={!connected}>
+            Refresh
+          </button>
         </div>
-      ))}
+        {!connected && <div className="empty-state">Connect to a daemon to manage templates.</div>}
+        <div className="templates-grid">
+          {list.map((t) => (
+            <button
+              className={selected === t.name ? "template-card selected" : "template-card"}
+              key={t.name}
+              onClick={() => void loadDetail(t.name)}
+            >
+              <div className="template-header">
+                <Layers3 size={22} />
+                <strong>{t.name}</strong>
+                {t.name === defaultName && <span className="template-default-badge">default</span>}
+                <span className="template-source-badge">{t.source || "builtin"}</span>
+              </div>
+              <p className="template-desc">
+                {t.summary || (t.version ? `v${t.version}` : "")}
+              </p>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="template-detail">
+        {err && <div className="error-banner">{err}</div>}
+        {msg && <div className="ok-banner">{msg}</div>}
+        {!detail && <div className="empty-state">Select a template.</div>}
+        {detail && (
+          <>
+            <div className="section-heading">
+              <h3>{detail.template.name}</h3>
+              <div className="detail-actions">
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    const name = window.prompt(`Fork ${detail.template.name} as:`);
+                    if (name) void act("fork", () => client.templateFork(detail.template.name, name));
+                  }}
+                >
+                  Fork
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => void act("validate", () => client.templateValidate(detail.template.name))}
+                >
+                  Validate
+                </button>
+                <button
+                  disabled={busy || detail.template.name === defaultName}
+                  onClick={() =>
+                    void act("set default", async () => {
+                      await client.templatePromote(detail.template.name);
+                      setDefaultName(detail.template.name);
+                    })
+                  }
+                >
+                  Set default
+                </button>
+              </div>
+            </div>
+
+            <dl className="template-meta">
+              <dt>Source</dt>
+              <dd>
+                {detail.template.source?.type || "builtin"}
+                {detail.template.source?.forkedFrom
+                  ? ` (forked from ${detail.template.source.forkedFrom})`
+                  : ""}
+              </dd>
+              <dt>Image</dt>
+              <dd>
+                <code>{detail.image}</code>
+              </dd>
+              <dt>Content digest</dt>
+              <dd>
+                <code>{detail.contentDigest}</code>
+                {detail.template.lineage?.generation
+                  ? ` · generation ${detail.template.lineage.generation}`
+                  : ""}
+              </dd>
+              <dt>Network</dt>
+              <dd>{String(detail.template.network ?? "restricted")}</dd>
+              {Object.keys(runtimes).length > 0 && (
+                <>
+                  <dt>Runtime compatibility</dt>
+                  <dd>
+                    {Object.entries(runtimes)
+                      .map(([m, s]) => `${m}: ${s}`)
+                      .join(" · ")}
+                  </dd>
+                </>
+              )}
+            </dl>
+
+            <div className="section-heading">
+              <h4>Validation</h4>
+            </div>
+            {detail.problems.length === 0 ? (
+              <div className="ok-banner">No problems.</div>
+            ) : (
+              <ul className="template-problems">
+                {detail.problems.map((p, i) => (
+                  <li key={i}>{p}</li>
+                ))}
+              </ul>
+            )}
+
+            <div className="section-heading">
+              <h4>Revision history</h4>
+            </div>
+            {history.length === 0 ? (
+              <div className="empty-state">No revisions.</div>
+            ) : (
+              <ul className="template-revisions">
+                {history.map((r) => (
+                  <li key={r.n}>
+                    <span>rev {r.n}</span>
+                    <span>{formatTime(r.time)}</span>
+                    <code>{r.digest.slice(0, 19)}…</code>
+                    <button
+                      disabled={busy}
+                      onClick={() =>
+                        void act(`rollback to rev ${r.n}`, () =>
+                          client.templateRollback(detail.template.name, r.n)
+                        )
+                      }
+                    >
+                      Roll back
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </section>
     </div>
   );
 }
@@ -2780,7 +2968,11 @@ function App() {
 
         {/* ── Templates view ─────────────────────────────────────────────── */}
         {activeView === "templates" && (
-          <TemplatesView defaults={defaults} />
+          <TemplatesView
+            defaults={defaults}
+            client={client}
+            connected={connection === "connected"}
+          />
         )}
 
         {/* ── Contexts view ──────────────────────────────────────────────── */}

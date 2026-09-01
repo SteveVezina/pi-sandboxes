@@ -154,6 +154,20 @@ make mock-down
 └── Makefile          # Build & test automation
 ```
 
+## Documentation
+
+User- and API-facing docs (install, quickstart, CLI, API, runtime modes,
+architecture) live in [`website/`](./website/) as a standalone Docusaurus
+site:
+
+```bash
+cd website && npm install && npm start   # http://localhost:3000
+```
+
+Run `cd website && npm run build` before any user-visible change —
+`onBrokenLinks: 'throw'` makes drift a build failure. See
+`website/docs/contributing-docs.md`.
+
 ## Contributing
 
 1. Read [SPEC.md](./SPEC.md) — the master source of truth

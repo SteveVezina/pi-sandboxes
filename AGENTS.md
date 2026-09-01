@@ -202,7 +202,7 @@ spec, never the other way around.
 
 | Category | Examples | Lives in |
 |----------|----------|----------|
-| **Public API surface** | function signatures on classes used across modules, HTTP route shapes, CLI flags, env vars consumed by the service | feature spec § Interface Impact + task acceptance criteria |
+| **Public API surface** | function signatures on classes used across modules, HTTP route shapes, CLI flags, env vars consumed by the service | feature spec § Interface Impact + task acceptance criteria — **also update the matching `website/docs/` page in the same change** (see "Keep user-facing docs current") |
 | **Acceptance criteria** | any new condition the code must satisfy or any change to an existing one | feature spec § Acceptance Criteria |
 | **Configurable defaults that ship in the repo** | timeouts, retry counts, batch sizes, TTLs, max iterations | feature spec § Implementation Approach (or a referenced ADR) |
 | **Error-handling contracts** | what gets cleaned up on failure, what gets retried, how partial state is reported, exit-code interpretations | feature spec § Acceptance Criteria + relevant task |
@@ -338,6 +338,30 @@ They are distinct from the raw SSE agent stream (which is forwarded verbatim).
 | `pi.sandbox.destroyed` | Service emits on Pod destruction (TTL or explicit) |
 | `pi.artifact.delivered` | After successful Workspaces POST /output |
 
+## Keep user-facing docs current
+
+`website/` (Docusaurus, deployed separately to Vercel) is the user- and
+API-facing documentation — separate from the spec-driven docs under
+`docs/` (features, ADRs, proposals, plan) and from this file.
+
+Whenever a task adds, removes, or meaningfully changes something a user of
+the CLI, daemon API, or SDK would need to know — a new/changed `pi-box`
+command or flag, a new/changed `/v1/*` route or request/response shape, a
+new template or config key, a new `pi-sandboxd` flag, a changed
+runtime-mode behavior or default, a new lifecycle event, or a changed
+install/start step — update the matching page under `website/docs/` **in
+the same change**, not a follow-up pass. Full guide:
+`website/docs/contributing-docs.md`.
+
+Before the change is done, run `cd website && npm run build` (exposed as
+`verify.docs` in `.pi/block.yaml`). `onBrokenLinks: 'throw'` turns a
+broken internal link into a build failure. Purely internal changes
+(refactors, test-only, deploy plumbing) need no doc update — use judgment.
+
+Rule of thumb: **any "yes" on the Spec-First Discipline "Public API
+surface" row also means a `website/docs/` page is due in the same
+change.**
+
 ## Quality Gates
 
 Before any feature is complete:
@@ -346,3 +370,4 @@ Before any feature is complete:
 - [ ] Tests pass (against mock services)
 - [ ] Security constraints verified
 - [ ] Feature status updated in `docs/features/INDEX.md`
+- [ ] User-facing docs updated if the change touches a CLI/API/SDK/template/config surface, and `cd website && npm run build` passes

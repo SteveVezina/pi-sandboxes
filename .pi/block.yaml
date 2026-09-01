@@ -24,6 +24,7 @@ verify:
   build: "go build ./..."
   test:  "go test -race -count=1 ./..."
   lint:  "golangci-lint run ./..."
+  docs:  "cd website && npm ci && npm run build"   # user-facing docs site; onBrokenLinks: 'throw'
   mocks_up:   "make mocks-up"
   mocks_down: "make mocks-down"
   integration: "PI_RUNTIME_LIVE_K8S=1 go test -race ./tests/integration/..."

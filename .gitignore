@@ -8,6 +8,10 @@ vendor/
 dist/
 build/
 
+# Docusaurus (website/)
+.docusaurus/
+.vercel/
+
 # IDE
 .vscode/
 .idea/
@@ -27,6 +31,9 @@ build/
 # Local/temp files
 tmp/
 *.orig
+
+# Harness plan scratch
+plans/
 
 # Secrets and credentials
 *.key

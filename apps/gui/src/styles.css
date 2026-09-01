@@ -4576,3 +4576,20 @@ button:not(:disabled):active {
   font-size: 13px;
   margin-bottom: 10px;
 }
+.template-import-row { margin: 4px 0 12px; }
+.template-diff-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.template-diff-output {
+  background: rgba(128, 128, 128, 0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+}

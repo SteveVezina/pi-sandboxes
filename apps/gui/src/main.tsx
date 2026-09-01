@@ -1590,6 +1590,9 @@ function TemplatesView({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [diffRight, setDiffRight] = useState("");
+  const [diffText, setDiffText] = useState<string | null>(null);
+  const importInput = useRef<HTMLInputElement>(null);
 
   const loadList = useCallback(async () => {
     if (!connected) return;
@@ -1705,7 +1708,46 @@ function TemplatesView({
                 >
                   Set default
                 </button>
+                <button
+                  disabled={busy}
+                  onClick={() =>
+                    void act("export", async () => {
+                      const buf = await client.templateExport(detail.template.name);
+                      const url = URL.createObjectURL(
+                        new Blob([buf], { type: "application/octet-stream" })
+                      );
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `${detail.template.name}.oci.tar`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    })
+                  }
+                >
+                  Export
+                </button>
               </div>
+            </div>
+
+            <input
+              ref={importInput}
+              type="file"
+              accept=".tar"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                void act("import", async () => {
+                  const buf = await file.arrayBuffer();
+                  await client.templateImport(buf);
+                });
+                e.target.value = "";
+              }}
+            />
+            <div className="template-import-row">
+              <button disabled={busy} onClick={() => importInput.current?.click()}>
+                Import bundle…
+              </button>
             </div>
 
             <dl className="template-meta">
@@ -1753,6 +1795,47 @@ function TemplatesView({
                 ))}
               </ul>
             )}
+
+            <div className="section-heading">
+              <h4>Diff</h4>
+            </div>
+            <div className="template-diff-row">
+              <span>
+                <code>{detail.template.name}</code> vs
+              </span>
+              <select value={diffRight} onChange={(e) => setDiffRight(e.target.value)}>
+                <option value="">select…</option>
+                {list
+                  .filter((t) => t.name !== detail.template.name)
+                  .map((t) => (
+                    <option key={t.name} value={t.name}>
+                      {t.name}
+                    </option>
+                  ))}
+                {history.map((r) => (
+                  <option key={`rev-${r.n}`} value={`${detail.template.name}@${r.n}`}>
+                    {detail.template.name}@{r.n}
+                  </option>
+                ))}
+              </select>
+              <button
+                disabled={busy || !diffRight}
+                onClick={() =>
+                  void (async () => {
+                    try {
+                      const d = await client.templateDiff(detail.template.name, diffRight);
+                      setDiffText(d.diff);
+                      setErr(null);
+                    } catch (e) {
+                      setErr(e instanceof Error ? e.message : String(e));
+                    }
+                  })()
+                }
+              >
+                Diff
+              </button>
+            </div>
+            {diffText !== null && <pre className="template-diff-output">{diffText}</pre>}
 
             <div className="section-heading">
               <h4>Revision history</h4>

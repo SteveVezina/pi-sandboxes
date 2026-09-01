@@ -120,7 +120,9 @@ F10/F17/F19 ──────────────────────�
 T28.2c done — `.default` marker file (`Store.SetDefault`/`Default`), `CreateSandbox` resolves empty template from it before `base`, `POST /v1/templates/{name}/promote`, `pi-box template promote --default`. AC-35.11 audit-log done — `pkg/template/audit.go`, `slog` line per fork/rollback/import/promote. 509 tests green.
 Open F28: **T28.2b snapshot-from-sandbox (runtime hooks — Linux)** and **T28.4 GUI**.
 
-**F28 T28.4 (GUI templates) — core done (2026-08-31):** `apps/gui` `TemplatesView` rewritten from static cards to a live surface — `GET /v1/templates` list, per-template detail (source/lineage, digest+generation, image, network, declared runtime compat), validation problems, revision history + per-revision rollback, Fork / Validate / Set-default. `apps/gui/src/api.ts` template methods. GUI builds clean via pnpm/turbo. Deferred: diff view, snapshot (T28.2b), import/export upload UI. AC-35.12 partial.
+**F28 T28.4 (GUI templates) — done (2026-08-31):** `apps/gui` `TemplatesView` is now a full management surface — list, per-template detail (source/lineage, digest+generation, image, network, declared runtime compat), validation problems, revision history + per-revision rollback, diff (template or `name@N`), fork, validate, set-default, export (download), import (file upload). `apps/gui/src/api.ts` template methods. Only the snapshot-from-sandbox action is deferred (T28.2b, Linux). AC-35.12 ✅.
+
+**F28 status: T28.1–T28.4 done. Only T28.2b (snapshot from a sandbox — needs runtime hooks on Linux) remains.**
 
 **F26 GUI Sandbox Operations re-verified (2026-08-31):** `apps/gui/src/api.ts` matches the current daemon router (no stale routes/terms post-PROP-009), `network` passthrough on exec, GUI builds clean. Added `apps/gui` to the pnpm workspace (`pnpm run build` → website + sdk + gui via turbo). F26 → ✅ Implemented. **No `⚠️ Needs re-verify` features remain.**
 

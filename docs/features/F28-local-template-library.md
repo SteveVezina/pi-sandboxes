@@ -1,7 +1,7 @@
 # F28: Local Template Library and Lifecycle
 
 > Source: `SPEC.md` §6 Features F28, §18.1
-> Status: 🔵 In progress — T28.1/T28.2/T28.2c/T28.3 done; T28.4 GUI partial (list/detail/fork/validate/promote/history-rollback; diff+snapshot+import/export UI open); T28.2b (snapshot — Linux/runtime) open
+> Status: 🔵 In progress — T28.1/T28.2/T28.2c/T28.3/T28.4 done; only T28.2b (snapshot from a sandbox — Linux/runtime hooks) remains
 > Category: Service-layer / CLI / GUI
 
 ## Definition (from block spec)
@@ -49,7 +49,7 @@ Mapped from `SPEC.md` § AC-35:
 - [x] AC-35.9: `pi-box template export` creates a portable bundle with metadata, definition, digest, and provenance *(2026-08-31: T28.3 — `template.ExportBundle` → OCI image layout tar per ADR-008; `POST /v1/templates/export`)*
 - [x] AC-35.10: `pi-box template import` validates and installs a portable local bundle *(2026-08-31: T28.3 — `Store.Import` verifies blob digests + `Validate` + collision check, installs `source.type: imported`; `POST /v1/templates/import`)*
 - [x] AC-35.11: Snapshot, import, fork, rollback, promote, and export operations are audited and policy-checked *(2026-08-31: `pkg/template/audit.go` — structured `slog` line per fork/rollback/import/promote; `Validate` runs on fork/rollback/import/export. Snapshot audit lands with T28.2b.)*
-- [~] AC-35.12: GUI Templates view can show details, source/lineage, validation errors, history/diff, and fork/snapshot/import/export/promote actions *(2026-08-31 T28.4: details, source/lineage, digest, compatibility, validation errors, revision history + rollback, fork, validate, set-default — done. diff view + snapshot + import/export UI still open.)*
+- [x] AC-35.12: GUI Templates view can show details, source/lineage, validation errors, history/diff, and fork/snapshot/import/export/promote actions *(2026-08-31 T28.4: details, source/lineage, digest, compatibility, validation, revision history + rollback, diff (template or `name@N`), fork, validate, set-default, export/import. The `snapshot` action alone waits on T28.2b.)*
 - [ ] AC-35.13: Template snapshots and exports exclude secrets and workspace source files by default
 
 ## Interface Impact
@@ -180,13 +180,13 @@ tampered-blob rejection, non-template archive rejection),
 **Size:** M
 **Depends on:** T28.1, ADR-008
 
-### T28.4: GUI template management surface 🟡 *(2026-08-31 — core done; diff/snapshot/import-export UI open)*
+### T28.4: GUI template management surface 🟢 *(2026-08-31 — snapshot UI waits on T28.2b)*
 
 **Description:** The Workbench Templates view is now a live management surface (`apps/gui/src/main.tsx` `TemplatesView` + `apps/gui/src/api.ts` template methods): fetches `GET /v1/templates`, per-template detail (source/lineage, content digest + generation, resolved image, network, declared runtime compatibility), validation problems, revision history with per-revision rollback, and Fork / Validate / Set-default actions. GUI stays a pure daemon client — every mutation is a `/v1/templates*` call.
 
-**Deferred:** diff view (needs a two-ref picker), snapshot-from-sandbox (T28.2b), import/export (needs a file upload/download widget).
+Diff (template or `name@N` revision), export (bundle download), and import (bundle file upload) are wired. Only the snapshot-from-sandbox action is deferred — it needs T28.2b.
 
-**Acceptance criteria:** AC-35.12 — partial (details/source/lineage/validation/history/fork/promote ✅; diff/snapshot/import/export UI open)
+**Acceptance criteria:** AC-35.12 — done except the snapshot action (blocked on T28.2b)
 **Verification:** `pnpm --filter @pi-sandbox/gui build` (tsc + vite) clean.
 **Files:** `apps/gui/src/{main.tsx,api.ts,styles.css}`
 **Size:** M

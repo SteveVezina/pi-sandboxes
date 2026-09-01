@@ -525,6 +525,44 @@ export class PiDaemonClient {
     });
   }
 
+  async templateDiff(left: string, right: string): Promise<{ diff: string }> {
+    return this.request<{ diff: string }>("POST", "/v1/templates/diff", { left, right });
+  }
+
+  // Returns the OCI bundle tar bytes.
+  async templateExport(name: string): Promise<ArrayBuffer> {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (this.bearerToken) headers.Authorization = `Bearer ${this.bearerToken}`;
+    const res = await fetch(`${this.baseUrl}/v1/templates/export`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ name })
+    });
+    if (!res.ok) throw new Error(`export failed with HTTP ${res.status}`);
+    return res.arrayBuffer();
+  }
+
+  async templateImport(bundle: ArrayBuffer, name?: string): Promise<{ name: string }> {
+    const headers: Record<string, string> = { "Content-Type": "application/octet-stream" };
+    if (this.bearerToken) headers.Authorization = `Bearer ${this.bearerToken}`;
+    const q = name ? `?name=${encodeURIComponent(name)}` : "";
+    const res = await fetch(`${this.baseUrl}/v1/templates/import${q}`, {
+      method: "POST",
+      headers,
+      body: bundle
+    });
+    if (!res.ok) {
+      let m = `import failed with HTTP ${res.status}`;
+      try {
+        m = (await res.json()).error || m;
+      } catch {
+        /* keep default */
+      }
+      throw new Error(m);
+    }
+    return res.json() as Promise<{ name: string }>;
+  }
+
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const headers: Record<string, string> = {
       Accept: "application/json",

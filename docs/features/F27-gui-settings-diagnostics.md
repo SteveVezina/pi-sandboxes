@@ -151,5 +151,6 @@ Implement settings as GUI preference management plus read-only daemon diagnostic
 
 ## Out of Scope
 
+- Template source/lineage/validation state in the default-template picker — F28 (PROP-006) extends the picker once the richer template metadata exists.
 - Enterprise identity management
 - Hosted support upload service

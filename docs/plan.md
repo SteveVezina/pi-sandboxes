@@ -21,7 +21,9 @@ F17 re-verified 2026-08-31: partly the same story as F11 but not entirely. The h
 2026-08-31 re-verify sweep DONE: F14 Benchmarks, F15 SDKs, F18 Secure Backend, F22 Remote Contexts all re-verified → ✅ Implemented (185 targeted tests pass; 2 skips are repo-root env guards, not AC masks; fixed a malformed checkbox in F14 T11.1). Milestones M3/M4/M6 → ✅ Implemented; M1 now only F9 open; M2 gated on F30 tasks + F13 cache scoping.
 **2026-08-31 (F29 Agent Run):** T29.1 done — fixed dead `r.PathValue` (mux routes) → `mux.Vars`; `AgentRunStore.UpdateState` now rejects transitions out of terminal state (exactly-once `pi.run.completed`); `StartAgentRun`/`finishRun` emit `pi.run.started`/`pi.run.completed`; `superviseRun` goroutine drives PENDING→STARTING→RUNNING→COMPLETED (no real agent process yet). T29.2 partial — `pi-box run <agent>` now a registered top-level command with `--template`/`--mode`/`--repo`/`--prompt`, real poll loop, exit-code propagation, SIGINT→cancel. T29.3 ✅ via F9. **Blocked:** real in-sandbox agent launch needs an "agent entrypoint resolution" spec — F29 § Spec Gaps proposes an agent registry (`~/.pi-box/agents/<name>.yaml`). 494 tests green.
 
-**Open work:** (1) F29 real agent launch — needs a PROP for agent entrypoint resolution (blocked by PROP-006 unless BLOCKING); (2) F30 T30.4/T30.3-firewall/T30.8-HTTPS — Linux host; (3) F9 archive size cap — block-spec default (PROP); (4) F13 cache-scoping fix (PROP/ADR); (5) F18 gVisor driver — Linux host.
+**2026-08-31 — PROP-006 accepted + cascaded.** Added F28 Local Template Library and Lifecycle (`SPEC.md` §6/§7 AC-35/§18.1/§19/§9). New spec `docs/features/F28-local-template-library.md` with phased tasks T28.1 (metadata schema + inspect/fork/validate) → T28.2 (snapshot/history/diff/rollback/promote) → T28.3 (import/export bundles) → T28.4 (GUI). F5/F13/F24/F27 got scope-note cascades. **PROP queue is now empty** — new PROPs for the remaining spec gaps are unblocked.
+
+**Open work:** (1) **F28 T28.1** — first darwin-buildable M8 feature now available; (2) F29 real agent launch — write a PROP for agent entrypoint resolution (queue now open); (3) F9 archive size cap — PROP; (4) F13 cache-scoping fix — PROP/ADR; (5) F30 T30.4/T30.3-firewall/T30.8-HTTPS + F18 gVisor — Linux host.
 **Blockers:** Lifecycle event transport ADR needed before AC-9.4 (and F4/F29's related lifecycle-event ACs) can close. Sandbox egress enforcement: **ADR-006 Accepted 2026-08-31 and cascaded** — F11 → 🟢 Reviewed, F30 → 🟢 Reviewed with tasks T30.1–T30.8 authored, `Driver.Create` contract note added to ADR-005. F30 implementation is now unblocked; recommend `/skill:pi-review-plan` on the F30 task list before executing.
 
 ## Cross-Feature Dependency Graph
@@ -110,10 +112,11 @@ F10/F17/F19 ──────────────────────�
 32. **F26** GUI Sandbox Operations ✅
 33. **F27** GUI Settings and Diagnostics ✅
 
-### 🔵 Phase 10 — M8 agent loop and egress
+### 🔵 Phase 10 — M8 agent loop, egress, template library
 34. **F30** Egress Proxy — 🔵 In progress. T30.1/T30.2/T30.5/T30.6/T30.7 done; T30.3/T30.8 partial. Deferred (Linux): T30.4 L3 isolation, T30.3 compat firewall, T30.8 HTTPS git credential-helper channel.
 35. **F29** Agent Run — 🔵 In progress. T29.1 (API + state + `pi.run.*` events) done; T29.3 via F9; T29.2 partial (CLI wired). Blocked: agent entrypoint resolution spec gap.
 36. **F11** Secrets & Network Model — enforcement lands with F30 tasks.
+37. **F28** Local Template Library and Lifecycle — 🟡 Spec written (PROP-006). NEXT: T28.1 (metadata schema + inspect/fork/validate). Darwin-buildable.
 
 ## Risk Tracking
 

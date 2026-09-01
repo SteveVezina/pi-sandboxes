@@ -214,6 +214,6 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 ## Out of Scope
 
 - Remote template registry (future)
-- Template versioning (future)
+- Local template lifecycle — fork, snapshot, edit-metadata, validate, diff, history, rollback, promote, import/export — **delegated to F28** (PROP-006, `SPEC.md` §18.1). F5 stays the static local baseline; the extended metadata schema is also owned by F28.
 - Template inheritance/composition (future)
 - Template building for fast backend (fast uses host-installed tools)

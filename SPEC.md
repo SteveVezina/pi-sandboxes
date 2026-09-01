@@ -134,6 +134,7 @@ repeat
 | F25 | GUI Workspace Authorization | Explicit project-folder selection, allowed folder management, and safe bind/copy workspace setup for GUI-launched sandboxes | M7 |
 | F26 | GUI Sandbox Operations | Dashboard and sandbox views for create/list/inspect/exec/logs/diff/patch/output/snapshots/destroy using existing daemon API operations | M7 |
 | F27 | GUI Settings and Diagnostics | GUI controls for daemon connection, active context, default template/runtime mode/network policy, engine health, doctor output, and support bundle export | M7 |
+| F28 | Local Template Library and Lifecycle | Manage templates as local daemon-owned assets: inspect, fork, edit metadata, validate, snapshot from sandboxes, version locally, diff, rollback, import, export, and promote templates while preserving local-first trust boundaries | M8 |
 | F29 | Agent Run | `pi-box run <agent>` starts the autonomous agent loop inside the sandbox and streams lifecycle and agent events to the host supervisor | M8 |
 | F30 | Egress Proxy | Daemon-owned egress proxy enforces allowlists and injects scoped credentials into approved outbound requests without exposing tokens inside the sandbox | M8 |
 
@@ -389,6 +390,21 @@ repeat
 - [ ] Secrets are represented as egress-proxy injection rules and are not stored as plaintext files under `~/.pi-box`
 - [ ] `~/.pi-box` contains control-plane state, templates, sandbox metadata, daemon-managed snapshots, and runtime-managed cache state only
 
+### AC-35: Local Template Library and Lifecycle Works (F28)
+- [ ] Template metadata includes version, summary, description, source, lineage, compatibility, tool versions, cache mounts, network domains, resource defaults, digest, and timestamps
+- [ ] Existing minimal built-in templates remain valid template definitions
+- [ ] `pi-box template inspect <name>` shows detailed metadata, lineage, compatibility, and policy-relevant settings
+- [ ] `pi-box template fork <source> <new-name>` creates an editable local template derived from an existing template
+- [ ] `pi-box template snapshot <sandbox-id> <new-name>` creates a local template from sandbox/template state when the runtime supports safe snapshotting
+- [ ] `pi-box template validate <path-or-name>` validates schema, pinned versions, cache mounts, network requests, runtime compatibility, and policy-relevant fields
+- [ ] `pi-box template diff` and `history` show local template changes and lineage
+- [ ] `pi-box template rollback` restores a local template to a prior revision
+- [ ] `pi-box template export` creates a portable bundle with metadata, definition, digest, and provenance
+- [ ] `pi-box template import` validates and installs a portable local bundle
+- [ ] Snapshot, import, fork, rollback, promote, and export operations are audited and policy-checked
+- [ ] GUI Templates view can show installed template details, source/lineage, validation errors, history/diff, fork, snapshot, import/export, and promote actions
+- [ ] Template snapshots and exports exclude secrets and workspace source files by default
+
 ## 8. Security Model
 
 ### Filesystem Isolation
@@ -446,6 +462,17 @@ repeat
 | POST | `/v1/sandboxes/{id}/snapshot` | Create snapshot |
 | POST | `/v1/sandboxes/{id}/rollback` | Rollback to snapshot |
 | GET | `/v1/sandboxes/{id}/logs` | Get command logs |
+| GET | `/v1/templates` | List local templates with summary metadata (F28) |
+| GET | `/v1/templates/{name}` | Inspect local template details (F28) |
+| POST | `/v1/templates/fork` | Fork a local template (F28) |
+| POST | `/v1/templates/snapshot` | Snapshot a sandbox into a new local template (F28) |
+| POST | `/v1/templates/validate` | Validate a template definition or import bundle (F28) |
+| GET | `/v1/templates/{name}/history` | Local revision history and lineage (F28) |
+| POST | `/v1/templates/diff` | Compare templates or revisions (F28) |
+| POST | `/v1/templates/{name}/rollback` | Roll back to a previous revision (F28) |
+| POST | `/v1/templates/{name}/promote` | Promote / set default (F28) |
+| POST | `/v1/templates/export` | Export a portable template bundle (F28) |
+| POST | `/v1/templates/import` | Import a template bundle after validation (F28) |
 
 ### Create Request
 ```json
@@ -500,6 +527,7 @@ pi-box box destroy <name> [--all]
 pi-box system status|doctor|prune|disk-usage
 pi-box bench run [flags]
 pi-box template list|inspect|build|update|prune [flags]
+pi-box template fork|snapshot|validate|diff|history|rollback|promote|export|import [flags]   # F28
 ```
 
 ## 10. Dependencies
@@ -957,6 +985,69 @@ pi-box template build node-python
 pi-box template update node-python
 pi-box template prune
 ```
+
+Local lifecycle commands (F28):
+
+```bash
+pi-box template inspect <name> [--json]
+pi-box template fork <source> <new-name> [--description <text>]
+pi-box template snapshot <sandbox-id> <new-name> [--metadata-only] [--include-artifacts=false]
+pi-box template validate <path-or-name> [--strict] [--json]
+pi-box template diff <left> <right> [--json]
+pi-box template history <name> [--json]
+pi-box template rollback <name> <revision>
+pi-box template promote <name> [--default]
+pi-box template export <name> --output <path>
+pi-box template import <path> [--name <new-name>]
+pi-box template prune [--snapshots] [--revisions] [--artifacts]
+```
+
+### 18.1 Local template library (F28)
+
+`pi-sandboxd` owns a local template library under the Pi Box home. This is
+not a central package registry and requires no hosted service. The daemon
+is the authority for mutating the library; CLI, GUI, and SDK clients use
+daemon/API operations.
+
+Template sources: `builtin` (shipped, refreshed by product updates),
+`local` (user-created or forked), `snapshot` (captured from a sandbox or
+built template state), `imported` (loaded from a portable bundle).
+
+**Metadata schema.** Templates remain YAML on disk and keep their existing
+minimal fields. The schema is extended with: semantic `version`;
+human-readable `summary`, `description`, `tags`, maintainers; `source`
+(type + `parent` + `forkedFrom` + `snapshotOf`); `compatibility.runtimes`
+(a declared hint — each driver's `Probe`/`CapabilityReport` is
+authoritative, ADR-005); `base` as a resolved OCI image + digest
+(PROP-007); `tools` with pinned versions (string-list form still
+accepted); `network.domains` (seeds a new sandbox's `network.allow`; the
+daemon egress proxy stays authoritative, ADR-006); `resources` defaults
+(subject to daemon policy); `lineage` (generation, parent/content
+digests); `metadata.createdAt`/`updatedAt` and local revision history.
+
+**Lifecycle operations:** inspect, fork, edit-metadata (validated),
+validate, snapshot, diff, history, rollback, promote, export, import,
+prune. All mutating operations are explicit, policy-checked, and
+auditable. Import/snapshot/promote must not bypass network, filesystem,
+runtime, or secret constraints.
+
+**Snapshot behavior.** Snapshotting from a sandbox is explicit. It records
+the source sandbox ID, template name, runtime mode, and time; captures
+only template/build state (not arbitrary workspace source by default);
+excludes secrets, SSH keys, cloud credentials, tokens, daemon config, and
+host-only paths. Fast mode may snapshot metadata and cache/toolchain
+assumptions only; compat and microVM modes may support image/rootfs
+snapshots. A runtime that cannot safely snapshot executable state reports
+the limitation and offers metadata-only fork/export.
+
+**Trust.** Built-in templates are trusted local definitions. Imported
+bundles are untrusted until validated and explicitly installed. Bundles
+carry content digests for audit. No lifecycle operation may persist
+credentials in template YAML, sandbox workspaces, bundles, or artifacts.
+
+**Non-goals:** no central registry/marketplace, no Docker-style
+search/pull/push, no automatic remote installation at sandbox create, no
+implicit template execution hooks, no registry credentials.
 
 ## 19. CLI requirements
 

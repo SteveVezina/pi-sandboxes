@@ -163,6 +163,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 ## Out of Scope
 
+- **Snapshotting a sandbox into a reusable template** — that is F28 (PROP-006, `SPEC.md` §18.1). F13 covers warm-start / rollback snapshots of a live sandbox; F28's template snapshot reuses these primitives but produces a daemon-managed template asset.
 - MicroVM template snapshots (Milestone 5)
 - Snapshot compression (future)
 - Snapshot diff/comparison (future)

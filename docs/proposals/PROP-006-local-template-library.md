@@ -1,7 +1,7 @@
 # PROP-006: Add Local Template Library and Lifecycle
 
 ## Status
-🟡 Proposed (revised 2026-08-31 — renumbered AC, refreshed against applied PROP-007/008/009, remapped Impact feature IDs)
+✅ Applied to block spec (2026-08-31)
 
 ## Block Spec Reference
 `SPEC.md` §6 Features, §7 Acceptance Criteria, §8 Security Model, §18 Templates, §19 CLI requirements, §20 Daemon API, §25 Snapshot and rollback, §34 Configuration file, §36 Documentation requirements, §39 First coding-agent task list
@@ -331,4 +331,15 @@ When this PROP is accepted:
 
 ## Implementation Blocked?
 
-Pending human review. Local template fork/snapshot/import/export/history/diff/rollback/promote workflows should wait until this proposal is accepted.
+No longer blocked — accepted and cascaded 2026-08-31.
+
+## Cascade completed
+
+**Accepted by human 2026-08-31.**
+
+- `SPEC.md`: §6 F28 row; §7 AC-35 block; §18.1 new "Local template library (F28)" subsection; §19 CLI local-lifecycle commands (`fork|snapshot|validate|diff|history|rollback|promote|export|import`) + §9 CLI summary line; §9 Daemon API `/v1/templates*` endpoint rows.
+- Feature specs created: `docs/features/F28-local-template-library.md` (Status 🟡 Spec written; T28.1–T28.4 phased tasks).
+- Feature specs cascaded: F5 (Out of Scope → local lifecycle delegated to F28), F13 (Out of Scope → template-from-sandbox snapshot is F28), F24 (Out of Scope → rich template management is F28), F27 (Out of Scope → template-picker lineage is F28).
+- INDEX: `docs/features/INDEX.md` F28 row + M8 milestone + summary; `docs/proposals/INDEX.md` status → ✅ Applied.
+- `docs/plan.md`: Active Cursor updated — F28 is now open M8 work.
+- No task resets: F28 is new; F5/F13/F24/F27 cascade was scope-note only (no AC changes).

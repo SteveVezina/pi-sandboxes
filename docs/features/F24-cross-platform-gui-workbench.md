@@ -155,6 +155,7 @@ Use a thin desktop shell around a TypeScript frontend. The preferred stack is Ta
 
 ## Out of Scope
 
+- Rich template management (fork/snapshot/diff/history/import/export/promote in the Templates view) — that is **F28** (PROP-006). F24 keeps the static template cards; F28 extends the view.
 - Browser/computer-use agents
 - Hosted control plane
 - A separate sandbox runtime embedded in the GUI

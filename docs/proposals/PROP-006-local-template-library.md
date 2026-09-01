@@ -1,10 +1,20 @@
 # PROP-006: Add Local Template Library and Lifecycle
 
 ## Status
-🟡 Proposed
+🟡 Proposed (revised 2026-08-31 — renumbered AC, refreshed against applied PROP-007/008/009, remapped Impact feature IDs)
 
 ## Block Spec Reference
-`SPEC.md` §6 Features, §7 Acceptance Criteria, §8 Security Model, §18 Templates, §19 CLI requirements, §20 Daemon API, §25 Snapshot and rollback, §34 Configuration file, §35 Documentation, §39 First coding-agent task list
+`SPEC.md` §6 Features, §7 Acceptance Criteria, §8 Security Model, §18 Templates, §19 CLI requirements, §20 Daemon API, §25 Snapshot and rollback, §34 Configuration file, §36 Documentation requirements, §39 First coding-agent task list
+
+## Revision Note (2026-08-31)
+
+This PROP was authored 2026-07-15, before PROP-007, PROP-008, and PROP-009 were applied. Reconciled with the current block spec:
+
+- **AC number:** the proposed criterion is now **AC-35** (AC-31–34 were taken by PROP-009: Agent Run, Egress Proxy, Single Output Channel, Host FS Decoupling). Cascade updated.
+- **PROP-007 (image resolution):** the template `base` field resolves to an OCI image name per PROP-007; the `base: { image, digest }` block below is the resolved form, not a shorthand.
+- **PROP-008 / ADR-005 (runtime driver contract):** template `compatibility.runtimes` is a *declared* compatibility hint. The authoritative runtime capability comes from each driver's `Probe` → `CapabilityReport`. The daemon reconciles the two and reports mismatches at validate time.
+- **PROP-009 (sandbox rename + host decoupling):** "sandbox" terminology throughout; template snapshot/import/export must not reintroduce host-disk coupling — snapshots are daemon-managed assets under the Pi Box home, captured from container/rootfs state, never host bind mounts.
+- **ADR-006 (egress enforcement):** template `network.domains` only *seeds* a new sandbox's `network.allow`; per-sandbox `network.mode` + the daemon egress proxy remain authoritative.
 
 ## Problem
 
@@ -38,6 +48,8 @@ Add the following feature after F27.
 |------------|------|-------------|-----------|
 | F28 | Local Template Library and Lifecycle | Manage templates as local daemon-owned assets: inspect, fork, edit metadata, validate, snapshot from sandboxes, version locally, diff, rollback, import, export, and promote templates while preserving local-first trust boundaries | M8 |
 
+The feature spec (`docs/features/F28-*.md`) should phase the work: (1) richer metadata schema + `inspect` + `fork` + `validate`; (2) `snapshot` + `history` + `diff` + `rollback` + `promote`; (3) `import` / `export` bundles; (4) GUI management surface. AC-35 items map onto these phases.
+
 ### Local library model
 
 `pi-sandboxd` owns the local template library under the Pi Box home. This is not a central package registry and does not require a hosted service.
@@ -63,19 +75,19 @@ version: 1.2.0
 description: Node.js and Python toolchain for full-stack agent work
 summary: Node.js 22, pnpm, Python 3.13, uv, pip, git, ripgrep, jq
 source:
-  type: builtin
+  type: builtin            # builtin | local | snapshot | imported
   parent: base
   forkedFrom: ""
-  snapshotOf: ""
-compatibility:
+  snapshotOf: ""           # sandbox ID when type == snapshot
+compatibility:             # DECLARED hint; driver Probe/CapabilityReport is authoritative (ADR-005)
   piBox: ">=0.1.0"
   runtimes:
     fast: supported
     compat: supported
     secure: supported
     microvm: planned
-base:
-  image: debian:bookworm-slim
+base:                      # resolved OCI image per PROP-007
+  image: docker.io/library/debian:bookworm-slim
   digest: sha256:...
 tools:
   - name: node
@@ -94,7 +106,7 @@ caches:
   pnpm: /cache/pnpm
   uv: /cache/uv
   pip: /cache/pip
-network:
+network:                   # seeds a new sandbox's network.mode / network.allow; daemon egress proxy stays authoritative (ADR-006)
   default: restricted
   domains:
     - registry.npmjs.org
@@ -248,9 +260,9 @@ The local template library feature does not add:
 
 ## Acceptance Criteria Additions
 
-Add acceptance criteria after AC-30.
+Add acceptance criteria after AC-34.
 
-### AC-31: Local Template Library and Lifecycle Works (F28)
+### AC-35: Local Template Library and Lifecycle Works (F28)
 - [ ] Template metadata includes version, summary, description, source, lineage, compatibility, tool versions, cache mounts, network domains, resource defaults, digest, and timestamps
 - [ ] Existing minimal built-in templates remain valid template definitions
 - [ ] `pi-box template inspect <name>` shows detailed metadata, lineage, compatibility, and policy-relevant settings
@@ -273,14 +285,14 @@ A local template library gives users the lifecycle they need without turning Pi 
 
 ## Impact
 
-Features affected:
+Features affected (canonical `SPEC.md` §6 IDs):
 
-- F01 CLI Entry Point: new `template` subcommands and JSON output shapes.
-- F02 Daemon API: new local template fork/snapshot/validate/history/diff/rollback/promote/import/export endpoints.
-- F07 Template System: schema expansion, validation, provenance, local revision tracking, and local lifecycle operations.
-- F12 Secrets and Network: snapshot/import/export must exclude secrets and respect network policy.
-- F13 Cache Model: template metadata describes cache mounts and cache compatibility.
-- F14 Snapshot and Rollback: template snapshot and rollback behavior overlaps with sandbox snapshot primitives.
+- F1 CLI Entry Point: new `template` subcommands and JSON output shapes.
+- F2 Daemon API: new local template fork/snapshot/validate/history/diff/rollback/promote/import/export endpoints.
+- F5 Template System: schema expansion, validation, provenance, local revision tracking, and local lifecycle operations.
+- F11 Secrets & Network Model: snapshot/import/export must exclude secrets and respect network policy.
+- F12 Cache Model: template metadata describes cache mounts and cache compatibility.
+- F13 Snapshot & Rollback: template snapshot and rollback behavior overlaps with sandbox snapshot primitives.
 - F15 Compat Backend: local template snapshots may reference built artifacts or images.
 - F17 Policy Enforcement: template-requested domains, mounts, resources, snapshots, imports, and exports require policy checks.
 - F20 MicroVM Backend: future template snapshots need digest/version provenance.
@@ -306,13 +318,13 @@ Until accepted, implementation should keep templates local-first and static. The
 
 When this PROP is accepted:
 
-1. Update `SPEC.md` to add F28 and AC-31.
+1. Update `SPEC.md` to add F28 and AC-35 (after AC-34).
 2. Update `SPEC.md` §18 Templates with the richer metadata schema, local library model, lifecycle operations, snapshot behavior, security constraints, and GUI expectations.
 3. Update `SPEC.md` §19 CLI requirements with local lifecycle `pi-box template` commands.
 4. Update `SPEC.md` §20 Daemon API with template fork/snapshot/validate/history/diff/rollback/promote/import/export endpoints or equivalent SDK operations.
 5. Create `docs/features/F28-local-template-library.md`.
-6. Update F07 to mark local lifecycle operations as delegated to F28 rather than generic future work.
-7. Update F14, F24, and F27 feature specs with template snapshot and GUI template-management behavior.
+6. Update F5 Template System to mark local lifecycle operations as delegated to F28 rather than generic future work.
+7. Update F13, F24, and F27 feature specs with template snapshot and GUI template-management behavior.
 8. Add ADRs for local template snapshot boundaries, schema versioning, and import/export bundle format.
 9. Update `docs/contracts/pi-sandboxd.md` with the new API shapes once specified.
 10. Update `docs/features/INDEX.md` and `docs/proposals/INDEX.md`.

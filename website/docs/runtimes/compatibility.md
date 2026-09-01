@@ -28,5 +28,6 @@ sidebar_position: 2
 |------|--------|
 | `secure` (gVisor) driver | Present but not currently building against the shared OCI engine on Linux — being reworked. |
 | `microvm` L3 network isolation, `compat` egress firewall | Pending — needs a Linux + Docker host. |
+| Dependency cache: strict "shared read-only + per-sandbox writable overlay" | Baseline is a shared read-write per-scope volume (reuse works); the overlayfs model is a Linux follow-up (ADR-009). |
 | Template `fork` / `snapshot` / `import` / `export` | Specified (F28), not implemented. |
 | In-sandbox agent process launch | Run state + events wired; process launch pending an "agent entrypoint" spec. |

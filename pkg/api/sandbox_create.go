@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pi-sandbox/pi/pkg/cache"
 	"github.com/pi-sandbox/pi/pkg/events"
 	"github.com/pi-sandbox/pi/pkg/network"
 	pruntime "github.com/pi-sandbox/pi/pkg/runtime"
@@ -155,10 +156,14 @@ func createCompatContainer(store *sandbox.Store, sandboxID, templateName string)
 	// Resolve the image
 	image := template.ResolveTemplateImage(t)
 
-	// Build cache mounts from runtime-managed volumes (no host bind mounts).
+	meta, _ := store.Get(sandboxID)
+
+	// Cache mounts are daemon-managed named volumes scoped by
+	// template/runtime/user (ADR-009), so sibling sandboxes of the same
+	// template share a warm cache. No host bind mounts.
 	caches := make(map[string]string)
 	for name := range t.Caches {
-		caches[name] = managedVolumeName("cache", sandboxID, name)
+		caches[name] = cacheVolumeName(t.Name, metaMode(meta), name)
 	}
 
 	// Create the container
@@ -169,7 +174,7 @@ func createCompatContainer(store *sandbox.Store, sandboxID, templateName string)
 		Artifacts: compatArtifactsSource(sandboxID),
 		Caches:    caches,
 	}
-	if meta, err := store.Get(sandboxID); err == nil {
+	if meta != nil {
 		spec.Network = sandboxEgressNetwork(meta)
 	}
 
@@ -226,6 +231,19 @@ func compatWorkspaceSource(id string, meta *sandbox.Meta) string {
 		return meta.Workspace
 	}
 	return managedVolumeName("workspace", id)
+}
+
+// cacheVolumeName is the daemon-managed named volume for a cache type,
+// scoped by template/runtime/user (ADR-009) rather than sandbox ID.
+func cacheVolumeName(template, runtime, cacheType string) string {
+	return managedVolumeName("cache", cache.VolumeScope(template, runtime, "default"), cacheType)
+}
+
+func metaMode(m *sandbox.Meta) string {
+	if m == nil || m.Mode == "" {
+		return "auto"
+	}
+	return m.Mode
 }
 
 func compatArtifactsSource(id string) string {

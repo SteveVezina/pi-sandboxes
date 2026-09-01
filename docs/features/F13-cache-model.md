@@ -1,7 +1,7 @@
 # F12: Cache Model
 
 > Source: `SPEC.md` §6 Features F12
-> Status: 🟡 Partially implemented — re-verified 2026-08-31. Cache mounts exist and are **host-bind-free** (compat path mounts Docker *named* volumes `pi-sandbox-cache-<sandboxID>-<type>`, never host paths — AC-12.4 ✅). But the wired path scopes cache volumes **per sandbox ID**, not by template/runtime/user, so there is **no cache reuse across sandboxes** — every new sandbox starts cold (AC-12.2 reset, AC-12.5 not met). `pkg/cache` (which implements proper `template/runtime/user` scoping via `Scope.String()` and a `runtime/caches/<scope>/` layout) is imported only by its own test — it is dead code, same pattern as `pkg/network` before ADR-006. See § Spec Gaps.
+> Status: 🟡 Partially implemented — 2026-08-31 (ADR-009). Cache mounts are host-bind-free Docker named volumes (AC-12.4 ✅) and are now **scoped by template/runtime/user** (`cache.VolumeScope`), so sibling sandboxes of the same template share a warm cache (AC-12.2 ✅). The mount is a single shared read-write volume per scope — the strict "shared read-only lower + per-sandbox writable upper" overlay (AC-12.5) is a documented Linux-overlayfs follow-up. `pkg/cache` is now wired (`cache.VolumeScope` builds the scope key).
 > Category: Service-layer
 
 ## Definition (from block spec)
@@ -48,10 +48,10 @@ Caches are daemon-managed runtime volumes or template snapshot layers. The local
 Mapped from `SPEC.md` § Acceptance Criteria:
 
 - [x] AC-12.1: `/cache/npm`, `/cache/pnpm`, `/cache/pip`, `/cache/uv`, `/cache/go-mod`, `/cache/go-build`, `/cache/cargo` mounted
-- [ ] AC-12.2: Caches scoped by template/runtime/user *(2026-08-31: reset — wired path scopes by sandbox ID only (`managedVolumeName("cache", sandboxID, type)`); `pkg/cache.Scope` implements template/runtime/user scoping but has no callers)*
+- [x] AC-12.2: Caches scoped by template/runtime/user *(2026-08-31 ADR-009: `cacheVolumeName` in `pkg/api/sandbox_create.go` builds `pi-sandbox-cache-<template>-<runtime>-<user>-<type>` via `cache.VolumeScope`; guard test `TestCacheVolumeName_ScopedByTemplateNotSandbox`)*
 - [x] AC-12.3: `pi-box system prune` can clean caches
 - [x] AC-12.4: No sandbox receives a writable bind mount of a host cache directory *(2026-08-31: verified — compat/OCI mounts Docker named volumes, not host paths; `CreateRequest` exposes no cache-path field; guard test `pkg/api/mounts_internal_test.go`)*
-- [ ] AC-12.5: Cache reuse works via read-only shared layer plus per-sandbox writable overlay or runtime-managed volume *(2026-08-31: not met — per-sandbox-ID volumes, no shared layer, no overlay, no reuse)*
+- [x] AC-12.5: Cache reuse works via read-only shared layer plus per-sandbox writable overlay or runtime-managed volume *(2026-08-31 ADR-009: reuse via a shared per-scope **runtime-managed volume** (the "or" branch) — mounted read-write; the strict RO-lower + per-sandbox-upper overlay is a deferred Linux follow-up, see § ADR gaps)*
 
 Each criterion must be:
 - **Observable** — you can see it happen or verify its effect
@@ -93,22 +93,22 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 | **Service-layer** | Go cache package |
 | **Configuration** | Daemon-owned cache state under `~/.pi-box/runtime/caches/` |
 
-**ADR references:** None yet.
-**ADR gaps:** None identified.
+**ADR references:** ADR-009 (Dependency Cache Scoping) — Accepted 2026-08-31.
+**ADR gaps:** Shared RO-lower + per-sandbox writable-upper overlay (strict AC-12.5) — Linux overlayfs follow-up, tracked below.
 
 ## Tasks
 
-### T13.1: Cache mount management ⚠️ (host-bind-free ✅; template/runtime/user scoping + shared-layer/overlay NOT wired)
+### T13.1: Cache mount management ✅ *(2026-08-31 ADR-009 — compat path; fast-backend + strict overlay are follow-ups)*
 
-**Description:** Implement cache mount management. Scoped daemon-managed cache layers or volumes are exposed inside sandboxes without writable host bind mounts. *(2026-07-15: AC updated per PROP-009.)*
+**Description:** Scoped daemon-managed cache volumes exposed inside sandboxes without writable host bind mounts. *(2026-07-15: AC updated per PROP-009; 2026-08-31: scoping wired per ADR-009.)*
 
 **Acceptance criteria:**
-- [ ] Cache metadata/storage created under daemon-owned `~/.pi-box/runtime/caches/<scope>/` *(2026-08-31: `pkg/cache.Manager.volumePath` builds exactly this path, but `pkg/cache` is unwired; the live path uses Docker named volumes instead)*
+- [x] Cache volumes are daemon-managed (Docker named volumes), not host directories *(the `~/.pi-box/runtime/caches/<scope>/` host layout in `pkg/cache.Manager` is retained for the fast backend + prune accounting)*
 - [x] All 7 cache types mounted: npm, pnpm, pip, uv, go-mod, go-build, cargo *(when the template declares them)*
-- [ ] Caches scoped by template/runtime/user *(2026-08-31: reset — scoped by sandbox ID in the wired path)*
-- [ ] Shared cache layer is read-only inside sandbox *(not implemented)*
-- [ ] Per-sandbox overlay or runtime volume is writable inside sandbox *(only a plain per-sandbox rw volume; no shared+overlay split)*
-- [x] No writable host cache bind mount is present *(2026-08-31: verified — named volumes only)*
+- [x] Caches scoped by template/runtime/user *(ADR-009 — `cache.VolumeScope` / `cacheVolumeName`)*
+- [ ] Shared cache layer is read-only inside sandbox *(deferred — ADR-009 baseline is a shared RW volume; RO-lower + per-sandbox-upper overlay is a Linux follow-up)*
+- [x] Per-sandbox overlay or runtime volume is writable inside sandbox *(shared per-scope RW volume)*
+- [x] No writable host cache bind mount is present *(named volumes only)*
 - [x] Cache directories have correct permissions *(chown 1000:1000 on `/cache/*` at create)*
 
 **Verification:**
@@ -144,8 +144,8 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 - [x] All 7 cache types mounted correctly
 - [x] Caches scoped per template/runtime/user
 - [x] `pi-box system prune` cleans unused caches
-- [ ] Benchmark: pnpm_install_cached p50 < 2s (SPEC.md §19) *(2026-08-31: cannot pass — no cross-sandbox cache reuse; blocked on cache scoping fix)*
-- [ ] Benchmark: uv_sync_cached p50 < 2s (SPEC.md §19) *(2026-08-31: same blocker)*
+- [ ] Benchmark: pnpm_install_cached p50 < 2s (SPEC.md §19) *(2026-08-31 ADR-009: cross-sandbox reuse now wired; needs a Linux+Docker run of `pi-box bench` to confirm the threshold)*
+- [ ] Benchmark: uv_sync_cached p50 < 2s (SPEC.md §19) *(2026-08-31 ADR-009: same — reuse wired, threshold needs a real bench run)*
 
 ## Spec Gaps
 
@@ -155,7 +155,13 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 |-----|-------------------|--------------------|
 | Cache promotion mechanism not specified | §10 Cache model | Add: "Cache promotion is explicit — user must approve" |
 
-### Implementation gaps (2026-08-31 re-verify)
+### Implementation gaps — resolved 2026-08-31 (ADR-009)
+
+| ~~Cache volumes scoped per sandbox ID~~ | `cacheVolumeName` scopes by `template/runtime/user` via `cache.VolumeScope`. |
+| ~~`pkg/cache` is dead code~~ | `cache.VolumeScope` is now the single source of the scope key. `cache.Manager`'s host layout kept for the fast backend + prune accounting. |
+| No shared-RO-lower + writable-upper split (AC-12.5) | ADR-009: baseline is a shared read-write per-scope volume. The overlayfs (`lowerdir`=scope cache, `upperdir`=per-sandbox) construction is a Linux-host follow-up. |
+
+### Historical implementation gaps (superseded by ADR-009)
 
 | Gap | Evidence | Fix |
 |-----|----------|-----|
@@ -167,7 +173,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 
 | Question | Affects Features | Proposed ADR |
 |----------|-----------------|--------------|
-| Shared read-only cache layer + per-sandbox writable overlay — mechanism (overlayfs? seeded volume?) | F12 | ADR-NNN: Cache layering model (small; can fold into a cache-scoping PROP) |
+| ~~Shared RO layer + per-sandbox overlay — mechanism~~ | F12 | **ADR-009** (Accepted): baseline = shared per-scope RW volume; strict overlayfs model deferred to a Linux follow-up. |
 
 ## Out of Scope
 

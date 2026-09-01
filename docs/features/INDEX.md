@@ -29,7 +29,7 @@ Dashboard of all features for this project.
 | [F9](F08-output-delivery.md) | Output Delivery | 🟢 Reviewed | 🟡 list/pull/pack + `pi.artifact.delivered` done (ADR-007); archive size cap open (needs spec default) | M1 | F6 |
 | [F10](F09-logs-history.md) | Logs & Command History | 🟢 Reviewed | ✅ Implemented | M1 | F7 |
 | [F11](F12-secrets-network.md) | Secrets & Network Model | 🟢 Reviewed (ADR-006 Accepted) | 🔴 Not started — enforcement tracked as F30 T30.1–T30.8 | M2 | F17, F30 |
-| [F12](F13-cache-model.md) | Cache Model | 🟡 Re-verified 2026-08-31 | 🟡 mounts host-bind-free; per-sandbox-ID scoping (no reuse), `pkg/cache` unwired, no shared-layer/overlay | M2 | F5, F16 |
+| [F12](F13-cache-model.md) | Cache Model | 🟢 Reviewed (ADR-009) | 🟡 template/runtime/user scoped shared volumes (reuse works); strict RO+overlay is a Linux follow-up | M2 | F5, F16 |
 | [F13](F14-snapshot-rollback.md) | Snapshot & Rollback | ⚠️ Needs re-verify | ⚠️ Needs re-verify | M2 | F8 |
 | [F14](F11-benchmarks.md) | Benchmarks | 🟢 Reviewed | ✅ Implemented (re-verified 2026-08-31; cached-install threshold benchmarks depend on F13 cache-scoping fix) | M1 | F3, F4, F13 |
 | [F15](F16-sdk.md) | SDKs | 🟢 Reviewed | ✅ Implemented (re-verified 2026-08-31) | M3 | F2 |
@@ -54,7 +54,7 @@ Dashboard of all features for this project.
 | Milestone | Features | Status |
 |-----------|----------|--------|
 | M1: Local Linux MVP | F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F14, F16 | 🟡 Near-complete — only F9 archive size cap open (needs a block-spec default) |
-| M2: Hardening & Cache | F11, F12, F13, F17 | ⚠️ F11 enforcement pending (F30 tasks), F13 cache-scoping gap, F17 partial |
+| M2: Hardening & Cache | F11, F12, F13, F17 | ⚠️ F11 enforcement pending (F30 tasks); F12 scoping done (ADR-009), strict overlay deferred; F13 re-verify; F17 partial |
 | M3: Agent Integrations | F15 | ✅ Implemented |
 | M4: Secure Backend | F18, F19 | ⚠️ F19 done; F18 gVisor driver broken on Linux (found 2026-08-31) |
 | M5: MicroVM Backend | F20, F21 | ✅ Implemented |

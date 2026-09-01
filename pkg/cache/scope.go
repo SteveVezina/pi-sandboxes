@@ -65,3 +65,10 @@ func (s Scope) Ensure(t Type) error {
 	dir := s.Dir(t)
 	return os.MkdirAll(dir, 0755)
 }
+
+// VolumeScope is the sanitized scope segment for a daemon-managed cache
+// volume name (ADR-009). Sibling sandboxes of the same template + runtime
+// + user share the volume.
+func VolumeScope(template, runtime, user string) string {
+	return Scope{Template: template, Runtime: runtime, User: user}.String()
+}

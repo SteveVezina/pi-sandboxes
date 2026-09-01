@@ -118,7 +118,9 @@ F10/F17/F19 ──────────────────────�
 36. **F11** Secrets & Network Model — enforcement lands with F30 tasks.
 37. **F28** Local Template Library and Lifecycle — 🔵 In progress. T28.1 (metadata schema + `Validate`/`ContentDigest`/`Fork` + `/v1/templates` + CLI) and T28.2 (revision store: `history`/`diff`/`rollback`, `name@N` refs, `pkg/template/revision.go`) done. T28.3 done — ADR-008 accepted; `pkg/template/bundle.go` (OCI image layout tar, hand-rolled, no new dep), `template.ExportBundle`/`ReadBundle`/`Store.Import` (blob-digest verify + Validate + collision), `POST /v1/templates/{export,import}`, `pi-box template export|import`. `ContentDigest` now excludes `source` so fork/import of the same definition matches. 508 tests green. Deferred: artifact layers + `oci://` registry transport.
 T28.2c done — `.default` marker file (`Store.SetDefault`/`Default`), `CreateSandbox` resolves empty template from it before `base`, `POST /v1/templates/{name}/promote`, `pi-box template promote --default`. AC-35.11 audit-log done — `pkg/template/audit.go`, `slog` line per fork/rollback/import/promote. 509 tests green.
-Open F28: **T28.2b snapshot-from-sandbox (runtime hooks — Linux)** and **T28.4 GUI**. F28 is otherwise darwin-complete: AC-35.1–35.11 done, AC-35.5 (snapshot) + AC-35.12 (GUI) + AC-35.13 (secret-file exclusion — N/A until artifact layers/snapshot) remain.
+Open F28: **T28.2b snapshot-from-sandbox (runtime hooks — Linux)** and **T28.4 GUI**.
+
+**F13 cache-scoping done (ADR-009, accepted):** cache volume names now scoped by template/runtime/user (`cache.VolumeScope` / `cacheVolumeName`), so sibling sandboxes of the same template share a warm cache. Baseline = shared read-write per-scope named volume; strict RO-lower + per-sandbox-upper overlay deferred to a Linux follow-up. `pkg/cache` wired. F12 AC-12.2/AC-12.5 ✅. Cached-install benchmark thresholds need a Linux+Docker `pi-box bench` run to confirm. 510 tests green.
 
 ## Risk Tracking
 

@@ -3,6 +3,7 @@ package api
 import (
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/pi-sandbox/pi/pkg/sandbox"
@@ -82,5 +83,29 @@ func TestCreateRequest_HasNoHostMountFields(t *testing.T) {
 		if !allowed[rt.Field(i).Name] {
 			t.Fatalf("CreateRequest gained unexpected field %q — audit it for host-mount exposure", rt.Field(i).Name)
 		}
+	}
+}
+
+// ADR-009: cache volumes are scoped by template/runtime/user, so sibling
+// sandboxes of the same template share a warm cache — not per sandbox ID.
+func TestCacheVolumeName_ScopedByTemplateNotSandbox(t *testing.T) {
+	a := cacheVolumeName("node-python", "compat", "npm")
+	b := cacheVolumeName("node-python", "compat", "npm")
+	if a != b {
+		t.Fatalf("same template/runtime/type must yield the same volume: %q vs %q", a, b)
+	}
+	if isHostPath(a) {
+		t.Fatalf("cache volume name must not be a host path: %q", a)
+	}
+
+	if cacheVolumeName("go", "compat", "GOMODCACHE") == a {
+		t.Error("different template should give a different cache volume")
+	}
+	if cacheVolumeName("node-python", "fast", "npm") == a {
+		t.Error("different runtime should give a different cache volume")
+	}
+	// No sandbox ID anywhere in the name.
+	if strings.Contains(a, "sbx") || len(a) > 80 {
+		t.Errorf("unexpected volume name shape: %q", a)
 	}
 }

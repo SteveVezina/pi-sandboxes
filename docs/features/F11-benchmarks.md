@@ -97,7 +97,7 @@ Reference `SPEC.md` §8 (Security Model) for full security constraints.
 |-----------|------|--------|
 | F3: Fast Backend | Internal feature | Available |
 | F4: Compat Backend | Internal feature | ⚠️ Partially — compat is M2, bench runs against fast only for now |
-| F13: Snapshot & Rollback | Internal feature | ⚠️ Partially — snapshot benchmarks are M2 |
+| F13: Snapshot & Rollback | Internal feature | ✅ Implemented (2026-08-31) — snapshot_create/rollback benchmarks can run |
 | F12: Cache Model | Internal feature | 🟡 ADR-009 (2026-08-31) wired cross-sandbox cache reuse (per template/runtime/user scope). The four `*_cached` threshold benchmarks should now warm up on a second run of the same template — needs a Linux+Docker `pi-box bench` run to confirm the p50 targets. |
 
 ## Implementation Approach

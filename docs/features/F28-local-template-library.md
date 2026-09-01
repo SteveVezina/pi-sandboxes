@@ -78,7 +78,7 @@ Mapped from `SPEC.md` § AC-35:
 | Dependency | Type | Status |
 |-----------|------|--------|
 | F5 Template System | Internal feature | ✅ Implemented (static baseline) |
-| F13 Snapshot & Rollback | Internal feature | 🟡 Partial |
+| F13 Snapshot & Rollback | Internal feature | ✅ Implemented (2026-08-31) |
 | F17 Policy Enforcement | Internal feature | 🟡 Partial |
 | PROP-007 (image resolution) | Applied | `base` resolved-image form |
 | ADR-005 (driver contract) | Accepted | capability reports |
